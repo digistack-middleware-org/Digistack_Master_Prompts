@@ -1,2 +1,1 @@
-# Digistack_Master_Prompts
-Digistackcloud Group Projects
+# DigiStack_Master_Prompt
