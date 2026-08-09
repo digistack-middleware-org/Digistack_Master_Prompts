@@ -1,5 +1,5 @@
 ID: STD
-Version: 1.10
+Version: 1.11
 Status: Active
 
 Title: Standing Rules
@@ -213,6 +213,14 @@ Decisions: "should VM hostnames encode region before P06") — this
 naming change applies to WebSphere profile/cell/node/cluster names
 only, not VM hostnames.
 
+Version 1.11 change note (2026-08-07): P01 Version 1 signed off (13/13
+TestCases-v1.md cases pass, TCS01 §2.7 rubric satisfied). Per this
+document's own promotion rule, WebSphere ND (9.0.5.28) and PostgreSQL
+(16) version pins promoted from target/placeholder to CONFIRMED — source
+record is SetupDoc-v1.md §4.1/§4.3. Also added digistack_bank as the
+named early-build shared database (Database section), closing the
+ARCH01 gap where the pre-CBS-split shared DB had no defined name.
+
 Dependency Matrix
 -----------------
 (Full 8-column copy, kept identical to IDX's own copy of this matrix —
@@ -259,7 +267,8 @@ P01 is unaffected (PIS01 doesn't apply retroactively to v1-v14).
 Database
 --------
 PostgreSQL
-digistack_cbs (single dedicated DB, sole writer: CBS)
+digistack_bank (early-build shared DB, P01-P02, per ARCH01 Data Architecture — added at P01 v1 sign-off, 2026-08-07)
+digistack_cbs (single dedicated DB from CBS split onward, sole writer: CBS)
 
 Schemas (within digistack_cbs)
 --------------------------------
@@ -269,8 +278,8 @@ reporting
 
 Application Server
 ------------------
-WebSphere ND 9.0.5.28 (target — not yet installed; P01 v1 reset to
-not-started 2026-08-04, see v1.10 change note above)
+WebSphere ND 9.0.5.28 — CONFIRMED, installed on dsb-dmgr. Source:
+SetupDoc-v1.md §4.1. Confirmed 2026-08-07, P01 v1 signed off.
 
 Secondary App Server
 ---------------------
@@ -284,8 +293,8 @@ Version Pins (target/placeholder, unconfirmed — P01 v1 reset to
 not-started 2026-08-04; promote to CONFIRMED only once actually
 installed and recorded in SetupDoc-v1.md)
 ----------------------------------------------------------------
-WebSphere ND: 9.0.5.28 (target — not yet installed, unconfirmed; P01 v1
-reset to not-started 2026-08-04)
+WebSphere ND: 9.0.5.28 — CONFIRMED, installed on dsb-dmgr. Source:
+SetupDoc-v1.md §4.1. Confirmed 2026-08-07.
 Java SDK: IBM Java 8 (SDK 8.0), bundled/certified with WAS ND 9.0.5.28
 (target — not yet installed, unconfirmed)
 IBM HTTP Server (IHS): 9.0.5.28 (target — not yet installed; IHS is
@@ -295,9 +304,8 @@ at P01 v8)
 IBM Installation Manager: 1.9.x (target — confirm the exact version
 actually used for the WAS ND install against your install logs, and
 correct this line if it differs)
-PostgreSQL: 16 (target — project-wide standard, adopted 2026-08-04.
-Not yet installed anywhere — P01 v1, which would have provisioned
-dsb-db, has been reset to not-started per v1.10's change note.)
+PostgreSQL: 16 — CONFIRMED, installed on dsb-db. Source:
+SetupDoc-v1.md §4.3. Confirmed 2026-08-07.
 IBM MQ: Advanced for Developers, 9.3.x/9.4.x (target — not yet
 installed, MQ is P02 v19)
 

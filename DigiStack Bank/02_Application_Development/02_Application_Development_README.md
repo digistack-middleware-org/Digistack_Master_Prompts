@@ -22,25 +22,24 @@
 
 ### Version History
 First version: v1
-Latest working version: —
-Latest approved version: —
-Next planned version: v1
+Latest working version: v1
+Latest approved version: v1
+Next planned version: v2
 
 ### Completion
 Source:
 - P01_Foundation.md
 
 Progress:
-- 0 / 14 versions complete
+- 1 / 14 versions complete
 
 Remaining:
-- v1 through v14 (all)
+- v2 through v14
 
 ### AI Resume Context
-Current Objective: Not started — begin Version 1 (Project Setup & Enterprise Architecture).
-Current Milestone: — (reset 2026-08-04, per project owner request; prior v1 sign-off claim reverted, see Progress_Log.md's Open Questions section for the full decision log)
-Next Task: Begin Version 1, Sprint 1 (provision the base VM and validate the WebSphere ND install — per P01_Sprint_Plan.md).
-
+Current Objective: Version 1 signed off (2026-08-07). Beginning Version 2 — Login & Session.
+Current Milestone: v1 complete — WAS ND 9.0.5.28 + PostgreSQL 16 confirmed installed, digistack-bank-v1.ear deployed and verified (live DB read via servlet->JSP forward).
+Next Task: Begin Version 2, Sprint 1 — design and create the `users` table (V2__create_users.sql).
 ---
 
 ## P02 — WebSphere / Enterprise Middleware Integration

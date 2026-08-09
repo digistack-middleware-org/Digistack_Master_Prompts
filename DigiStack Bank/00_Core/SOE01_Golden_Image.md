@@ -1,5 +1,5 @@
 ID: SOE01
-Version: 1.7
+Version: 1.8
 Status: Active
 
 Title: Standard Operating Environment — Golden Image Specification
@@ -87,6 +87,11 @@ target/placeholder to CONFIRMED, mirroring STD v1.8's same-day change —
 P01 v1 signed off, SetupDoc-v1.md §4.1/§8 is the source record. IHS/Web
 Server Plug-ins/IBM Installation Manager pins remain target/unconfirmed
 until P01 v8 is reached.
+
+Version 1.8 change note (2026-08-07): WebSphere ND and PostgreSQL
+version pins promoted from target/placeholder to CONFIRMED, mirroring
+STD v1.11's same-day change — P01 v1 signed off, SetupDoc-v1.md §4.1/
+§4.3 is the source record.
 ---
 
 1. Supported Operating System
@@ -249,12 +254,12 @@ enforces which source subnets may reach the ones STD already defines.
 | Component | Version | Notes |
 |---|---|---|
 | IBM Installation Manager | 1.9.x (target, placeholder — response-file driven, P07 v44 pattern) | Version pinned per SetupDoc, re-validated at each P07 migration |
-| WebSphere ND | 9.0.5.28 (target — not yet installed; P01 v1 reset to not-started 2026-08-04) | Upgraded only via P07's Migration Strategy — never ad hoc on a single node |
+| WebSphere ND | 9.0.5.28 (CONFIRMED — installed on dsb-dmgr, source SetupDoc-v1.md §4.1, confirmed 2026-08-07) | Upgraded only via P07's Migration Strategy — never ad hoc on a single node |
 | Java SDK | IBM Java 8 (SDK 8.0), bundled/certified with WAS ND 9.0.5.28 target | Coexistence handled per P07 v44's managesdk discipline |
 | IBM HTTP Server | 9.0.5.28 (target — version-matched to WAS ND pin above, per IBM's Support Matrix, P07 v44's planning gate) | Mismatched IHS/WAS versions is a named migration failure mode — never install IHS independently of this check |
 | Web Server Plug-ins | 9.0.5.28 (target — matches WAS ND/IHS pin above) | Generated/propagated per P01 v8's plugin-cfg.xml workflow |
 | IBM MQ | IBM MQ Advanced for Developers, 9.3.x/9.4.x (free tier, per STD's Licensing Reality Check) | Version pinned per SetupDoc-v19.md |
-| PostgreSQL | 16 (target, adopted 2026-08-04 per STD v1.9/v1.10). Not yet installed anywhere — dsb-db has not been provisioned; P01 v1 reset to not-started | Project-wide standard — see MASTER INDEX Open Decisions |
+| PostgreSQL | 16 (CONFIRMED — installed on dsb-db, source SetupDoc-v1.md §4.3, confirmed 2026-08-07) | Project-wide standard — see MASTER INDEX Open Decisions |
 
 10. Security Hardening Baseline
 ------------------------------------

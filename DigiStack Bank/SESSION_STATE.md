@@ -1,5 +1,5 @@
 ID: SESSION01
-Version: 1.2
+Version: 1.3
 Status: Active
 
 Title: Session State — Global Pointer
@@ -34,8 +34,8 @@ about progress.
 
 Folder: 02_Application_Development/
 Part(s) in progress: P01
-Version in progress: v1
-Sprint in progress: Sprint 1 (next — not yet started)
+Version in progress: v2
+Sprint in progress: Sprint 1 (next — Login & Session, users table)
 
 → For full detail (completion %, AI Resume Context, Pause/Resume Log),
   open that folder's own README.md. This file only tells you WHICH
@@ -95,3 +95,9 @@ confirm P01 has not been started (0/14 versions complete, no SetupDocs
 written). No sprint work has actually begun. Found and corrected during
 the 2026-07-28 cross-file audit — see Progress_Log.md's Open Questions
 section for the full audit note.
+
+Change Note (v1.3, 2026-08-07)
+-------------------------------
+P01 Version 1 signed off (13/13 test cases pass, TCS01 §2.7 rubric
+satisfied). WAS ND 9.0.5.28 and PostgreSQL 16 confirmed installed
+(source: SetupDoc-v1.md). Advanced pointer to Version 2, Sprint 1.

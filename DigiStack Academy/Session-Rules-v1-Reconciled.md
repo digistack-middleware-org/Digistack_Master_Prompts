@@ -4,8 +4,8 @@
 rules (which referenced a 208-Day plan with a generic "every 7th / every 15th"
 Lab/Incident pattern) and the two verified project files:
 
-- `Progress-Log-v5-Verified.md`
-- `WebSphere-222-Day-Plan-v5-Verified.md`
+- `Progress-Log-v11.md`
+- `WAS-Program-v10-Full-222-Days.md`
 
 Add this file to the Project's knowledge alongside those two, so future
 sessions don't need to re-derive these resolutions from scratch.
@@ -23,7 +23,7 @@ unless a new, explicitly verified plan file superseding v5 is uploaded.
 
 The original rule text ("Day 7 = Lab Day," "Day 15 = Incident Day," recurring
 every 7th/15th day) is a **simplification only** and is superseded by the
-**Day-Tag Authority Table** in `Progress-Log-v5-Verified.md`. Applying the
+**Day-Tag Authority Table** in `Progress-Log-v11.md`. Applying the
 generic modulo rule directly would collide with Closeout Days and with the
 actual staggered Lab/Incident placement. Use this table as ground truth:
 
@@ -96,7 +96,7 @@ version table.
 The following rules from the original prompt were checked against the
 verified files and require **no changes**:
 
-- Fixed 30-Sprint template, in exact order, every Standard Day.
+- Fixed 24-Sprint template, in exact order, every Standard Day.
 - Sprint 1 structure: Theory (50%) → Real-time Examples (40%) → Interview
   Notes (10%).
 - Mandatory real, specific, rotating banking examples in *every* sprint, not

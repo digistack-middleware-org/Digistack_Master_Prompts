@@ -11,7 +11,7 @@ day-by-day topic list AND the Day-Tag (Standard / Lab Day / Incident Day / Close
 assignments — the tags are embedded directly in that file's day list, so no separate
 authority table is needed or should be trusted over it.
 
-`Progress-Log-v7-Reordered.md` is **superseded** for Day-Tag purposes (it was built
+`Progress-Log-v11.md` is **superseded** for Day-Tag purposes (it was built
 for the pre-v10 folder ordering and no longer matches v10's Lab/Incident/Closeout
 placements from Day 25 onward). It is retained only for the "Current Progress"
 tracking mechanism (last completed Day/Sprint) — that pointer should be manually

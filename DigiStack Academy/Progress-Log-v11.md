@@ -267,7 +267,7 @@ structure, ITIL basics, ServiceNow/Jira/Confluence
 - Reset the "Sprint Checklist for Current Day" block each time you move to a
   new Day — pick the STANDARD, LAB DAY, or INCIDENT DAY template per the
   table above.
-- This log supersedes `Progress-Log-v7-Reordered.md` entirely for Day-Tag
+- This log supersedes `Progress-Log-v11.md` entirely for Day-Tag
   purposes. Keep v7 only as a historical record of the pre-v10 ordering.
 - **Open item:** see the "Unresolved conflict inside v10 itself" section at
   the top — v10's own summary math (17 Closeouts / ~19 Lab Days) doesn't match
