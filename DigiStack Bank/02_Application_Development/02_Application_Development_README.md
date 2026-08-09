@@ -22,24 +22,21 @@
 
 ### Version History
 First version: v1
-Latest working version: v1
-Latest approved version: v1
-Next planned version: v2
+Latest working version: v2
+Latest approved version: v2
+Next planned version: v3
 
 ### Completion
-Source:
-- P01_Foundation.md
-
 Progress:
-- 1 / 14 versions complete
+- 2 / 14 versions complete
 
 Remaining:
-- v2 through v14
+- v3 through v14
 
 ### AI Resume Context
-Current Objective: Version 1 signed off (2026-08-07). Beginning Version 2 — Login & Session.
-Current Milestone: v1 complete — WAS ND 9.0.5.28 + PostgreSQL 16 confirmed installed, digistack-bank-v1.ear deployed and verified (live DB read via servlet->JSP forward).
-Next Task: Begin Version 2, Sprint 1 — design and create the `users` table (V2__create_users.sql).
+Current Objective: Version 2 signed off (2026-08-08). Beginning Version 3 — Basic Transaction (Deposit & Withdraw).
+Current Milestone: v2 complete — users table, Login/Logout, HttpSession with last-login display all working, digistack-bank-v2.ear redeployed cleanly over v1.
+Next Task: Begin Version 3, Sprint 1 — design and create the `accounts` table (V3__create_accounts.sql).
 ---
 
 ## P02 — WebSphere / Enterprise Middleware Integration

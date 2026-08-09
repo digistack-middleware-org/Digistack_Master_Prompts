@@ -20,7 +20,7 @@
 | # | Folder | Status | Last Completed Version | Next Version | Current Focus (AI Resume one-liner) |
 |---|---|---|---|---|---|
 | 00 | Core | 🔒 Frozen | — | — | — |
-| 01 | Architecture | ⏳ Not Started | — | — | Scaffolded 2026-08-04; each diagram fills in once its owning Part/Version is built — see 01_Architecture/README.md |
+| 02 | Application_Development | 🔓 In Progress | v2 | v3 (P01) | P01 v2 signed off 2026-08-08; starting v3 Sprint 1 (Basic Transaction) |
 | 02 | Application_Development | 🔓 In Progress | v1 | v2 (P01) | P01 v1 signed off 2026-08-07; starting v2 Sprint 1 (Login & Session) |
 | 03 | Interview_Prep | ⏳ Not Started | — | Interview-1 (P03.1) | Not started — depends on P03 completion |
 | 04 | Observability | ⏳ Not Started | — | v31 (P04) | Not started — depends on P03 completion |
@@ -59,7 +59,7 @@ Once frozen, a folder is only reopened for a documented correction — never sil
 
 | Part | Status | Last Approved Version | Next Version |
 |---|---|---|---|
-| P01 — Foundation | 🔓 In Progress | v1 | v2 |
+| P01 — Foundation | 🔓 In Progress | v2 | v3 |
 | P02 — Middleware | ⏳ Not Started | — | v15 |
 | P03 — Banking Systems | ⏳ Not Started | — | v23 |
 
@@ -149,6 +149,7 @@ per STD's Metadata Block Standard) when their content changes.
 |---|---|---|---|---|---|
 | ~~2026-07-30~~ | ~~P01~~ | ~~v1~~ | ~~Project Setup & Enterprise Architecture~~ | **RESET 2026-08-04** | Entry reset per project owner request — P01 v1 is not started. Original row (Approved 2026-07-30) struck through rather than deleted, per this project's "never silently edit" discipline. See Open Questions section below for the full reset decision log. |
 | 2026-08-07 | P01 | v1 | Project Setup & Enterprise Architecture | Approved | Signed off per TCS01 §2.7 — 13/13 test cases pass. WAS ND 9.0.5.28 confirmed on dsb-dmgr; PostgreSQL 16 confirmed on dsb-db (digistack_bank DB, digistack_app user). SetupDoc-v1.md is the source record. |
+| 2026-08-08 | P01 | v2 | Login & Session | Approved | Signed off per TCS01 §2.7 — 14/14 test cases pass. users table created (SHA-256+salt hashing), Login/Logout with HttpSession working, digistack-bank-v2.ear redeployed over v1. SetupDoc-v2.md is the source record. |
 
 ---
 
@@ -158,7 +159,7 @@ per STD's Metadata Block Standard) when their content changes.
 
 | Version | Depends On | Produces | Used By |
 |---|---|---|---|
-| | | | |
+| V2 | V1 (app_config table, EAR skeleton) | users table, Login/Logout servlets, HttpSession creation, Dashboard.jsp | V3 (accounts table shares DB), V5 (session replication tests this version's session mechanism), V10 (role-gating builds on this login) |
 
 *(Empty until Version 1 is implemented. Example row, for reference only — remove once real rows are added: `V15 | V3 (accounts table), V2 (users/session) | Customer/Account/Beneficiary/Fund Transfer tables, JMS Queue+MDB | V16 (REST Fund Transfer endpoint), V19 (external MQ leg), V23 (CBS migration)`.)*
 
