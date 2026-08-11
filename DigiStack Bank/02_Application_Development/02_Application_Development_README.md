@@ -21,12 +21,14 @@
 ## P01 — Foundation
 
 ### Version History
-First version: v1
 Latest working version: v2
 Latest approved version: v2
 Next planned version: v3
 
 ### Completion
+Source:
+- P01_Foundation.md
+
 Progress:
 - 2 / 14 versions complete
 
@@ -34,9 +36,9 @@ Remaining:
 - v3 through v14
 
 ### AI Resume Context
-Current Objective: Version 2 signed off (2026-08-08). Beginning Version 3 — Basic Transaction (Deposit & Withdraw).
-Current Milestone: v2 complete — users table, Login/Logout, HttpSession with last-login display all working, digistack-bank-v2.ear redeployed cleanly over v1.
-Next Task: Begin Version 3, Sprint 1 — design and create the `accounts` table (V3__create_accounts.sql).
+Current Objective: Version 2 signed off (2026-08-11). Beginning Version 3 — Basic Transaction (Deposit & Withdraw).
+Current Milestone: v2 complete — Login/Logout working, bcrypt hashing, session management verified end-to-end.
+Next Task: Begin Version 3, Sprint 1 — design and create the accounts table (V3__create_accounts.sql).
 ---
 
 ## P02 — WebSphere / Enterprise Middleware Integration
@@ -146,8 +148,7 @@ here for folder-level visibility (per STDGAP01 §7).*
 ## Pause / Resume Log
 
 | Date Paused | Paused At (Version + Sprint) | Reason | Exact Resume Point |
-|---|---|---|---|
-| | | | |
+| 2026-08-11 | v1, pre-Sprint-1 | Lab VM + chat session lost | Full reset — resume at Version 1 Sprint 1, VM provisioning, from a blank machine. See Progress_Log.md Open Questions for full reset note. |
 
 *"Exact Resume Point" must be specific enough for a cold-start chat to
 pick up without re-reading everything — e.g., "P01 v3 Sprint 4: DAO layer

@@ -24,9 +24,7 @@ Purpose
 -------
 Tells you (and Claude) which folder to open FIRST in a new session. All
 detailed status, version history, and AI Resume Context lives in that
-folder's own README.md — this file does not duplicate it. Keeping detail
-in exactly one place (the PXX/README.md) avoids two files disagreeing
-about progress.
+folder's own README.md — this file does not duplicate it.
 
 ---
 
@@ -35,11 +33,10 @@ about progress.
 Folder: 02_Application_Development/
 Part(s) in progress: P01
 Version in progress: v3
-Sprint in progress: Sprint 1 (next — Basic Transaction, accounts table)
+Sprint in progress: Sprint 1 (next — accounts table, V3__create_accounts.sql)
 
 → For full detail (completion %, AI Resume Context, Pause/Resume Log),
-  open that folder's own README.md. This file only tells you WHICH
-  folder to open.
+  open that folder's own README.md.
 
 ---
 
@@ -48,20 +45,17 @@ Sprint in progress: Sprint 1 (next — Basic Transaction, accounts table)
 Required
 --------
 - Active folder listed above (all files in it)
-- 00_Core/* (all core reference docs — single shared folder, no
-  per-folder copies)
+- 00_Core/* (all core reference docs)
 - Progress_Log.md
 
 Optional
 --------
-- Prior Part's folder, only if this session directly references its
-  output (e.g. P02 referencing P01's schema)
+- Prior Part's folder, only if this session directly references its output
 
 Do Not Load
 -----------
 - Any folder not listed as "Currently Active" above
-- Any *_Interview_Prep / *_WAS_IQ folder, unless this session is
-  explicitly interview-prep work
+- Any *_Interview_Prep / *_WAS_IQ folder, unless explicitly interview-prep work
 
 ---
 
@@ -69,42 +63,34 @@ Do Not Load
 
 When you move to a new Part/folder:
 1. Update "Currently Active Folder" above.
-2. Confirm that folder's README.md AI Resume Context section is current
-   (update it there, not here).
+2. Confirm that folder's README.md AI Resume Context section is current.
 
 ---
 
 Last Updated
 ------------
-2026-07-29
+2026-08-11
+
+Change Note (v1.4, 2026-08-11)
+-------------------------------
+Full project reset per project owner request. Both the physical lab
+environment (VM/WebSphere/PostgreSQL) and prior chat context were lost.
+P01 Version 1 — previously signed off 2026-08-07 — is reset to
+not-started. Pointer reverted to Version 1, Sprint 1. Prior sign-off row
+in Progress_Log.md is struck through, not deleted, per this project's
+"never silently edit" discipline (same precedent as the 2026-08-04
+reset).
+
+(Prior change notes v1.1–v1.3 retained below for history.)
 
 Change Note (v1.1)
 -------------------
-Removed all `SYNC_STATUS.md` / cross-account sync references (file
-retired — project is maintained from a single account). If multi-account
-work resumes in future, a sync-tracking mechanism should be reintroduced
-and documented here before relying on it again.
+Removed all SYNC_STATUS.md / cross-account sync references.
 
 Change Note (v1.2, 2026-07-28)
 -------------------------------
-Corrected "Sprint in progress" from "Sprint 2 (next)" to "Sprint 1 (next
-— not yet started)". This file had drifted out of sync with
-01_Application_Development/README.md (source of truth, per the "Switching
-Parts?" rule above) and Progress_Log.md's Folder Tracker, both of which
-confirm P01 has not been started (0/14 versions complete, no SetupDocs
-written). No sprint work has actually begun. Found and corrected during
-the 2026-07-28 cross-file audit — see Progress_Log.md's Open Questions
-section for the full audit note.
+Corrected Sprint pointer drift — no sprint work had actually begun.
 
 Change Note (v1.3, 2026-08-07)
 -------------------------------
-P01 Version 1 signed off (13/13 test cases pass, TCS01 §2.7 rubric
-satisfied). WAS ND 9.0.5.28 and PostgreSQL 16 confirmed installed
-(source: SetupDoc-v1.md). Advanced pointer to Version 2, Sprint 1.
-
-Change Note (v1.4, 2026-08-08)
--------------------------------
-P01 Version 2 signed off (14/14 test cases pass, TCS01 §2.7 rubric
-satisfied). Login/Logout, HttpSession creation, and last-login display
-all confirmed working; digistack-bank-v2.ear redeployed cleanly over
-v1. Advanced pointer to Version 3, Sprint 1.
+P01 Version 1 signed off (superseded by this v1.4 reset).

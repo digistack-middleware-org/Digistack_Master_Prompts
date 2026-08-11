@@ -20,8 +20,7 @@
 | # | Folder | Status | Last Completed Version | Next Version | Current Focus (AI Resume one-liner) |
 |---|---|---|---|---|---|
 | 00 | Core | 🔒 Frozen | — | — | — |
-| 02 | Application_Development | 🔓 In Progress | v2 | v3 (P01) | P01 v2 signed off 2026-08-08; starting v3 Sprint 1 (Basic Transaction) |
-| 02 | Application_Development | 🔓 In Progress | v1 | v2 (P01) | P01 v1 signed off 2026-08-07; starting v2 Sprint 1 (Login & Session) |
+| 02 | Application_Development | 🔓 In Progress | v2 | v3 (P01) | P01 v2 signed off 2026-08-11; starting v3 Sprint 1 (accounts table, Deposit/Withdraw) |
 | 03 | Interview_Prep | ⏳ Not Started | — | Interview-1 (P03.1) | Not started — depends on P03 completion |
 | 04 | Observability | ⏳ Not Started | — | v31 (P04) | Not started — depends on P03 completion |
 | 05 | HA_DR | ⏳ Not Started | — | v36 (P05) | Not started — depends on P04 completion |
@@ -59,7 +58,7 @@ Once frozen, a folder is only reopened for a documented correction — never sil
 
 | Part | Status | Last Approved Version | Next Version |
 |---|---|---|---|
-| P01 — Foundation | 🔓 In Progress | v2 | v3 |
+| P01 — Foundation | ⏳ Not Started | — | v1 |
 | P02 — Middleware | ⏳ Not Started | — | v15 |
 | P03 — Banking Systems | ⏳ Not Started | — | v23 |
 
@@ -151,6 +150,12 @@ per STD's Metadata Block Standard) when their content changes.
 | 2026-08-07 | P01 | v1 | Project Setup & Enterprise Architecture | Approved | Signed off per TCS01 §2.7 — 13/13 test cases pass. WAS ND 9.0.5.28 confirmed on dsb-dmgr; PostgreSQL 16 confirmed on dsb-db (digistack_bank DB, digistack_app user). SetupDoc-v1.md is the source record. |
 | 2026-08-08 | P01 | v2 | Login & Session | Approved | Signed off per TCS01 §2.7 — 14/14 test cases pass. users table created (SHA-256+salt hashing), Login/Logout with HttpSession working, digistack-bank-v2.ear redeployed over v1. SetupDoc-v2.md is the source record. |
 
+| 2026-08-09 | P01 | v3 | Basic Transaction (Deposit & Withdraw) | Approved | Signed off per TCS01 §2.7 — 17/17 test cases pass. accounts table (FK to users), full Controller->Service->DAO->DB layering, overdraft rejection enforced, ClassLoader policy documented. SetupDoc-v3.md is the source record. |
+
+| ~~2026-08-07~~ | ~~P01~~ | ~~v1~~ | ~~Project Setup & Enterprise Architecture~~ | **RESET 2026-08-11** | Full project reset per project owner request — both lab VM and chat context lost. Entry struck through rather than deleted, per this project's "never silently edit" discipline. WAS ND/PostgreSQL version pins in STD reverted to placeholder. |
+
+| 2026-08-11 | P01 | v2 | Login & Session | Approved | Signed off per TCS01 §2.7 — 10/10 test cases pass. bcrypt password hashing, PreparedStatement-based SQL injection prevention, full session lifecycle (login/last-login/logout) verified. SetupDoc-v2.md is the source record. |
+
 ---
 
 ## Cross-Part Dependency Chain
@@ -160,6 +165,7 @@ per STD's Metadata Block Standard) when their content changes.
 | Version | Depends On | Produces | Used By |
 |---|---|---|---|
 | V2 | V1 (app_config table, EAR skeleton) | users table, Login/Logout servlets, HttpSession creation, Dashboard.jsp | V3 (accounts table shares DB), V5 (session replication tests this version's session mechanism), V10 (role-gating builds on this login) |
+| V3 | V2 (users table, session mechanism) | accounts table (FK to users), AccountDao/Service/Controller layers, Deposit/Withdraw UI, InsufficientFundsException | V4 (redeploy/rollback practice reuses this app), V5 (clustering tests this same Deposit/Withdraw as failover subject), V6 (Freeze/Unfreeze extends AccountService) |
 
 *(Empty until Version 1 is implemented. Example row, for reference only — remove once real rows are added: `V15 | V3 (accounts table), V2 (users/session) | Customer/Account/Beneficiary/Fund Transfer tables, JMS Queue+MDB | V16 (REST Fund Transfer endpoint), V19 (external MQ leg), V23 (CBS migration)`.)*
 
@@ -192,17 +198,32 @@ per STD's Metadata Block Standard) when their content changes.
 ---
 ## Environment Notes
 
-- **WAS ND version installed:** 9.0.5.28, CONFIRMED, installed on dsb-dmgr. Source: SetupDoc-v1.md §4.1.
-- **Profile(s) created so far:** devdsbinappserver01 (standalone AppServer, cell devdsbincell01, node devdsbinnode01)
-- **Database:** PostgreSQL 16, CONFIRMED, installed on dsb-db (192.168.10.30). Database name: digistack_bank (shared, pre-CBS-split, per ARCH01). App user: digistack_app (least-privilege). Source: SetupDoc-v1.md §4.3.
-- **IBM HTTP Server installed:** No — planned v8
-- **Any deviations from the roadmap so far:** None
-
+- **WAS ND version installed:** Not yet installed — target/placeholder pin only (9.0.5.28), per STD. Lab VM lost in reset, rebuild required.
+- **Profile(s) created so far:** None.
+- **Database:** Not yet installed — PostgreSQL 16 target/placeholder pin only. Rebuild required.
+- **IBM HTTP Server installed:** No — planned v8.
+- **Any deviations from the roadmap so far:** Full reset 2026-08-11 (VM + chat lost) — see Open Questions for details.
 ---
 
 ## Open Questions / Decisions Pending
 
 > Anything you were mid-discussion on when a chat ended, so it isn't lost.
+**Resolved — Full Project Reset, 2026-08-11.**
+
+Project owner's lab VM (dsb-dmgr, dsb-db, etc.) and prior chat session
+were both lost. Confirmed explicitly with project owner (2026-08-11) that
+this is a genuine restart, not a documentation drift correction like the
+2026-07-28/2026-08-04 events. Reset executed:
+- SESSION_STATE.md pointer reverted to P01 v1, Sprint 1 (not started)
+- Progress_Log.md's Folder Tracker, Multi-Part Folder Detail, Detailed
+  Version Log (old row struck through, not deleted), and Environment
+  Notes all reset to reflect zero completed work
+- 02_Application_Development_README.md's P01 section reset to 0/14
+  versions, AI Resume Context reset to Sprint 1 start
+- STD's WAS ND / PostgreSQL version pins reverted from CONFIRMED back to
+  target/placeholder, unconfirmed (SOE01's mirrored pins likewise)
+Physical rebuild (VM provisioning, WAS ND install, PostgreSQL install)
+begins fresh at P01 v1 Sprint 1.
 
 **Resolved — 2026-07-29 Standing Reference Documents sync check.**
 
@@ -295,6 +316,7 @@ first logged.
   versions and produces no design-relevant artifacts), not once for the
   whole project — later phases' versions are deferred until that phase's
   implementation actually begins.
+
 
 ---
 
