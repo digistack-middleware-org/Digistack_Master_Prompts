@@ -20,7 +20,7 @@
 | # | Folder | Status | Last Completed Version | Next Version | Current Focus (AI Resume one-liner) |
 |---|---|---|---|---|---|
 | 00 | Core | 🔒 Frozen | — | — | — |
-| 02 | Application_Development | 🔓 In Progress | v2 | v3 (P01) | P01 v2 signed off 2026-08-11; starting v3 Sprint 1 (accounts table, Deposit/Withdraw) |
+| 02 | Application_Development | 🔓 In Progress | v3 | v4 (P01) | P01 v3 signed off 2026-08-11; starting v4 (EAR Update/Rollback/Lifecycle practice, no new features) |
 | 03 | Interview_Prep | ⏳ Not Started | — | Interview-1 (P03.1) | Not started — depends on P03 completion |
 | 04 | Observability | ⏳ Not Started | — | v31 (P04) | Not started — depends on P03 completion |
 | 05 | HA_DR | ⏳ Not Started | — | v36 (P05) | Not started — depends on P04 completion |
@@ -156,6 +156,7 @@ per STD's Metadata Block Standard) when their content changes.
 
 | 2026-08-11 | P01 | v2 | Login & Session | Approved | Signed off per TCS01 §2.7 — 10/10 test cases pass. bcrypt password hashing, PreparedStatement-based SQL injection prevention, full session lifecycle (login/last-login/logout) verified. SetupDoc-v2.md is the source record. |
 
+| 2026-08-11 | P01 | v3 | Basic Transaction (Deposit & Withdraw) | Approved | Signed off per TCS01 §2.7 — 10/10 test cases pass. Controller→Service→DAO→DB layering introduced; overdraft prevention enforced at Service layer; unauthenticated access blocked. EAR naming corrected to per-version convention (digistack-bank-v3.ear) — v1/v2 naming inconsistency documented as resolved deviation. SetupDoc-v3.md is the source record. |
 ---
 
 ## Cross-Part Dependency Chain

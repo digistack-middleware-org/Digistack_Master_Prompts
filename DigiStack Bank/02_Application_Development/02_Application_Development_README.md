@@ -21,24 +21,24 @@
 ## P01 — Foundation
 
 ### Version History
-Latest working version: v2
-Latest approved version: v2
-Next planned version: v3
+Latest working version: v3
+Latest approved version: v3
+Next planned version: v4
 
 ### Completion
 Source:
 - P01_Foundation.md
 
 Progress:
-- 2 / 14 versions complete
+- 3 / 14 versions complete
 
 Remaining:
-- v3 through v14
+- v4 through v14
 
 ### AI Resume Context
-Current Objective: Version 2 signed off (2026-08-11). Beginning Version 3 — Basic Transaction (Deposit & Withdraw).
-Current Milestone: v2 complete — Login/Logout working, bcrypt hashing, session management verified end-to-end.
-Next Task: Begin Version 3, Sprint 1 — design and create the accounts table (V3__create_accounts.sql).
+Current Objective: Version 3 signed off (2026-08-11). Beginning Version 4 — EAR Update, Rollback & Application Lifecycle.
+Current Milestone: v3 complete — Deposit/Withdraw working with Controller→Service→DAO layering, overdraft prevention proven.
+Next Task: Begin Version 4, Sprint 1 — trivial UI change ("v4" label) to observe Update Application mechanics.
 ---
 
 ## P02 — WebSphere / Enterprise Middleware Integration

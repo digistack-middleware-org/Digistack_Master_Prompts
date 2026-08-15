@@ -32,8 +32,8 @@ folder's own README.md — this file does not duplicate it.
 
 Folder: 02_Application_Development/
 Part(s) in progress: P01
-Version in progress: v3
-Sprint in progress: Sprint 1 (next — accounts table, V3__create_accounts.sql)
+Version in progress: v4
+Sprint in progress: Sprint 1 (next — add "v4" label to Home.jsp for lifecycle practice)
 
 → For full detail (completion %, AI Resume Context, Pause/Resume Log),
   open that folder's own README.md.
