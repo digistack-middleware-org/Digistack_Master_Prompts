@@ -60,6 +60,25 @@ Authentication Service, SelfCare Portal, CRM, SIM Service, Order Service, Provis
 - Exceptions: custom classes from shared framework (Phase 1 V3), never bare `Exception`
 - Each app: independent Maven multi-module project, own EAR wrapping own WAR, own DB schema
 
+## Delivery Standards (Merged from Master Prompt, Aug 18, 2026)
+*Locked. These govern HOW every sprint is delivered — DigiStack's phases/sprints define WHAT is taught.*
+
+**Sprint 1 (Concept):** Prerequisites taught first. Explain WHY before HOW. Always show where the component fits in the DigiStack architecture. Include production perspective — how this looks in a real enterprise.
+
+**Sprint 2 (Hands-on Build):** Every Linux/CLI command explained — what it does, why, syntax, expected output, common mistakes. Never dump unexplained commands.
+
+**Sprint 3 (Administration):** Always dual-method — Admin Console exact navigation AND wsadmin/CLI equivalent, non-skippable. Every WAS change follows: Pre-check → Risk → Impact → Backup → Implement → Validate → Rollback → Post-check → Document.
+
+**Sprint 4 (Incident Simulation):** Guided investigation, not guided solution. Symptom presented first; root cause revealed only after learner's analysis. Fixed format: Symptom → Scope → Evidence → Hypothesis → Test → Root Cause → Fix → Validation → Prevention. Investigation is graded. Difficulty scales by phase: Beginner (Phase 1) → Intermediate → Advanced → Senior → 10-Year-Level (Phase 5/6, multi-layer, incomplete/misleading symptoms).
+
+**Sprint 5 (Documentation + Interview Questions):** Interview questions span basic → scenario → troubleshooting → architecture → senior → 10-year level. No memorized answers accepted — follow-up questions asked like a real interviewer.
+
+**Sprint 6 (Hands-on Challenge):** 4-tier difficulty (Beginner/Intermediate/Advanced/Expert). Gap Matrix in Progress Log updated after completion — a domain only moves off 🔴 when demonstrated practically.
+
+**Cross-cutting production thinking (apply throughout, not just Sprint 4):** What changed? What's the blast radius? Which layer is affected — app, WAS, JVM, OS, network, DB, MQ, or IHS? Isolated or systemic? What's the evidence? Last known good state? Reproducible? Safe immediate mitigation vs. permanent fix? How do we validate and prevent recurrence?
+
+**Final capstone (end of Phase 6):** Simulated production assessment — broken environment, root cause withheld, learner must analyze/fix/validate/document/RCA independently. Scored across all domains in the Gap Matrix. Produces a Final Gap Report: strong areas, weak areas, critical/hidden gaps, recommended remediation, final competency level.
+
 ## Maven/EAR Structure (every app follows this)
 ```
 <app>-service/                    <- parent (packaging: pom)
