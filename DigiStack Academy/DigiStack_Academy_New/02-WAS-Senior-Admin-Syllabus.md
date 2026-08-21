@@ -3,6 +3,7 @@
 Upload this file to the Claude Project's **Project Knowledge** section.
 
 Target: Senior WAS Administrator, 10-year depth, banking enterprise context.
+Locked environment version anchor: **WAS 9.0.5.28 ND (IBM J9 JDK 8)** — see `03-Progress-Log.md` for full baseline.
 Every topic includes: Concept Explanation → Real Banking Scenario → Hands-On Lab → Production Incident → Closeout.
 Every module close: 1 overall module lab + 6+ production incidents with resolution.
 Every arc close: Arc Capstone.
@@ -54,13 +55,13 @@ Every arc close: Arc Capstone.
 ## ARC 3 — Scale & Availability
 
 **Module 11: Clustering**
-11.1 Cluster Design Architecture · 11.2 Cluster Internals · 11.3 Port Management · 11.4 rippleStart vs Full Start · 11.5 Config Propagation · 11.6 Cluster SPOF · 11.7 Cross-Node Clustering · 11.8 Weights/Load Distribution · 11.9 Health Monitoring · 11.10 Anti-Patterns
+11.1 Cluster Design Architecture · 11.2 Cluster Internals · 11.3 Port Management · 11.4 rippleStart vs Full Start · 11.5 Config Propagation · 11.6 Cluster SPOF · 11.7 Cross-Node Clustering · 11.8 Weights/Load Distribution · 11.9 Health Monitoring · 11.10 Anti-Patterns · 11.11 Core Groups & HAManager Architecture · 11.12 Workload Management (WLM) — Web Container & EJB Tier · 11.13 Work Manager, Asynchronous Beans & Resource Environment Providers · 11.14 On Demand Router (ODR) & Intelligent Management Concepts · 11.15 Dynamic Clusters (ND Auto-Scaling)
 
 **Module 12: Deploy to Cluster**
 12.1 Cluster Deploy Internals · 12.2 Deployment Options · 12.3 Rolling Deployment · 12.4 Maintenance Mode · 12.5 Verification Checklist · 12.6 Update Strategies · 12.7 Cluster Deploy via wsadmin · 12.8 Failure Isolation · 12.9 Change Management
 
 **Module 13: HA & DR**
-13.1 HA Architecture Patterns · 13.2 DMGR SPOF Mitigation · 13.3 DMGR Backup Strategy · 13.4 Node Agent Resilience · 13.5 Cluster Member Failover · 13.6 DR Runbook · 13.7 Backup Automation · 13.8 Recovery Scenarios
+13.1 HA Architecture Patterns · 13.2 DMGR SPOF Mitigation · 13.3 DMGR Backup Strategy · 13.4 Node Agent Resilience · 13.5 Cluster Member Failover · 13.6 DR Runbook · 13.7 Backup Automation · 13.8 Recovery Scenarios · 13.9 Complete WAS Backup Architecture
 
 **Module 14: Capacity Planning & Sizing** *(new)*
 14.1 Load-to-Node Translation · 14.2 Heap Sizing Formula · 14.3 Thread Pool Sizing vs Downstream Limits · 14.4 Headroom Planning · 14.5 Documenting Sizing Decisions
@@ -72,10 +73,12 @@ Every arc close: Arc Capstone.
 ## ARC 4 — Data & Integration
 
 **Module 15: JDBC**
-15.1 Pool Architecture · 15.2 JDBC Providers · 15.3 XA vs Non-XA · 15.4 J2C Auth Alias · 15.5 Pool Sizing · 15.6 Pool Timeout Params · 15.7 Connection Leak Detection · 15.8 Stale Connection Handling · 15.9 Cell vs Server Scope · 15.10 DB Failover · 15.11 JDBC Diagnosis · 15.12 wsadmin JDBC Automation
+15.1 Pool Architecture · 15.2 JDBC Providers · 15.3 XA vs Non-XA · 15.4 J2C Auth Alias · 15.5 Pool Sizing · 15.6 Pool Timeout Params · 15.7 Connection Leak Detection · 15.8 Stale Connection Handling · 15.9 Cell vs Server Scope · 15.10 DB Failover · 15.11 JDBC Diagnosis · 15.12 wsadmin JDBC Automation · 15.13 Transaction Service & tranlog Management · 15.14 JNDI Naming & Lookup Conventions (`jdbc/`, `jms/`, `mail/`, `url/`, `ejb/` namespaces) · 15.15 JNDI Lab — Bind & Look Up Resources by JNDI Name
 
 **Module 16: Messaging — MQ/JMS/SIBus** *(new)*
 16.1 SIBus vs External MQ · 16.2 JMS Connection Factories/Activation Specs · 16.3 MQ Queue Manager Integration · 16.4 MDB Deployment/Sizing · 16.5 Poison Message/DLQ Handling · 16.6 Diagnosing Stuck Queues
+
+*(Supplementary prerequisite: IBM MQ Standalone Install & MQSC Basics Lab — studied between 16.3 and 16.4. Covers: install a Queue Manager from scratch (MQ 9.3.x/9.4.x), create Local/Remote/Alias/Dead Letter Queue objects using `runmqsc`, start a Listener, verify connectivity with `amqsput`/`amqsget`. Pure MQ foundations — no WAS involved. See Day 214 in the day-by-day plan.)*
 
 *Arc 4 Capstone:* Trace a transaction across JDBC (XA) + MQ; identify where a 2PC failure surfaces.
 
@@ -84,25 +87,25 @@ Every arc close: Arc Capstone.
 ## ARC 5 — Operate & Defend
 
 **Module 17: IHS**
-17.1 Role in Architecture · 17.2 Production Install · 17.3 httpd.conf Mastery · 17.4 plugin-cfg.xml · 17.5 Plugin Generation · 17.6 Plugin Error Interval · 17.7 Plugin Retry Interval · 17.8 SSL/TLS Architecture · 17.9 Virtual Hosting · 17.10 Tuning · 17.11 Log Analysis · 17.12 IHS HA · 17.13 Troubleshooting
+17.1 Role in Architecture · 17.2 Production Install · 17.3 httpd.conf Mastery · 17.4 Apache Module Directives — mod_rewrite, mod_headers, mod_alias, mod_status & KeepAlive · 17.5 plugin-cfg.xml · 17.6 Plugin Generation · 17.7 Plugin Error Interval · 17.8 Plugin Retry Interval · 17.9 SSL/TLS Architecture · 17.10 Virtual Hosting · 17.11 Tuning · 17.12 Log Analysis · 17.13 IHS HA · 17.14 Troubleshooting
 
 **Module 18: Session Management** *(trimmed)*
 18.1 Session Lifecycle/JSESSIONID · 18.2 Affinity via Plugin · 18.3 Failover Without Replication · 18.4 Replication vs DB Persistence · 18.5 Timeout Precedence · 18.6 When Session Design Is Wrong
 
 **Module 19: User Management & Security**
-19.1 Security Model · 19.2 User Registry Architecture · 19.3 LDAP Integration · 19.4 Federated Repository · 19.5 Admin Roles · 19.6 Role-to-Group Mapping · 19.7 Java 2 Security · 19.8 SSL Config Architecture · 19.9 Admin Security Recovery · 19.10 wsadmin with Security On · 19.11 Security Audit Checklist
+19.1 Security Model · 19.2 User Registry Architecture · 19.3 LDAP Integration · 19.4 Federated Repository · 19.5 Admin Roles · 19.6 RunAs Roles & J2C Authentication Alias Deep Dive · 19.7 Role-to-Group Mapping · 19.8 Java 2 Security · 19.9 SSL Config Architecture · 19.10 Admin Security Recovery · 19.11 wsadmin with Security On · 19.12 CSIv2/IIOP Security Deep Dive · 19.13 Security Audit Checklist
 
 **Module 20: Performance Tuning & JVM Diagnostics**
 20.1 GC Deep Dive · 20.2 verboseGC Parsing · 20.3 Thread Pool Architecture · 20.4 Thread Dump Analysis · 20.5 Heap Dump Analysis · 20.6 PMI · 20.7 Pool Monitoring · 20.8 CPU/Memory Baseline · 20.9 Diagnosis Methodology · 20.10 Web Container Tuning
 
 **Module 21: Logging & FFDC**
-21.1 Log Architecture · 21.2 Trace String Config · 21.3 Trace String Syntax · 21.4 FFDC · 21.5 Log Rotation/Retention · 21.6 Cross-Component Correlation · 21.7 IBM Message Decoder · 21.8 Log-Based Incident Analysis
+21.1 Log Architecture · 21.2 Trace String Config · 21.3 Trace String Syntax · 21.4 FFDC · 21.5 Log Rotation/Retention · 21.6 Cross-Component Correlation · 21.7 IBM Message Decoder · 21.8 Log-Based Incident Analysis · 21.9 Daily & Weekly Health Check Runbook
 
 **Module 22: Patch & Vulnerability Management** *(new)*
 22.1 CVE Monitoring · 22.2 Emergency iFix vs Scheduled Fix Pack · 22.3 Patch Testing Gate · 22.4 Rollback Decision Criteria
 
 **Module 23: Licensing & Modernization Framework** *(new)*
-23.1 PVU/Core Licensing · 23.2 WAS ND vs Liberty vs OpenLiberty · 23.3 Migration Effort Estimation · 23.4 Containerization Context · 23.5 Building the Business Case
+23.1 PVU/Core Licensing · 23.2 WAS ND vs Liberty vs OpenLiberty · 23.3 Migration Effort Estimation · 23.4 Containerization Context · 23.5 Building the Business Case · 23.6 Liberty Migration Deep Dive
 
 **Module 24: wsadmin / Automation Mastery**
 24.1 wsadmin Architecture · 24.2 Jython in WAS · 24.3 AdminConfig · 24.4 AdminControl · 24.5 AdminApp · 24.6 AdminTask · 24.7 MBean Querying · 24.8 Script Library Patterns · 24.9 Automation Framework · 24.10 Interview Jython Scripts
@@ -264,13 +267,15 @@ Each pattern has: Pattern Name → Trigger Symptoms → Most Likely Causes (rank
 7. Self-signed cert in production — works but auditors flag it, breaks some strict clients
 8. Certificate CN mismatch — cert issued for wrong hostname, SNI-aware clients reject
 
-### Category 8: Change Management Failures (6 patterns)
+### Category 8: Change Management Failures (8 patterns)
 1. Unauthorized change — someone deployed directly without RFC, caused outage
 2. Rollback failure — rollback plan written but not tested, old EAR incompatible with current DB schema
 3. Change during freeze — emergency fix applied, violated freeze policy, audit finding raised
 4. PIR not written — change considered closed, same failure recurs 3 months later
 5. Wrong deployment window — deployed during peak NEFT hours, transaction failures
 6. CAB approval bypassed under pressure — senior manager pushed deployment, RFC not approved
+7. CAB approval expired — deployment executed against a stale/lapsed approval window, change no longer covers current state of target servers
+8. Concurrent conflicting changes — two RFCs touch the same cluster/datasource in the same window, second deployment overwrites or invalidates the first without either team knowing
 
 ---
 
@@ -279,11 +284,11 @@ Each pattern has: Pattern Name → Trigger Symptoms → Most Likely Causes (rank
 - [ ] Arc 1 — Module 1 (7 topics)
 - [ ] Arc 1 — Module 2 (12 topics)
 - [ ] Arc 2 — Modules 3-10
-- [ ] Arc 3 — Modules 11-14
-- [ ] Arc 4 — Modules 15-16
-- [ ] Arc 5 — Modules 17-24
+- [ ] Arc 3 — Modules 11-14 (Module 11 now 15 topics, incl. 11.11 Core Groups & HAManager, 11.12 WLM, 11.13 Work Manager/Async Beans, 11.14 ODR, 11.15 Dynamic Clusters; Module 13 now 9 topics, incl. 13.9 Complete WAS Backup Architecture)
+- [ ] Arc 4 — Modules 15-16 (Module 15 now 15 topics, incl. 15.13 Transaction Service & tranlog Management, 15.14 JNDI Naming & Lookup Conventions, 15.15 JNDI Lab; Module 16: 6 topics + 1 supplementary MQ Standalone Install & MQSC Basics Lab between 16.3 and 16.4)
+- [ ] Arc 5 — Modules 17-24 (Module 17 now 14 topics, incl. 17.4 Apache Module Directives/mod_rewrite/mod_headers/mod_alias/mod_status; Module 19 now 13 topics, incl. 19.6 RunAs Roles & J2C Auth Alias, 19.12 CSIv2/IIOP Security; Module 21 now 9 topics, incl. 21.9 Daily & Weekly Health Check Runbook; Module 23 now 6 topics, incl. 23.6 Liberty Migration Deep Dive)
 - [ ] Arc 6 — Module 25: Change Management & ITSM (10 topics)
 - [ ] Arc 6 — Module 26: Enterprise Integration (10 topics)
 - [ ] Arc 6 — Module 27: Compliance & Audit Readiness (11 topics)
 - [ ] Arc 6 — Module 28: SSL & Certificate DR (13 topics)
-- [ ] Incident Pattern Library — studied after Arc 3 completion
+- [ ] Incident Pattern Library — studied after Arc 3 completion (Category 8 now 8 patterns)
