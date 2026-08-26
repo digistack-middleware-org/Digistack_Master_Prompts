@@ -1,5 +1,5 @@
 ID: STD
-Version: 1.11
+Version: 1.13
 Status: Active
 
 Title: Standing Rules
@@ -221,6 +221,36 @@ record is SetupDoc-v1.md §4.1/§4.3. Also added digistack_bank as the
 named early-build shared database (Database section), closing the
 ARCH01 gap where the pre-CBS-split shared DB had no defined name.
 
+Version 1.13 change note (2026-08-25): Full reset #2 (VM + chat lost,
+confirmed with project owner 2026-08-25, per SESSION_STATE v1.5).
+WebSphere ND and PostgreSQL version pins reverted from CONFIRMED back
+to target/placeholder, unconfirmed — mirroring the 2026-08-11 reset
+precedent. This closes a real drift: Progress_Log.md's 2026-08-11
+reset entry already claimed this revert had been done, but this
+document's actual pins were never edited at that time and still read
+CONFIRMED (dated 2026-08-07) until this entry. Re-promote to CONFIRMED
+only once P01 v1 is rebuilt and signed off again, with a fresh
+SetupDoc-v1.md as the source record.
+
+Version 1.12 change note (2026-08-25): Header version bumped from 1.11
+to 1.12 to match this change note, which had been added without the
+metadata block being updated to match — same category of gap as the
+SOE01 v1.9 Used-By correction below.
+
+This entry replaces an earlier, garbled version of this same change
+note that named the same value ("Portal") on both sides of a claimed
+correction, making it unreadable as written. Correcting to what is
+actually true today, cross-checked directly against the files: this
+document's Applications/Deployables tables, ARCH01, ARCH02, and both
+P02_Middleware.md and P03_Banking_Systems.md (including their Sprint
+Plans) all consistently name this application "Portal" (EAR:
+digistack-portal-v<N>.ear) — no naming mismatch currently exists
+anywhere in the project. If a real mismatch prompted the original
+(unreadable) note, it has since been resolved; this entry is a
+metadata correction only, per this project's standing "correct the
+reference doc, not the built work" precedent (same as the 2026-07-28
+STD/SOE01 port-table fix). No architectural/technical change.
+
 Dependency Matrix
 -----------------
 (Full 8-column copy, kept identical to IDX's own copy of this matrix —
@@ -278,8 +308,10 @@ reporting
 
 Application Server
 ------------------
-WebSphere ND 9.0.5.28 — CONFIRMED, installed on dsb-dmgr. Source:
-SetupDoc-v1.md §4.1. Confirmed 2026-08-07, P01 v1 signed off.
+WebSphere ND: 9.0.5.28 (target/placeholder, unconfirmed — reverted here
+per the 2026-08-25 full reset #2; not yet installed, promote back to
+CONFIRMED only once actually installed and recorded in a fresh
+SetupDoc-v1.md)
 
 Secondary App Server
 ---------------------
@@ -290,11 +322,11 @@ OS
 Rocky Linux 8.x / RHEL 8.x
 
 Version Pins (target/placeholder, unconfirmed — P01 v1 reset to
-not-started 2026-08-04; promote to CONFIRMED only once actually
-installed and recorded in SetupDoc-v1.md)
+not-started again 2026-08-25 (full reset #2); promote to CONFIRMED
+only once actually installed and recorded in a fresh SetupDoc-v1.md)
 ----------------------------------------------------------------
-WebSphere ND: 9.0.5.28 — CONFIRMED, installed on dsb-dmgr. Source:
-SetupDoc-v1.md §4.1. Confirmed 2026-08-07.
+WebSphere ND: 9.0.5.28 (target — not yet installed, unconfirmed;
+reverted from a prior CONFIRMED state per the 2026-08-25 reset)
 Java SDK: IBM Java 8 (SDK 8.0), bundled/certified with WAS ND 9.0.5.28
 (target — not yet installed, unconfirmed)
 IBM HTTP Server (IHS): 9.0.5.28 (target — not yet installed; IHS is
@@ -304,8 +336,8 @@ at P01 v8)
 IBM Installation Manager: 1.9.x (target — confirm the exact version
 actually used for the WAS ND install against your install logs, and
 correct this line if it differs)
-PostgreSQL: 16 — CONFIRMED, installed on dsb-db. Source:
-SetupDoc-v1.md §4.3. Confirmed 2026-08-07.
+PostgreSQL: 16 (target — not yet installed, unconfirmed; reverted
+from a prior CONFIRMED state per the 2026-08-25 reset)
 IBM MQ: Advanced for Developers, 9.3.x/9.4.x (target — not yet
 installed, MQ is P02 v19)
 
@@ -366,7 +398,7 @@ chore:
 
 Applications
 ------------
-InternetBanking      (WAS)    - customer web channel
+Portal               (WAS)    - customer web channel
 CBS                  (WAS)    - core banking, sole writer of digistack_cbs
 PaymentHub           (WAS)    - payment routing/coordination, never writes balances
 NotificationService  (WAS)    - event consumer, alerts
@@ -378,7 +410,7 @@ ATMSimulator         (Tomcat) - atm.digistack.cloud
 
 Deployables
 -----------
-InternetBanking.ear
+Portal.ear
 CBS.ear
 PaymentHub.ear
 NotificationService.ear
@@ -548,7 +580,7 @@ Deployment Dependency Order
 5. PaymentHub
 6. NotificationService
 7. ReportingService
-8. InternetBanking
+8. Portal
 9. BranchPortal
 10. CardPortal
 11. MobileBanking (Tomcat)

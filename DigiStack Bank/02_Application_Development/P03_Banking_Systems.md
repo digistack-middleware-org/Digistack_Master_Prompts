@@ -373,6 +373,43 @@ Transactions: Deposit, Withdrawal, Balance Inquiry, Fund Transfer, Mini
 Statement
 Products: Savings Account, Current Account
 
+Account Schema Note — Branch + IFSC Fields (added 2026-08-25)
+-------------------------------------------------------------------
+The accounts table in digistack_cbs gains two new display-only fields
+this version: branch_name (e.g. "Hyderabad Main") and ifsc_code (e.g.
+"DIGI0001234"). These are reference data sourced from a branches lookup
+table — not user-entered, assigned at account-open time. They are
+read-only on every channel (Portal, Mobile, ATM, Card Portal) — only
+CBS may set them, per the Governing Rule. These fields surface on the
+Accounts screen (account detail card) and are used nowhere else in
+P01–P03 except as display metadata.
+
+Accounts Screen UI Note — Full Detail Card (added 2026-08-25)
+-------------------------------------------------------------------
+From this version onward the Accounts screen detail card displays the
+complete set of fields the UI mockup shows — all now available in
+digistack_cbs for the first time:
+- Account Number (masked: XXXX XXXX XXXX 4521) — present since P01 v3
+- Account Type (Savings / Current) — introduced this version
+- Branch (branch_name, e.g. "Hyderabad Main") — introduced this version
+- IFSC (ifsc_code, e.g. "DIGI0001234") — introduced this version
+- Available Balance — present since P01 v3
+- View Transactions button — live at P02 v16.5 (Transaction History
+  pagination); links to Transaction History screen
+- Download Statement button — live at P02 v16; calls SOAP Account
+  Statement service
+All fields read from CBS via REST/SOAP — the Portal never queries
+digistack_cbs directly, per the Governing Rule established this version.
+
+Multi-Account Dashboard Tile Labels (added 2026-08-25)
+-------------------------------------------------------------------
+The Dashboard account tiles introduced as a list/switcher at P02 v15
+now show the account type label ("SAVINGS ACCOUNT" / "CURRENT ACCOUNT")
+alongside the masked account number and balance — because account_type
+is only available in digistack_cbs from this version onward. Before v23,
+tiles show only the masked account number and balance (no type label).
+The tile layout does not change; only the type label populates.
+
 Request Flow
 
 Customer
@@ -722,6 +759,13 @@ Master Index under this exact heading — this version fulfills that scope
 precisely, building on the JMS (P02 v15) and IBM MQ (P02 v19) foundations
 rather than duplicating them.
 
+Dashboard UI Note — Transfer Money Screen (added 2026-08-25)
+-------------------------------------------------------------------
+The Transfer Money screen's "Transfer Type" selector activates here with
+exactly two options: IMPS and NEFT — matching this version's scope
+precisely. RTGS is deliberately excluded and not planned for any later
+version either; the UI never offers it.
+
 ---
 
 Version 26 — Mobile Banking Simulator (Tomcat — mobile.digistack.cloud)
@@ -899,6 +943,19 @@ authorization when tested against the ATM Simulator (Version 27) — proving
 Card Portal (WAS), ATM Simulator (Tomcat), and CBS are properly integrated
 across the heterogeneous topology, not siloed.
 
+Dashboard UI Note (added 2026-08-24, updated 2026-08-24)
+--------------------------------------------------------
+The Dashboard's "Your Cards" section (placeholder since P01 v3, shown as
+"Coming soon — v28" per P01 v2's UI convention) activates here as a
+summary tile: masked card number + status, with a "Manage Card"
+action that redirects the customer from the Internet Banking Portal's
+Dashboard to card.digistack.cloud (Card Portal, its own WAS EAR). This is
+a navigation hand-off, not an embedded iframe/API call from the Portal —
+the Portal shows only the minimal card summary (via REST/SOAP read from
+Card Portal, per this Part's Governing Rule), full card management
+(activate/block/PIN reset/hotlist) happens on Card Portal itself after
+redirect.
+
 Scope note: Card expiry/renewal is a deliberate, documented omission —
 consistent with the "minimal" instruction for this area, not an oversight.
 
@@ -957,6 +1014,45 @@ Note: This is where "Reconciliation," originally only mentioned under
 Version 25's Enterprise Learning with no actual feature, gets a concrete
 implementation — EOD is when real banks reconcile, so it belongs here
 rather than as a separate version.
+
+Dashboard/Admin UI Note — Admin Portal Merged Into Branch Portal
+(added 2026-08-25)
+-------------------------------------------------------------------
+An earlier UI mockup proposed a separate internal "Admin Portal" (System
+Overview tiles for WAS Node/DB status, an Application Status table,
+Customers/Accounts/Transactions/Alerts/Reports/Audit Logs/Configuration
+menu, Recent Admin Events feed). That concept is merged into Branch
+Portal rather than built as a distinct application — Branch Portal is
+already the roadmap's one staff-facing, non-customer portal, and adding
+a second, overlapping internal portal would duplicate deployment/routing
+work without a new WebSphere topic to justify it. Consequences of the
+merge:
+- Branch Portal's Teller Login screen gains an "Operations" side menu
+  alongside Teller functions, but only for the features this roadmap
+  actually scopes: Cash Deposit/Withdrawal, BOD/EOD, EOD Reconciliation
+  Report (all above), plus Unlock User (new, below).
+- The System Overview-style live infrastructure view (WAS node status,
+  app status per server, JVM/session/queue/DB pool health) is NOT
+  rebuilt here — that's already P02 v18's Operations Dashboard (PMI/JMX),
+  which stays its own screen; Branch Portal does not duplicate it.
+- A general Customers/Accounts/Transactions/Reports/Configuration admin
+  menu and an Audit Log UI remain out of scope — P01 v6 already
+  explicitly excluded an Audit Log UI, and nothing since has scoped one.
+  Only the specific operations named above (Teller cash ops, BOD/EOD,
+  reconciliation, Unlock User) exist in Branch Portal.
+- App/server naming from the mockup ("DigiBank-Web/API/Payments" on
+  "server1/2/3") doesn't map to this project's real deployables and is
+  dropped — the real units are the 7 WAS EARs + 2 Tomcat apps listed in
+  this Part's architecture diagram.
+
+Dashboard/Admin UI Note — Unlock User (added 2026-08-25)
+-------------------------------------------------------------------
+Unlock User — flagged as "Coming soon — v29" on the Login screen since
+P01 v2 — is implemented here as a Teller-performed operation inside
+Branch Portal's new Operations menu (above), not as customer
+self-service. A Teller looks up a locked account (locked per P02 v17's
+lockout-after-N-attempts rule) and clears the lock; the customer's own
+Login screen never gains a working Unlock User control.
 
 ---
 
@@ -1031,6 +1127,16 @@ distinct lifecycle and regulatory profile versus core Deposits/Accounts —
 is the most natural first candidate to split out; that's flagged there as
 an option, not committed to here.
 
+Dashboard UI Note (added 2026-08-24)
+--------------------------------------
+The Dashboard gets a new "Loans" section here — once a customer has an
+active loan (origination through disbursement, this version), it appears
+under this section showing loan type, outstanding principal, and next EMI
+due date, sourced read-only from CBS's Loans module via REST/SOAP (same
+Governing Rule as Cards — Portal never writes to digistack_cbs directly).
+If the customer has no active loan, the section is omitted (not shown as
+an empty placeholder), consistent with the Dashboard's existing
+placeholder/omission discipline for not-yet-relevant sections.
 ---
 
 Enterprise Architecture After This Part

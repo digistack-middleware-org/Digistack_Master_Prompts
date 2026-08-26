@@ -12,6 +12,7 @@ ARCH02
 P01
 P02
 P03
+P03.1
 STDGAP01
 RACI01
 
@@ -53,6 +54,13 @@ Suffix Part, same mechanism as P03.1. Sits between P03 and P03.1 in
 reading order (P03 → P03.2 → P03.1 → P04). No version numbers (v1–v78)
 are touched.
 
+Reading Order Alignment Note (added 2026-08-25)
+-------------------------------------------------
+P03.1's Next: field points to P04 (the next build Part), not P03.2 —
+this is correct. The reading order above is the candidate's study path,
+not a technical dependency chain. P03.2 is the reference book; P03.1 is
+the drill layer that tests against it. Both are complete before P04 begins.
+
 ---
 
 Version 1 — Chapter 1: Enterprise Interview Questions
@@ -62,7 +70,12 @@ area, each fully worked in the agreed format.
 
 Sprint 1 — Architecture & Design Decisions
 (CBS single-EAR, Portal/CBS split, Payment Hub Saga pattern, Reporting
-Service tradeoff, Card Portal on WAS vs. Tomcat, database evolution)
+Service tradeoff, Card Portal on WAS vs. Tomcat, database evolution,
+UI scope decisions: Admin Portal merged into Branch Portal, Unlock User
+as Teller-only not self-service, Pay Bill dropped entirely, RTGS never
+added, Security/Profile sidebar absent, Login field label transition
+Username → Customer ID at P03 v24 CIF, account type label gating on
+v23 CBS schema, Transaction History pagination as UI-only v16.5 sprint)
 
 Sprint 2 — Request Flow & Core Transactions
 (Fund Transfer end-to-end, Deposit/Withdraw, Balance Inquiry, NEFT vs.

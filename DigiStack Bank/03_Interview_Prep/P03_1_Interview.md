@@ -12,6 +12,7 @@ ARCH02
 P01
 P02
 P03
+P03.2
 STDGAP01
 RACI01
 
@@ -24,6 +25,7 @@ Interview-5 Banking Production Environment Q&A
 Interview-6 Mock Interview
 
 Used By:
+P03.2 (Interview-6 scored against this file's rubric — see P03.2 Chapter 5)
 P04 (candidate should complete this before entering Phase-2 operations
 work, though it is not a technical dependency)
 
@@ -77,6 +79,23 @@ enforced end to end. This Part assumes the candidate actually built
 P01–P03, not merely read about it — every answer below should be
 traceable to something the candidate did, not memorized.
 
+P03.2 (Enterprise Interview Book) should be read before drilling this
+Part — reading order is P03 → P03.2 → P03.1 → P04. P03.2 is the fully-
+worked source material (questions, scenarios, runbooks, mock transcripts);
+this file is the drill/checklist layer that tests against it. Completing
+P03.1 drills without P03.2 as a reference means drilling against an
+incomplete set.
+
+Forward Reference Note (added 2026-08-25)
+------------------------------------------
+Interview-3 and Interview-4 reference versions from P04–P08 (e.g., P04
+v31, v33, v34, v35; P05 v36, v38; P07 v44, v46; P08 v52) that are not
+yet built. These are forward citations only — they point at where the
+relevant feature/capability will land in the roadmap, not at content
+already available. Candidates working this Part immediately after P03
+should note these as "not yet built — revisit after the relevant Part" and
+move on; they do not block any of the six Interview deliverables.
+
 ---
 
 Interview-1 — Project Walkthrough
@@ -117,6 +136,17 @@ notes)
    digistack_cbs.
 10. What was the hardest architectural decision you had to defend, and
     why did you land where you did?
+11. Why is the "Unlock User" action a Teller operation in Branch Portal
+    instead of customer self-service on the Login screen? (ties to P02
+    v17 lockout + P03 v29 Branch Portal merge)
+12. Why is there no "Pay Bill" feature in your application at all?
+    (ties to P01 v3 scope discipline — no biller registry scoped in
+    P01–P03)
+13. Walk through how the Login screen's field label changes from
+    "Username" to "Customer ID" and why. (P01 v2 → P03 v24 CIF)
+14. Why does the Admin Portal UI not exist as a separate application?
+    (merged into Branch Portal at P03 v29 — rationale: no new WAS topic
+    to justify a second internal portal EAR)
 
 Model-Answer Skeleton (use this shape for every "why" question)
 State the decision plainly (one sentence).
@@ -157,6 +187,12 @@ Question Bank — Representative Set (organized by topic; each topic below
 is a seed set to expand from during actual prep — target 300–500 total
 questions across every topic, drilling from "define it" → "configure
 it" → "troubleshoot it" → "explain a failure mode" for each one)
+
+Note: The full worked question bank (all 300–500 questions, each in the
+agreed short-answer format with why-it's-asked, implementation reference,
+follow-ups, mistakes, and best-practice notes) is in P03.2 Chapter 1.
+The 45 questions below are the seed set — drill from here, expand via
+P03.2.
 
 **Profiles / Cells / Nodes / DMgr / Node Agent**
 1. What is a WebSphere profile, and what are the profile types?
@@ -461,8 +497,24 @@ Example Questions & Answer Anchors
     tradeoff (ARCH01 §Risks) — avoided introducing new read-replica
     infrastructure mid-build; closed later at P09 v64's RDS read
     replica.
+11. **Why is there no RTGS transfer type in your application?** RTGS
+    is out of scope for the entire roadmap — only NEFT and IMPS are
+    implemented (P03 v25 Payment Hub). The Transfer Money screen offers
+    exactly two transfer types, not three. A real bank would have RTGS;
+    this project's scope filter explicitly excluded it.
+12. **Why does the Transaction History screen paginate the way it does?**
+    Pagination (10 rows per page, ← / → controls) is a pure UI/servlet-
+    layer concern introduced at P02 v16.5 — the SOAP endpoint returns
+    all records in one fetch, sliced in servlet memory, so the WSDL
+    contract is unchanged. The filter controls (date range, type) are
+    the primary narrowing tool; pagination handles the remainder.
+13. **Why do the Dashboard account tiles show the account type label
+    ("SAVINGS ACCOUNT / CURRENT ACCOUNT") only from P03 v23 onward?**
+    The account_type column only exists in digistack_cbs from v23 — before
+    that migration, tiles show only the masked account number and balance.
+    Label populates when the column becomes available; no tile layout change.
 
-Sprint Deliverable: Candidate answers 10 domain questions (drawn from
+Sprint Deliverable: Candidate answers 10+ domain questions (drawn from
 this list or equivalent) without infrastructure jargon creeping in where
 a business-level answer is expected — practice distinguishing "how the
 platform does it" from "why the bank needs it."

@@ -73,6 +73,20 @@ Sprint Deliverable: digistack-bank-v1.ear deployed to WAS, reachable via
 context root/virtual host, Home page renders and confirms a live PostgreSQL
 read. Confirmed via Admin Console app status + browser hit.
 
+Public Landing Page UI Note (added 2026-08-24)
+------------------------------------------------
+This version's "Static Home page" is the public/pre-login landing page —
+hero banner, marketing copy, feature-teaser tiles (Accounts/Transfer/
+Transactions, linking to Login — no live functionality), "Login" and
+"Open an Account" buttons. The "Open an Account" button is rendered
+disabled/"Coming soon" — self-service account opening is NOT scoped
+anywhere in P01-P10 yet (see Progress_Log.md Open Questions,
+2026-08-24 entry). A "Personal | Business" toggle in the header is
+likewise disabled/"Coming soon" — Business banking is out of scope
+project-wide (ARCH01 covers CIF/Accounts/Transactions/Products/Loans,
+retail only; no corporate-banking module exists in this roadmap).
+Both remain visually present but non-functional until explicitly scoped.
+
 Version 2 — Login & Session
 ------------------------------
 WebSphere Topic: JVM/Application startup behavior, HTTP session creation,
@@ -87,6 +101,68 @@ EAR Redeploy (v2 over v1, same context root/virtual host).
 Sprint Deliverable: Login/logout works against PostgreSQL; session attribute
 (last login) set at login, read correctly on next request; v2 redeployed
 cleanly over v1.
+
+Dashboard UI Note (added 2026-08-24)
+--------------------------------------
+"Last login: <timestamp>" — already the session-proof content this
+version builds — is retrofitted onto Dashboard.jsp (P01 v3 Sprint 4) as
+a small, persistent header element, not just a one-time post-login flash.
+Shown on every Dashboard visit within the session, framed as a basic
+security signal ("was this you?"), consistent with real banking UX.
+
+Login Page UI Note — Login Field Label (added 2026-08-25)
+-------------------------------------------------------------
+The Login.jsp field is labeled "Username" from this version through P03
+v23. At P03 v24 (CIF & Account Lifecycle), the users table gains a
+formal customer_id as part of the CIF model — from that version onward
+the login field label changes to "Customer ID" on Login.jsp, matching
+the UI mockup. No backend auth change — just a label update on the JSP,
+noted in SetupDoc-v24.md.
+
+Dashboard UI Note — Greeting and Display Name (added 2026-08-25)
+-------------------------------------------------------------------
+The Dashboard header shows "Good Morning / Afternoon / Evening,
+<name>" using the name column added to the users row at P02 v15
+(where the existing users row gains customer_id and name). Before v15
+the greeting reads "Good Morning, <username>" using the session's
+username attribute — a one-line JSP fallback, no extra DB call. From
+P02 v15 onward the name field is used instead. The time-of-day greeting
+("Good Morning" / "Good Afternoon" / "Good Evening") is determined by
+server-side time in the Servlet — no JS date logic needed.
+
+Login Page UI Note — Forgot Password (added 2026-08-24)
+-------------------------------------------------------------
+The Login.jsp mockup includes a "Forgot Password?" link. This is rendered
+disabled/"Coming soon" — no password-reset flow is scoped anywhere in
+P01 v2 (Login) or v10 (Administrative Security). Deferred until
+explicitly scoped (see Progress_Log.md Open Questions, 2026-08-24 entry).
+
+Login Page UI Note — Unlock User (added 2026-08-25)
+-------------------------------------------------------------
+The Login.jsp mockup also includes an "Unlock User" link, alongside
+"Forgot Password?". Rendered disabled/"Coming soon — v29" from this
+version onward. Account lockout itself is introduced at P02 v17
+(lockout after N failed attempts), but the unlock action is deliberately
+not self-service — it's a Teller-performed operation, added at P03 v29
+(Branch Portal / Enterprise Banking Operations) once that portal exists.
+See P03 v29's UI note for the actual Unlock User feature.
+
+Dashboard UI Note — "Coming Soon" Convention (added 2026-08-25)
+-------------------------------------------------------------------
+Standing convention for the whole roadmap: any Dashboard sidebar item or
+tile whose backing feature isn't built yet is rendered visible but
+disabled, labeled "Coming soon — vNN" (pointing at the version that
+activates it), rather than omitted or rendered as if live. This extends
+the same treatment already used for "Forgot Password?" above to every
+placeholder tile introduced at P01 v3 (Cards, Payments/Transfers,
+Statements) and applies to every later placeholder noted in P02/P03 (see
+P02 v15/v16, P03 v28/v29 UI notes).
+
+"Security" and "Profile" sidebar items are removed from the Dashboard
+entirely — no customer-facing Security settings screen or Profile
+management module is scoped anywhere in P01–P03, and no future Part has
+been assigned these features. They do not appear as placeholders or
+"Coming soon" items; they are simply absent from the sidebar.
 
 Version 3 — Basic Transaction (Deposit & Withdraw)
 ------------------------------------------------------
@@ -103,6 +179,41 @@ Application Packaging, EAR Redeploy (v3).
 Sprint Deliverable: Balance/Deposit/Withdraw work end-to-end through
 Controller → Service → DAO → DB, deployed as v3, layering explained
 class-by-class.
+
+Dashboard UI Note (added 2026-08-24, applies at Sprint 4 retrofit)
+-------------------------------------------------------------------
+Per the project's standing Dashboard-first UI standard, this version's
+Balance screen is delivered as `Dashboard.jsp` (not a bare `Account.jsp`),
+with balance hidden by default behind a "View Balance" toggle (JS reveal,
+no page reload) — matching a Kotak-style reference layout (structure only,
+no reused account data). This Dashboard becomes the permanent Home page
+shell for the rest of the roadmap; later Parts activate additional tiles
+on it (see P02 v15/v16, P03 v28/v29 notes) rather than replacing it.
+Sidebar placeholders introduced here (Cards, Payments/Transfers,
+Statements) render as "Coming soon — vNN" per the convention in this
+version's Login Page UI notes above, not as live/enabled nav items.
+
+Dashboard UI Note — Quick Actions Row (added 2026-08-25)
+-------------------------------------------------------------
+A "Quick Actions" row sits below the account tile(s) on the Dashboard,
+showing shortcut buttons. The row is present from v3 onward; individual
+buttons activate exactly when their backing feature does:
+- "Transfer Money" — disabled/"Coming soon — v15" until Fund Transfer
+  exists (P02 v15), then live.
+- "Download Statement" — disabled/"Coming soon — v16" until the SOAP
+  Account Statement service exists (P02 v16), then live.
+- "Pay Bill" — dropped entirely; not shown even as a placeholder
+  (see Pay Bill note below).
+No new backend work per this note — the row is a JSP layout element
+whose buttons toggle enabled/disabled state as versions activate.
+
+Dashboard UI Note — Pay Bill (dropped, added 2026-08-25)
+-------------------------------------------------------------
+An earlier UI mockup included a "Pay Bill" quick action on the Dashboard.
+This is confirmed out of scope for the whole roadmap — no bill-payment
+module (biller registry, biller payment processing) is defined anywhere
+in P01, P02, or P03. Not included as a placeholder either; left out of
+the Dashboard entirely rather than shown as "Coming soon."
 
 Version 4 — EAR Update, Rollback & Application Lifecycle
 -------------------------------------------------------------
@@ -161,6 +272,14 @@ Application Management, Server Lifecycle, wsadmin.
 Sprint Deliverable: DMgr manages federated nodes; Freeze/Unfreeze toggled via
 app and verified to block/allow Deposit/Withdraw; at least one freeze/unfreeze
 action performed via a wsadmin script instead of the UI.
+
+Dashboard UI Note (added 2026-08-24)
+--------------------------------------
+When an account's `is_frozen` flag is true, the Dashboard shows a clear
+banner ("Your account is frozen — contact support") instead of silently
+rejecting Deposit/Withdraw with no explanation. Retrofitted onto
+Dashboard.jsp; no new backend logic — reads the same `is_frozen` column
+this version already introduces.
 
 Version 7 — WAS JDBC
 ------------------------
@@ -246,6 +365,7 @@ Only two roles are built in this roadmap: Customer and Administrator
 P01–P10 — if ever needed, they should be added explicitly at the version
 that requires them (Branch Portal, P03 v29, is the natural candidate),
 not assumed to already exist.
+
 Version 11 — SSL (HTTPS at the Web Tier)
 -----------------------------------------------
 WebSphere Topic: SSL basics, certificates, keystore/truststore, HTTPS,
@@ -297,6 +417,14 @@ Sprint Deliverable: WAS Mail Session configured via JNDI; a Withdraw
 triggers a real email delivered through configured SMTP; delivery failure
 visible in logs when deliberately misconfigured once, to prove
 troubleshooting.
+
+Dashboard UI Note (added 2026-08-24, activates fully at P02 v15)
+------------------------------------------------------------------
+A notification/alert bell icon is added to the Dashboard header here,
+initially showing a count for Withdraw email events (this version). It's
+a lightweight in-app list backed by the same trigger this version already
+fires — not a new notification engine. Extended at P02 v15 to include
+Fund Transfer confirmations once that feature exists.
 
 Version 14 — Reports & JVM Heap Tuning
 -------------------------------------------

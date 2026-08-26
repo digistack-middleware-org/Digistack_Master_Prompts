@@ -10,7 +10,11 @@
 | File | Purpose |
 |---|---|
 | P03.1_Interview.md | Interview-1 through Interview-6 drills |
-| P03.2_Interview_Book.md | Chapter 1–5 full interview reference book |
+| P03.2Enterprise_Interview_Book.md | Chapter 1–5 full interview reference book |
+
+## Reading Order
+P03 (application build) → **P03.2** (read the full reference book first) → **P03.1** (drill/practice against it) → P04 (next build Part).
+P03.2 is source material; P03.1 is the drill checklist. Complete P03.2 before starting P03.1 drills.
 
 ---
 
@@ -76,8 +80,9 @@ Next Task: —
 To resume work in this folder from scratch, upload:
 - [ ] `00_Core/*` (all files)
 - [ ] `Progress_Log.md`
-- [ ] `01_Application_Development/*` (source material this Part drills against)
-- [ ] This folder's contents
+- [ ] `01_Application_Development/*` (P01, P02, P03 — source material this Part drills against)
+- [ ] `P03.2Enterprise_Interview_Book.md` (required before working P03.1 drills — it is the source material P03.1 tests against)
+- [ ] This folder's contents (P03.1_Interview.md, README.md)
 
 ---
 

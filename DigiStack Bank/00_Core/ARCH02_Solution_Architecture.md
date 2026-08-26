@@ -104,7 +104,7 @@ CBS.ear
 Rule: service classes call each other directly within the same JVM/transaction.
 No CBS service ever makes a network call to reach another CBS service.
 
-Satellite App Layering (InternetBanking, PaymentHub, NotificationService,
+Satellite App Layering (Portal, PaymentHub, NotificationService,
 ReportingService, BranchPortal, CardPortal, MobileBanking, ATMSimulator)
 
 <app>.ear / .war
@@ -122,7 +122,7 @@ com.digistack.cbs.controller.FundTransferController
 com.digistack.cbs.service.FundTransferService
 com.digistack.cbs.dao.AccountDao
 com.digistack.cbs.mdb.FundTransferMDB
-com.digistack.internetbanking.controller.LoginController
+com.digistack.portal.controller.LoginController
 com.digistack.paymenthub.service.SettlementService
 com.digistack.notificationservice.mdb.TransactionEventMDB
 
@@ -152,9 +152,9 @@ layout:
                                    per STD's Deployables naming)
 
 Example — CBS:              cbs-parent/ { cbs-ejb/, cbs-web/, cbs-ear/ }
-Example — InternetBanking:  internetbanking-parent/
-                             { internetbanking-web/, internetbanking-ear/ }
-                             (no ejb/ module — InternetBanking has no
+Example — Portal:  Portal-parent/
+                             { Portal-web/, Portal-ear/ }
+                             (no ejb/ module — Portal has no
                              session beans of its own, per §2)
 
 Rule: Tomcat-hosted apps (MobileBanking, ATMSimulator) use ONLY the
@@ -180,10 +180,10 @@ Sprint Plan wording, written before this convention was formalized).
 
 Synchronous (REST/SOAP)
 Contract                          | Provider | Consumers                | Style
-Balance Inquiry                    | CBS      | InternetBanking, Mobile, | REST
+Balance Inquiry                    | CBS      | Portal, Mobile, | REST
                                     |          | ATM                      |
-Fund Transfer                      | CBS      | InternetBanking, Mobile  | REST
-Account Statement / Txn History    | CBS      | InternetBanking,         | SOAP
+Fund Transfer                      | CBS      | Portal, Mobile  | REST
+Account Statement / Txn History    | CBS      | Portal,         | SOAP
                                     |          | ReportingService (data)  |
 Card Service (Issue/Activate/etc)  | CBS      | CardPortal               | REST/SOAP
 Operations (Teller/BOD/EOD)        | CBS      | BranchPortal             | REST/SOAP
@@ -250,7 +250,7 @@ Deployability            | Zero-downtime redeploy/rollback           | P06
 WebSphere ND Cluster Apache Tomcat
 ┌───────┬───────┬───────┬───────┐ ┌───────┬───────┐
 ▼ ▼ ▼ ▼ ▼ ▼ ▼
-InternetBanking CardPortal BranchPortal PaymentHub MobileBanking ATMSimulator
+Portal CardPortal BranchPortal PaymentHub MobileBanking ATMSimulator
 NotificationService
 ReportingService
 │ │ │ │ │ │

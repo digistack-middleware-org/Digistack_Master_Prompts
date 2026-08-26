@@ -20,7 +20,7 @@
 | # | Folder | Status | Last Completed Version | Next Version | Current Focus (AI Resume one-liner) |
 |---|---|---|---|---|---|
 | 00 | Core | 🔒 Frozen | — | — | — |
-| 02 | Application_Development | 🔓 In Progress | v3 | v4 (P01) | P01 v3 signed off 2026-08-11; starting v4 (EAR Update/Rollback/Lifecycle practice, no new features) |
+| 02 | Application_Development | ⏳ Not Started | — | v1 (P01) | Full reset #2 (2026-08-25) — VM + chat lost again; P01 v1 Sprint 1 not yet started. Mirrors Multi-Part Folder Detail row below. |
 | 03 | Interview_Prep | ⏳ Not Started | — | Interview-1 (P03.1) | Not started — depends on P03 completion |
 | 04 | Observability | ⏳ Not Started | — | v31 (P04) | Not started — depends on P03 completion |
 | 05 | HA_DR | ⏳ Not Started | — | v36 (P05) | Not started — depends on P04 completion |
@@ -124,9 +124,9 @@ Once frozen, a folder is only reopened for a documented correction — never sil
 
 | Doc ID | Title | Version | Status |
 |---|---|---|---|
-| IDX | Master Index | 1.3 | Active |
-| STD | Standing Rules | 1.10 | Active |
-| SOE01 | Golden Image Specification | 1.7 | Active |
+| IDX | Master Index | 1.4 | Active |
+| STD | Standing Rules | 1.13 | Active |
+| SOE01 | Golden Image Specification | 1.10 | Active |
 | ARCH01 | Enterprise Architecture | 1.0 | Active |
 | ARCH02 | Solution Architecture | 1.1 | Active |
 | STDGAP01 | Consolidated Standing Standards | 1.1 | Active |
@@ -154,9 +154,9 @@ per STD's Metadata Block Standard) when their content changes.
 
 | ~~2026-08-07~~ | ~~P01~~ | ~~v1~~ | ~~Project Setup & Enterprise Architecture~~ | **RESET 2026-08-11** | Full project reset per project owner request — both lab VM and chat context lost. Entry struck through rather than deleted, per this project's "never silently edit" discipline. WAS ND/PostgreSQL version pins in STD reverted to placeholder. |
 
-| 2026-08-11 | P01 | v2 | Login & Session | Approved | Signed off per TCS01 §2.7 — 10/10 test cases pass. bcrypt password hashing, PreparedStatement-based SQL injection prevention, full session lifecycle (login/last-login/logout) verified. SetupDoc-v2.md is the source record. |
+| ~~2026-08-11~~ | ~~P01~~ | ~~v2~~ | ~~Login & Session~~ | **RESET 2026-08-25** | Entry reset per full project reset #2 — lab VM + chat context lost again, confirmed with project owner 2026-08-25. Struck through rather than deleted, per this project's "never silently edit" discipline. |
 
-| 2026-08-11 | P01 | v3 | Basic Transaction (Deposit & Withdraw) | Approved | Signed off per TCS01 §2.7 — 10/10 test cases pass. Controller→Service→DAO→DB layering introduced; overdraft prevention enforced at Service layer; unauthenticated access blocked. EAR naming corrected to per-version convention (digistack-bank-v3.ear) — v1/v2 naming inconsistency documented as resolved deviation. SetupDoc-v3.md is the source record. |
+| ~~2026-08-11~~ | ~~P01~~ | ~~v3~~ | ~~Basic Transaction (Deposit & Withdraw)~~ | **RESET 2026-08-25** | Entry reset per full project reset #2 — same event as the v2 reset row above. |
 ---
 
 ## Cross-Part Dependency Chain
@@ -165,8 +165,13 @@ per STD's Metadata Block Standard) when their content changes.
 
 | Version | Depends On | Produces | Used By |
 |---|---|---|---|
-| V2 | V1 (app_config table, EAR skeleton) | users table, Login/Logout servlets, HttpSession creation, Dashboard.jsp | V3 (accounts table shares DB), V5 (session replication tests this version's session mechanism), V10 (role-gating builds on this login) |
-| V3 | V2 (users table, session mechanism) | accounts table (FK to users), AccountDao/Service/Controller layers, Deposit/Withdraw UI, InsufficientFundsException | V4 (redeploy/rollback practice reuses this app), V5 (clustering tests this same Deposit/Withdraw as failover subject), V6 (Freeze/Unfreeze extends AccountService) |
+| ~~V2~~ | ~~V1 (app_config table, EAR skeleton)~~ | ~~users table, Login/Logout servlets, HttpSession creation, Dashboard.jsp~~ | ~~V3, V5, V10~~ |
+| ~~V3~~ | ~~V2 (users table, session mechanism)~~ | ~~accounts table (FK to users), AccountDao/Service/Controller layers, Deposit/Withdraw UI, InsufficientFundsException~~ | ~~V4, V5, V6~~ |
+
+Rows above struck through per the 2026-08-25 full reset #2 — these
+describe artifacts from the pre-reset build (lost along with the lab
+VM), not artifacts currently on disk. Re-add un-struck rows once each
+version is actually rebuilt and signed off again.
 
 *(Empty until Version 1 is implemented. Example row, for reference only — remove once real rows are added: `V15 | V3 (accounts table), V2 (users/session) | Customer/Account/Beneficiary/Fund Transfer tables, JMS Queue+MDB | V16 (REST Fund Transfer endpoint), V19 (external MQ leg), V23 (CBS migration)`.)*
 
@@ -199,16 +204,90 @@ per STD's Metadata Block Standard) when their content changes.
 ---
 ## Environment Notes
 
-- **WAS ND version installed:** Not yet installed — target/placeholder pin only (9.0.5.28), per STD. Lab VM lost in reset, rebuild required.
+- **WAS ND version installed:** Not yet installed — target/placeholder pin only (9.0.5.28), per STD. Lab VM lost in second reset (2026-08-25), rebuild required.
 - **Profile(s) created so far:** None.
 - **Database:** Not yet installed — PostgreSQL 16 target/placeholder pin only. Rebuild required.
 - **IBM HTTP Server installed:** No — planned v8.
-- **Any deviations from the roadmap so far:** Full reset 2026-08-11 (VM + chat lost) — see Open Questions for details.
+- **Any deviations from the roadmap so far:** Full reset 2026-08-11 (VM + chat lost), then a second full reset 2026-08-25 (VM + chat lost again) — see Open Questions for details.
 ---
 
 ## Open Questions / Decisions Pending
+**Open — Three Unscoped UI Elements (Business toggle, Open an Account,
+Forgot Password), logged 2026-08-24, no target version assigned.**
+
+Project owner's public landing page / login page mockup (2026-08-24)
+included three elements with no corresponding backend anywhere in
+P01-P10:
+
+| Element | Why it's a gap | Decision needed |
+|---|---|---|
+| "Personal \| Business" toggle | Business/corporate banking not scoped anywhere in ARCH01 or any Part (retail-only project) | Scope a Business Banking module (new Part?) or drop permanently — undecided |
+| "Open an Account" (self-service) | Accounts are currently only created via SQL seed scripts, not a customer-facing flow. Related to the Admin/Teller account-opening gap already logged (2026-08-24, tied to P03 v29 Branch Portal) | Decide: self-service (customer-facing) vs. admin-assisted (Teller, P03 v29) vs. both — undecided |
+| "Forgot Password?" | No password-reset flow anywhere in P01 v2 or v10 | Decide which version builds it (candidate: P01 v10, Administrative Security) — undecided |
+
+Decision (2026-08-24): render all three as disabled/"Coming soon" in the
+UI rather than removing them or silently wiring them to nothing — visible
+so the roadmap gap stays honest, non-functional so no false capability is
+implied. Revisit and formally scope each once a decision is made — not
+before. Per NDS01/Roadmap Discipline, none of this is built ahead of
+schedule; P01 v5 (WAS Clustering) continues uninterrupted.
+
+**Open — Dashboard Full Layout, logged 2026-08-24, updated 2026-08-24 (ATM tile removed).**
+
+| Section | Behavior | Target Version |
+|---|---|---|
+| 1. View Balance (toggle, hidden by default) | In-page reveal, no redirect | **P01 v3 Sprint 4** — `Dashboard.jsp` retrofit |
+| 2. Payments & Transfers tile | In-app Fund Transfer | **P02 v15** (Fund Transfer live) |
+| 3. Last 10 Transactions list | In-page list | **P02 v16** (SOAP Account Statement/Transaction History) |
+| 4. Cards summary tile | Redirects to card.digistack.cloud | **P03 v28** |
+| 5. Loans section | In-page summary, omitted if no active loan | **P03 v30** |
+| 6. Last login timestamp | Persistent header, not just post-login flash | **P01 v2/v3 retrofit** |
+| 7. Frozen-account banner | Shown when `is_frozen` = true | **P01 v6 retrofit** |
+| 8. Notification bell | Withdraw email (v13) → extended to Fund Transfer (v15) | **P01 v13 / P02 v15** |
+| 9. Multi-account switcher | "Your Accounts" becomes a list once 2+ accounts possible | **P02 v15** |
+| 10. Download Statement link | Next to Recent Transactions, reuses v16's SOAP service | **P02 v16** |
+
+No new backend logic introduced by any of these — all reuse data/events
+already produced by the version they're attached to. Per NDS01/Roadmap
+Discipline, none of this is built ahead of schedule; P01 v5 (WAS
+Clustering) continues uninterrupted.
+
+Decision: do NOT build ahead of schedule (NDS01/Roadmap Discipline). P01 v5
+continues uninterrupted. ATM tile (previously logged 2026-08-24) removed
+the same day — project owner agreed ATM is a physical channel, not
+something a customer launches from online banking; ATM Simulator (P03
+v27) remains a standalone kiosk app with no Dashboard entry point.
 
 > Anything you were mid-discussion on when a chat ended, so it isn't lost.
+**Resolved — Full Project Reset #2, 2026-08-25.**
+
+Project owner's lab VM (dsb-dmgr, dsb-db, etc.) and prior chat session
+were both lost a second time. Confirmed explicitly with project owner
+(2026-08-25) that this is a genuine restart, mirroring the 2026-08-11
+event. Reset executed:
+- SESSION_STATE.md pointer reverted to P01 v1, Sprint 1 (not started);
+  header version bumped 1.4 → 1.5, correcting a duplicate-"v1.4"
+  change-note labeling bug found in the same pass
+- This file's Folder Tracker row for `02_Application_Development`
+  reverted to ⏳ Not Started (was stuck showing "v3 signed off,
+  In Progress" — itself stale against both this reset and the prior
+  2026-08-11 one)
+- Detailed Version Log: the 2026-08-11 v2 and v3 "Approved" rows
+  struck through (not deleted), per this project's "never silently
+  edit" discipline
+- Cross-Part Dependency Chain: V2/V3 rows struck through for the same
+  reason
+- Environment Notes updated to reflect the second loss
+- STD's WAS ND / PostgreSQL version pins reverted from CONFIRMED back
+  to target/placeholder (STD v1.13), SOE01's mirrored pins likewise
+  (SOE01 v1.10) — this also closes a real drift found during this
+  pass: the 2026-08-11 reset entry below already claimed this same
+  revert had been done, but STD/SOE01's actual pins were never edited
+  at that time and still read CONFIRMED (dated 2026-08-07) until now
+
+Physical rebuild (VM provisioning, WAS ND install, PostgreSQL install)
+begins fresh at P01 v1 Sprint 1.
+
 **Resolved — Full Project Reset, 2026-08-11.**
 
 Project owner's lab VM (dsb-dmgr, dsb-db, etc.) and prior chat session
@@ -295,6 +374,8 @@ P05 changed, consistent with the Version Numbering Freeze discipline
 This item is now closed — both P04 and P05 explicitly cite RACI01 §4
 inline, per the closure condition originally set out when this gap was
 first logged.
+
+
 
 *(Resolved items below.)*
 

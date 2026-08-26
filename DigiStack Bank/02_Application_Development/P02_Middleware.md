@@ -137,6 +137,27 @@ a Customer's own Accounts) returns an immediate response while the actual
 balance update happens asynchronously via an MDB on SIBus; a deliberately
 failing transfer lands in the DLQ and is inspected.
 
+Dashboard UI Note (added 2026-08-24)
+--------------------------------------
+The "Payments and Transfers" tile on the Dashboard (placeholder since
+P01 v3, shown as "Coming soon — v15" per P01 v2's UI convention) goes
+live here — Fund Transfer (to a registered Beneficiary) is reachable
+directly from the Dashboard's tile, not just a standalone form. The
+Transfer Money screen at this point offers internal transfer only (no
+IMPS/NEFT/RTGS types yet — those transfer-type options don't exist
+until P03 v25, and RTGS is never added — see P03 v25's UI note).
+
+Dashboard UI Note — Multi-Account + Alerts (added 2026-08-24)
+-----------------------------------------------------------------
+Two Dashboard changes land here, both driven by this version's own
+schema changes:
+1. "Your Accounts" becomes a list/switcher (not a single hardcoded
+   account) — required the moment a customer can hold 2+ accounts
+   (this version's Account/customer_id change). Each account in the list
+   gets its own balance-toggle and transaction feed.
+2. The notification bell (P01 v13) is extended to include Fund Transfer
+   confirmations, reusing the same in-app alert list.
+
 ---
 
 Version 16 — Web Services (SOAP/REST)
@@ -177,6 +198,67 @@ one SOAP endpoint (Account Statement / Transaction History) are live; a
 WSDL is published and browsable; a simple external client (Postman/SoapUI)
 successfully calls all three and logs are captured for each
 request/response.
+
+Dashboard UI Note (added 2026-08-24)
+--------------------------------------
+The Dashboard's "Your Recent Transactions" section (placeholder since
+P01 v3, shown as "Coming soon — v16" per P01 v2's UI convention)
+activates here — the SOAP Account Statement / Transaction History
+service built this version is queried to populate the Dashboard's
+last-10-transactions list (date, description, amount), per the standing
+Dashboard-first UI standard. The Statements sidebar item (also
+"Coming soon — v16") activates in lockstep with this. This is a read-only UI consumer of the
+existing SOAP endpoint — no new backend logic beyond what this version
+already delivers.
+
+Dashboard UI Note — Download Statement (added 2026-08-24)
+---------------------------------------------------------------
+A "Download Statement" link is added next to the Dashboard's Recent
+Transactions section, calling this version's SOAP Account
+Statement/Transaction History service to produce the same PDF/CSV
+format P01 v14's Transaction Report already generates. No new report
+logic — just a Dashboard entry point into an existing service.
+
+---
+
+Version 16.5 — Transaction History Pagination (UI-only)
+-----------------------------------------------------------
+WebSphere Topic: None — this is a pure UI/servlet-layer sprint with
+zero new WebSphere administration work.
+
+Rationale: The SOAP Account Statement / Transaction History service
+introduced at v16 returns all matching records in one response. The
+Transaction History screen (Statement sidebar) needs client-side
+pagination for usability — the backend already supports date/type
+filters, but a long result set needs page-by-page navigation. This is
+filed as v16.5 rather than inside v16 (to keep v16 a clean single-topic
+SOAP/REST sprint) and before v17 (so the UI is complete before security
+hardening locks down the endpoints).
+
+What Is Built
+- The Transaction History JSP/Servlet is updated to pass page and
+  pageSize parameters to the existing SOAP Account Statement service
+  call.
+- The service response is sliced server-side in the Servlet layer
+  (not in the SOAP service itself — no change to the published WSDL
+  or endpoint contract) and rendered as a paged table.
+- Navigation controls rendered: [ ← 1  2  3  4 → ] below the table,
+  consistent with the Dashboard UI mockup.
+- Page size: 10 rows per page (fixed for now — no user-configurable
+  page-size selector).
+- No new database queries, no new backend service, no new WSDL changes.
+
+Scope Boundary
+Pagination lives entirely in the Portal's presentation layer
+(TransactionHistoryServlet + TransactionHistory.jsp). The SOAP endpoint
+at CBS is unchanged. If the full result set is very large, the filter
+controls (date range + type, live since v16) are the primary tool for
+narrowing — pagination handles the remainder.
+
+Sprint Deliverable: Transaction History screen displays results 10 per
+page with working ← / → navigation; navigating pages does not trigger a
+new SOAP call per page (result is fetched once, paged in servlet memory);
+the WSDL and SOAP endpoint are confirmed unchanged after this sprint.
 
 ---
 

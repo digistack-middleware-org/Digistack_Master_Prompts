@@ -1,5 +1,5 @@
 ID: SESSION01
-Version: 1.4
+Version: 1.5
 Status: Active
 
 Title: Session State — Global Pointer
@@ -32,8 +32,8 @@ folder's own README.md — this file does not duplicate it.
 
 Folder: 02_Application_Development/
 Part(s) in progress: P01
-Version in progress: v4
-Sprint in progress: Sprint 1 (next — add "v4" label to Home.jsp for lifecycle practice)
+Version in progress: v1
+Sprint in progress: Sprint 1 (VM provisioning — not yet started)
 
 → For full detail (completion %, AI Resume Context, Pause/Resume Log),
   open that folder's own README.md.
@@ -69,7 +69,7 @@ When you move to a new Part/folder:
 
 Last Updated
 ------------
-2026-08-11
+2026-08-25
 
 Change Note (v1.4, 2026-08-11)
 -------------------------------
@@ -94,3 +94,11 @@ Corrected Sprint pointer drift — no sprint work had actually begun.
 Change Note (v1.3, 2026-08-07)
 -------------------------------
 P01 Version 1 signed off (superseded by this v1.4 reset).
+
+Change Note (v1.5, 2026-08-25)
+-------------------------------
+Full project reset #2 (chat + VM both lost, confirmed with project
+owner 2026-08-25). Pointer reset to P01 v1, Sprint 1. Mirrors the
+2026-08-11 reset precedent. (Originally logged as a second "v1.4"
+entry — corrected here to v1.5, since the metadata header cannot
+carry two different change notes under the same version number.)

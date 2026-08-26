@@ -14,12 +14,14 @@ CAP01
 RACI01
 
 Exports:
-Versions 31-35
+Versions 31-35.5
 Application & Infrastructure Observability Foundations
 Centralized Logging & Log Analytics
 APM, Distributed Tracing & SRE Methodology
 Alerting, Dashboard Engineering & Synthetic Monitoring
 Production Operations, Capacity Planning & Reporting
+Enterprise Incident Management & ServiceNow Integration —
+Unified Monitoring Portal (monitoring.digistack.cloud)
 
 Used By:
 P05
@@ -567,8 +569,347 @@ runs above.
 
 ---
 
+Version 35.5 — Enterprise Incident Management & ServiceNow Integration
+------------------------------------------------------------------------
+Core promise: Alert → Automatic Ticket → Assignment → Investigation →
+Resolution → Verification → RCA → Closure.
+
+Objective: Give Versions 31–35 a single-pane-of-glass entry point
+(monitoring.digistack.cloud), and make the final leg — turning an alert
+into a formally managed, assigned, deduplicated, and closed incident —
+fully practical, not just conceptual. This is a capstone integration
+version: the portal surfaces and links into data/tools already built
+(Prometheus/Grafana, OpenSearch, Jaeger, Alertmanager, ServiceNow) and
+adds the ServiceNow-facing incident workflow on top. None of those
+underlying tools are replaced or retired by the portal's existence — see
+"Portal Is an Entry Point, Not a Replacement" below.
+
+Important clarification — the portal is an entry point, not a
+replacement: Grafana, OpenSearch, Jaeger, Alertmanager, and ServiceNow are
+NOT retired or hidden by this version. The portal is a single-pane-of-
+glass front door that surfaces and links to those tools; each specialized
+tool still exists, is still directly reachable, and still owns its own
+data:
+
+```
+Portal
+  │
+  ├── Prometheus / Grafana → Metrics
+  ├── OpenSearch            → Logs
+  ├── Jaeger                → Traces
+  ├── Alertmanager          → Alerts
+  ├── Runbooks              → Operations
+  └── ServiceNow            → Incidents
+```
+
+This is a different relationship than v31's supersession of P02 v18's
+custom dashboard: v18's dashboard was a bespoke one-off tool being
+replaced by industry-standard tooling, so it was correctly retired.
+Grafana/OpenSearch/Jaeger/Alertmanager/ServiceNow are the industry-
+standard tools themselves — the portal composes them, it doesn't
+duplicate or supersede them.
+
+Minimum App Needed: Zero new banking functionality. The portal itself is
+a new small internal WAS application (read-only dashboards + ServiceNow
+API calls) — not part of the 9 banking deployables.
+
+V35.5 Architecture
+
+```
+                    WebSphere
+                       │
+        ┌──────────────┼──────────────┐
+        ▼              ▼              ▼
+    Prometheus      OpenSearch       Jaeger
+     Metrics          Logs           Traces
+        │              │              │
+        └──────────────┼──────────────┘
+                       ▼
+                  Alertmanager
+                       │
+                  P2 Alert
+                       │
+                       ▼
+          monitoring.digistack.cloud
+                       │
+                       ▼
+              Incident Management
+                       │
+                       ▼
+                  ServiceNow
+                       │
+                       ▼
+                WAS Support Team
+                       │
+                       ▼
+                 Investigation
+                       │
+                       ▼
+                    Runbook
+                       │
+                       ▼
+                   Resolution
+                       │
+                       ▼
+                  Verification
+                       │
+                       ▼
+                      RCA
+                       │
+                       ▼
+               ServiceNow Closure
+```
+
+Portal V1 — Monitor (built on v31)
+Purpose: WebSphere/infrastructure health at a glance.
+Sources: WAS JMX/PMI → JMX Exporter → Prometheus → Grafana; Linux → Node
+Exporter → Prometheus; PostgreSQL → PostgreSQL Exporter → Prometheus.
+Screens: WAS Cell / Cluster / Database summary tiles, Node Agent status,
+per-application status table (all 9 deployables), JVM health (heap/GC/
+threads), JDBC connection pool gauges per server, recent events feed.
+
+Portal V2 — Observe (built on v31–v34)
+Purpose: Full observability — metrics, logs, traces, and alerts in one
+entry point.
+Sources: Metrics (Prometheus/Grafana), Logs (Filebeat → Logstash →
+OpenSearch), Traces (OpenTelemetry → Jaeger), Alerts (Prometheus →
+Alertmanager), Synthetic monitoring (v34).
+Screens: System health tiles (WebSphere/Database/MQ/Monitoring), active
+alerts by priority (P1–P3), WebSphere health bars (heap/threads/JDBC/GC),
+business health (Login success, Fund Transfer success, avg transfer time,
+transactions/min), recent events, observability-service status strip
+(Prometheus/Grafana/OpenSearch/Jaeger/Alertmanager/Synthetic).
+
+Portal V3 — Operate (built on v35)
+Purpose: Turn V2's data into actual production operations.
+Screens: Production overview tiles, open incidents by priority,
+Operations KPIs (MTTD/MTTR/MTBF), SLO/SLA panel (availability, error
+budget, response SLO), capacity trend (JVM heap/JDBC pool/CPU
+progression), and action shortcuts into the Runbook Library, Chaos Tests,
+Capacity Report, SLA Report, and RCA Reports produced in v35.
+
+Portal V4 — Manage Incident (new in this version)
+Purpose: Close the loop from alert to resolved incident, wired to
+ServiceNow (concepts only, per v35's Enterprise Tools list — no live
+ServiceNow instance is required to complete this version).
+
+New menu item added to the portal: 🚑 Incident Management. Selecting it
+opens the Incident Management screen:
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║ INCIDENT MANAGEMENT                                          ║
+╠══════════════════════════════════════════════════════════════╣
+║                                                                ║
+║ ACTIVE INCIDENTS                                              ║
+║                                                                ║
+║ 🔴 P1    0                                                    ║
+║ 🟠 P2    2                                                    ║
+║ 🟡 P3    4                                                    ║
+║ 🔵 P4    7                                                    ║
+║                                                                ║
+║ ────────────────────────────────────────────────────────────  ║
+║                                                                ║
+║ INC0010042                                                    ║
+║ P2 — JDBC Connection Pool Exhaustion                          ║
+║ CBS / WAS02                                                   ║
+║ Status: INVESTIGATING                                        ║
+║ Assigned: WAS-L3                                              ║
+║                                                                ║
+║ Created: 14:32                                                ║
+║ MTTD: 8 seconds                                               ║
+║                                                                ║
+║ [Open] [Investigate] [ServiceNow]                             ║
+║                                                                ║
+╚══════════════════════════════════════════════════════════════╝
+```
+
+Automatic Ticket Creation (the most important V35.5 feature): the WAS
+administrator never manually opens the ticket. Example timeline:
+
+```
+14:32:00  JDBC Pool = 96%
+14:32:05  Prometheus Alert Rule fires
+14:32:06  Alertmanager receives alert
+14:32:08  ServiceNow API called
+14:32:09  INC0010042 CREATED
+14:32:10  WAS-L3 assigned
+```
+
+ServiceNow ticket auto-populated fields: Incident Number, Priority,
+Application, WebSphere Server, Cluster, Alert Name, Current Metric,
+Threshold, Detected Time, Environment, Correlation ID, Description,
+Monitoring Portal URL, Grafana URL, OpenSearch URL, Jaeger URL, Runbook
+URL. Example:
+
+```
+INC0010042
+Priority: P2
+Service: DigiStack Banking
+Application: CBS
+Server: WAS02
+Alert: JDBC Pool Exhaustion
+Current: 96%
+Threshold: 90%
+Correlation ID: FT-20260825-00192
+Source: Monitoring.digistack.cloud
+```
+
+Incident lifecycle (official workflow, expands the shorthand already
+used in v35's Sprint Deliverable into full named states):
+ALERT → TICKET CREATED → ASSIGNED → ACKNOWLEDGED → INVESTIGATING →
+ROOT CAUSE FOUND → FIX IN PROGRESS → RESOLVED → VERIFICATION → RCA →
+CLOSED.
+
+Deduplication requirement (critical — prevents alert storms from
+becoming ticket storms): if JDBC stays at 96% across multiple alert
+evaluation cycles, this must NOT create INC001, INC002, INC003... in
+sequence. Instead:
+
+```
+Alert starts    → INC001 created
+Alert continues → INC001 updated
+Alert continues → INC001 updated
+Alert clears    → INC001 → RESOLVED
+```
+
+This works together with (does not duplicate) the Alertmanager
+deduplication/grouping already required in Version 34 — V34 dedupes at
+the alerting layer, V35.5 dedupes at the ticketing layer using the same
+correlation ID so one real-world condition never produces more than one
+open incident.
+
+What a closed ticket contains (the glue this version provides): each
+ServiceNow incident links out to every other version's artifacts rather
+than duplicating their data —
+
+```
+INC0010042
+     │
+     ├── 📊 Metrics   → Grafana / Prometheus (v31, v34)
+     ├── 📜 Logs      → OpenSearch (v32)
+     ├── 🔍 Trace     → Jaeger (v33)
+     ├── 📖 Runbook   → (v35)
+     ├── 🖥 WebSphere → native PMI/JMX (v31)
+     └── 📝 RCA       → (v35)
+```
+
+Flow: WAS → Prometheus → Alert Rule → Alertmanager → P2/P1 alert →
+monitoring.digistack.cloud → Incident Management → ServiceNow API →
+ticket (e.g., INC0010042) → team assignment (e.g., WAS-L3) →
+Acknowledged → Investigation (pulls Metrics/Logs/Trace inline from Portal
+V2) → Root Cause Found → Runbook (v35) → Fix in Progress → Resolved →
+Verification → RCA (v35) → ServiceNow Closure.
+
+Screens: Incident counts by priority (P1–P4), active incident cards with
+inline links to Metrics/Logs/Trace/Runbook/ServiceNow, incident lifecycle
+strip (Alert → Ticket → Assigned → Acknowledged → Investigating → Root
+Cause → Fix → Resolved → Verify → RCA → Closed), MTTD/MTTR/SLA compliance
+KPIs, ServiceNow connection status panel.
+
+Portal Is an Entry Point, Not a Replacement (important clarification)
+The portal is a single-pane-of-glass front end — it does not retire,
+replace, or disappear the specialized tools underneath it. Grafana still
+exists for deep-dive metric exploration, OpenSearch still exists for raw
+log search, Jaeger still exists for full trace inspection, Alertmanager
+still exists as the actual alerting engine, and ServiceNow still exists
+as the actual system of record for incidents. The portal embeds/links
+into each of these; it does not reimplement their functionality:
+
+```
+Portal
+  │
+  ├── Prometheus / Grafana → Metrics
+  ├── OpenSearch            → Logs
+  ├── Jaeger                → Traces
+  ├── Alertmanager          → Alerts
+  ├── Runbooks              → Operations
+  └── ServiceNow            → Incidents
+```
+
+This is the same relationship v31 already established between the
+Operations Dashboard and the underlying PMI/JMX data — except here it's
+formalized across all five tools instead of just one, and made explicit
+so a fresh reader doesn't assume v35.5 decommissions Grafana/OpenSearch/
+Jaeger/Alertmanager/ServiceNow the way v31 decommissioned P02 v18's
+custom dashboard.
+
+Portal Family Summary
+
+```
+DIGISTACK BANK — monitoring.digistack.cloud
+        │
+   ┌────┼────┬─────────┐
+   ▼    ▼    ▼         ▼
+  V1   V2   V3        V4
+Monitor Observe Operate Manage Incident
+ (v31) (v31-34) (v35)   (this version)
+```
+
+Underlying tools remain fully intact and directly accessible underneath
+every one of those four views — the portal is the entry point, not a
+replacement:
+
+```
+Portal
+  │
+  ├── Prometheus / Grafana → Metrics
+  ├── OpenSearch            → Logs
+  ├── Jaeger                → Traces
+  ├── Alertmanager          → Alerts
+  ├── Runbooks              → Operations
+  └── ServiceNow            → Incidents
+```
+
+How this Part reads end-to-end (V31→V35.5 narrative):
+V31 Monitor — "Is it healthy?" (Prometheus + Grafana)
+V32 Log — "What happened?" (Filebeat + Logstash + OpenSearch)
+V33 Trace — "Where did it fail/slow?" (OpenTelemetry + Jaeger)
+V34 Alert — "Tell me automatically." (Prometheus + Alertmanager)
+V35 Operate — "How do I fix it?" (Runbooks + Chaos + RCA + SRE)
+V35.5 Incident — "How do we formally manage it?" (ServiceNow + Incident
+Management)
+
+Cross-reference note: Portal V4's "Assignment" concept ties back to
+RACI01 §4's Incident Commander role (already referenced in v35) for any
+incident spanning more than one team — the portal surfaces the assignment,
+it does not redefine who holds authority.
+
+Topics Covered: Dashboard Engineering (consolidation), Portal
+Architecture, ServiceNow Integration (concepts), Single-Pane-of-Glass
+Design, Incident Workflow Automation, Alert-to-Ticket Deduplication.
+
+Enterprise Learning: Observability Portal Design, NOC/SOC-style unified
+monitoring, Incident Management tooling integration, Executive/Operations
+reporting surfaces.
+
+Sprint Deliverable: monitoring.digistack.cloud is reachable and shows all
+four portal views (V1–V4); a live P2 alert (e.g., JDBC pool exhaustion
+from v35's chaos testing) is visible flowing through Portal V2 (alert
+raised) → Portal V4 (ticket auto-created within seconds, assigned,
+acknowledged, investigated using inline Metrics/Logs/Trace, root-caused,
+fixed, resolved, verified, RCA'd, closed) — with the sustained-alert
+scenario proven to update the single existing incident rather than
+spawning duplicates — demonstrating the full v31–v35 stack operating
+through one interface rather than six separate tools.
+
+---
+
 Completion Checklist
 ------------------------
+□ Unified portal (monitoring.digistack.cloud) live with all four views —
+  Monitor, Observe, Operate, Manage Incident (v35.5)
+□ At least one real alert traced end-to-end through the portal: raised
+  (V2) → ticket auto-created and assigned within seconds (V4) →
+  acknowledged → investigated inline → root-caused → fixed → resolved →
+  verified → RCA'd → closed (v35.5)
+□ ServiceNow ticket auto-populated with all required fields (Incident
+  Number, Priority, Application, Server, Cluster, Alert Name, Current
+  Metric, Threshold, Detected Time, Environment, Correlation ID,
+  Description, Portal/Grafana/OpenSearch/Jaeger/Runbook URLs) (v35.5)
+□ Deduplication proven: a sustained alert condition updates a single
+  existing incident rather than creating duplicate tickets, using the
+  same correlation ID discipline as V34's Alertmanager grouping (v35.5)
 □ All 9 P03 applications expose working /health and metrics endpoints
   (v31)
 □ Prometheus/Grafana operational across Linux, WAS/JVM, and PostgreSQL
@@ -630,6 +971,11 @@ Observability Infrastructure Added
 - Synthetic monitoring jobs (v34)
 - Production runbooks, chaos/resilience testing, capacity forecasting,
   availability/SLA reporting (v35)
+- Unified Monitoring & Incident Management Portal at
+  monitoring.digistack.cloud, consolidating v31-v35 into four views
+  (Monitor / Observe / Operate / Manage Incident), with automatic
+  alert-to-ServiceNow-ticket creation, assignment, deduplication, and
+  full incident lifecycle tracking through to RCA and closure (v35.5)
 
 Carried Forward to P05
 ---------------------------
@@ -638,4 +984,6 @@ Alertmanager) becomes the tooling used to validate disaster-recovery
 drills — DR failover success/failure will be measured through the same
 metrics, logs, and traces built here, not a separate ad hoc check. The
 chaos-testing discipline from v35 is also the direct precedent for P05's
-DR failover drills.
+DR failover drills. The v35.5 Unified Portal becomes the single screen used
+to observe and manage those DR drills, rather than a separate DR-specific
+dashboard being built from scratch in P05.

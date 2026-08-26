@@ -1,5 +1,5 @@
 ID: SOE01
-Version: 1.8
+Version: 1.10
 Status: Active
 
 Title: Standard Operating Environment — Golden Image Specification
@@ -23,6 +23,7 @@ P04
 P08 
 P09
 P10
+P10.1
 P10.1
 
 Next:
@@ -87,6 +88,22 @@ target/placeholder to CONFIRMED, mirroring STD v1.8's same-day change —
 P01 v1 signed off, SetupDoc-v1.md §4.1/§8 is the source record. IHS/Web
 Server Plug-ins/IBM Installation Manager pins remain target/unconfirmed
 until P01 v8 is reached.
+
+Version 1.10 change note (2026-08-25): Full reset #2 (VM + chat lost,
+confirmed with project owner 2026-08-25, per SESSION_STATE v1.5).
+WebSphere ND and PostgreSQL version pins in §9 reverted from CONFIRMED
+back to target/placeholder, unconfirmed, mirroring STD v1.13's same-day
+change and the 2026-08-11 reset precedent. Same drift-closure note as
+STD v1.13: this revert had been claimed as already-done in
+Progress_Log.md's 2026-08-11 entry but was never actually applied to
+this document until now.
+
+Version 1.9 change note (2026-08-25): Added P10.1 to this document's own
+Used By list — both IDX's and STD's copies of the Dependency Matrix
+already marked the SOE01 column ✅ for P10.1, but this document's header
+had never been updated to match, the same category of gap as the
+2026-07-28 STD/SOE01 port-table fix and the 2026-07-29 ARCH02 §2a Maven
+metadata correction. No content/behavioral change — header only.
 
 Version 1.8 change note (2026-08-07): WebSphere ND and PostgreSQL
 version pins promoted from target/placeholder to CONFIRMED, mirroring
@@ -254,12 +271,12 @@ enforces which source subnets may reach the ones STD already defines.
 | Component | Version | Notes |
 |---|---|---|
 | IBM Installation Manager | 1.9.x (target, placeholder — response-file driven, P07 v44 pattern) | Version pinned per SetupDoc, re-validated at each P07 migration |
-| WebSphere ND | 9.0.5.28 (CONFIRMED — installed on dsb-dmgr, source SetupDoc-v1.md §4.1, confirmed 2026-08-07) | Upgraded only via P07's Migration Strategy — never ad hoc on a single node |
+| WebSphere ND | 9.0.5.28 (target/placeholder, unconfirmed — reverted from CONFIRMED per the 2026-08-25 full reset #2; not yet installed) | Upgraded only via P07's Migration Strategy — never ad hoc on a single node |
 | Java SDK | IBM Java 8 (SDK 8.0), bundled/certified with WAS ND 9.0.5.28 target | Coexistence handled per P07 v44's managesdk discipline |
 | IBM HTTP Server | 9.0.5.28 (target — version-matched to WAS ND pin above, per IBM's Support Matrix, P07 v44's planning gate) | Mismatched IHS/WAS versions is a named migration failure mode — never install IHS independently of this check |
 | Web Server Plug-ins | 9.0.5.28 (target — matches WAS ND/IHS pin above) | Generated/propagated per P01 v8's plugin-cfg.xml workflow |
 | IBM MQ | IBM MQ Advanced for Developers, 9.3.x/9.4.x (free tier, per STD's Licensing Reality Check) | Version pinned per SetupDoc-v19.md |
-| PostgreSQL | 16 (CONFIRMED — installed on dsb-db, source SetupDoc-v1.md §4.3, confirmed 2026-08-07) | Project-wide standard — see MASTER INDEX Open Decisions |
+| PostgreSQL | 16 (target/placeholder, unconfirmed — reverted from CONFIRMED per the 2026-08-25 full reset #2; not yet installed) | Project-wide standard — see MASTER INDEX Open Decisions |
 
 10. Security Hardening Baseline
 ------------------------------------

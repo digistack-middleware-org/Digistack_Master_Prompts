@@ -17,6 +17,25 @@ them from prose on the spot.
 **Enterprise Architecture itself is intentionally NOT duplicated here** —
 see ARCH01 directly for that.
 
+## Version-Start Diagram Check (standing rule)
+
+At the start of every new version (before or alongside that version's
+Sprint work), check this folder against the version about to be built:
+
+1. Look up the version in each diagram's **Populate At** field below.
+2. Any diagram whose trigger is met (this version or earlier) and is
+   still `Not Populated`, or whose last populated state is now stale
+   (a new VM powered on, a new table added, a new hop added, etc.) —
+   update it before/alongside that version's Sprint Deliverable, not
+   after, per SDD01's "write it as you go" discipline.
+3. Diagrams whose trigger hasn't been reached yet stay untouched —
+   never populate ahead of the build.
+4. Record the update the same way as any populated diagram: a
+   **Populated: Yes (as of vN, date)** line inside that file.
+
+This makes the diagram folder self-checking at every version boundary,
+rather than something revisited only when someone asks for it.
+
 ## Fill-In Discipline
 
 Every file below is a scaffold only: a title, a short "what this diagram

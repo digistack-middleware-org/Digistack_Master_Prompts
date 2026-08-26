@@ -93,7 +93,7 @@ Architectural Views
     │                   │                   │
  WebSphere ND Cell  WebSphere ND Cell  WebSphere ND Cell
     │
-    ├── InternetBanking (WAS)
+    ├── Portal (WAS)
     ├── CardPortal (WAS)
     ├── BranchPortal (WAS)
     ├── PaymentHub / NotificationService / ReportingService (WAS)
@@ -117,7 +117,7 @@ SMTP/SMS · NTP · DNS
 ---------------------------------------
 Application          | Type              | Deployment | Writes digistack_cbs?
 CBS                   | Core banking      | WAS EAR    | Yes — sole writer
-InternetBanking       | Presentation       | WAS EAR    | No
+Portal                | Presentation       | WAS EAR    | No
 PaymentHub            | Payment routing    | WAS EAR    | No (routes only)
 NotificationService   | Event consumer     | WAS EAR    | No
 ReportingService      | Read-only reports  | WAS EAR    | No (read-only, accepted risk)

@@ -79,7 +79,13 @@ What this version adds, in 2-3 sentences. Link back to the roadmap entry.
 - New packages to install:
 - Ports to open:
 
-## 3. Pre-Deployment Checklist
+## 3. Pre-Deployment Checklist (do this first — before any Step 4 work begins)
+- [ ] 01_Architecture diagram check — the very first action of this
+      version, done before VM/config work starts: open that folder's
+      README, check each diagram's Populate At trigger against v<N>.
+      Update anything now due; leave the rest untouched. Check this
+      box only once that pass is actually done, even if the outcome
+      is "nothing was due this version."
 - [ ] Previous version's SetupDoc completed and verified
 - [ ] VM snapshot taken (pre-v<N>)
 - [ ] Git branch `feature/v<N>-<desc>` created from latest `develop`
