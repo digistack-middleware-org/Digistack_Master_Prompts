@@ -228,6 +228,107 @@ A version is signed off when, and only when:
 5. Reviewer/approver and date recorded in the Sign-off table.
 
 ===============================================================================
+# SECTION 2A — TCS02: Enterprise Test Promotion Flow (Dev → Prod, Bank-Realistic)
+===============================================================================
+
+TCS01 (Section 2) defines the *shape* of a test case (ID, template,
+priority model, sign-off rubric). TCS02 defines the *flow* those test
+cases travel through in a real bank, and maps that flow onto this
+project's actual environment reality: single-VM lab, no separate DEV/
+SIT/UAT/STAGING/PROD environments until EPS01's Promotion Path (STD
+§Environments) is physically stood up — which doesn't happen until
+later Parts (P08 CI/CD onward for automation; environment promotion
+itself is EPS01, already defined, but currently exercised as simulated
+phases on one environment, not physically separate ones).
+
+## TCS02.1 — The Seven Test Types (Standing Reference)
+
+| # | Test Type | Who Runs It (real bank) | Who Runs It (this project, solo) | What It Proves |
+|---|---|---|---|---|
+| 1 | Unit Test | Developer | You, per class/method, before EAR packaging | One class/method works in isolation |
+| 2 | Integration Test | Developer / WAS Admin | You, after EAR deployed to the lab VM | Code connects correctly to DB/WAS/JNDI |
+| 3 | System Test (SIT) | QA Team | You, exercising the full version's feature end-to-end | Entire flow works, not just one class |
+| 4 | User Acceptance Test (UAT) | Business Analyst | You, checking against the version's Sprint Deliverable wording | Feature matches what was actually asked for |
+| 5 | Regression Test | QA Team | You, re-running prior versions' Critical/High cases (TCS01 §2.6) | Nothing previously working broke |
+| 6 | Performance Test | Performance Engineer | You, only where CAP01 gives a target (JVM heap, thread pool, DB pool) | System holds under the lab-adjusted load target |
+| 7 | Smoke Test | WAS Admin / Ops | You, immediately after deploy | Critical path is alive |
+
+## TCS02.2 — Environment Mapping (Real Bank vs. This Project, Today)
+
+| Real Bank Stage | Test Type Run There | This Project's Current Equivalent |
+|---|---|---|
+| Local / Dev machine | Unit | Sprint 1-4 (build), inline as you write each class |
+| DEV | Integration | Sprint 5 (Package & Deploy) — deployed to dsb-dmgr/lab VM |
+| SIT | System | Test Case Sprint (see TCS02.3) — same lab VM, but tested as one coherent flow, not per-class |
+| UAT | Business/UAT | Same Test Case Sprint — acceptance criteria checked against the version's own Sprint Deliverable line |
+| STAGING/Pre-Prod | Regression + Performance + Security | Same Test Case Sprint — regression pack (TCS01 §2.6) + CAP01-referenced performance targets where they exist for that version |
+| PROD | Smoke + Sanity | Sign-off Sprint, immediately after backupConfig baseline capture |
+| Post-Prod Monitoring | — | Not applicable until P04 (Observability) exists |
+
+**Honesty rule (per STD's Golden Rules and CAP01's Lab-Scale Disclaimer):**
+every TestCases-v<N>.md produced under this flow must state plainly that
+Dev/SIT/UAT/Staging/Prod are *simulated phases on one environment*, not
+physically separate ones — this becomes real once EPS01's Promotion Path
+is physically stood up (P08 CI/CD onward for automation; the environments
+themselves are a standing STD/EPS01 concept already, just not yet built).
+Never claim a phase happened on separate infrastructure when it didn't.
+
+## TCS02.3 — Standard Sprint Structure (Effective Immediately, All Versions)
+
+Every version's sprint count is 8 sprints. This applies to every version
+in the project, P01 through the final Part (v1-v78) — no exceptions.
+
+Sprint 1-4 → Build the feature/infra
+Sprint 5 → Package and Deploy EAR
+Sprint 6 → TEST CASES — write + execute, per TCS02.1's 7 types,
+produces TestCases-v<N>.md
+Sprint 7 → Sign-off — SetupDoc-v<N>.md, backupConfig baseline,
+Smoke+Sanity in the "PROD" simulated phase
+Sprint 8 → Fault Injection + Incident (merged, per PIS01/FIS01) —
+produces FaultDrill-v<N>.md
+
+Note (2026-08-27): FIS01 and PIS01 are merged into one Sprint 8 sequence,
+fault-first — a real change is injected into the actual build, THEN an
+incident ticket is raised describing that fault's real symptoms, THEN
+the person troubleshoots live and performs RCA. This applies to every
+version in the project, P01 through the final Part, with no exceptions
+and no gap sprint. Sprint 8 is non-gating — it does not block a version's
+sign-off (which happens at Sprint 7) and may be completed after sign-off
+without reopening anything.
+
+## TCS02.4 — Generation Trigger (How "Continue Sprint" Works at Sprint 6)
+
+When the person says "continue sprint" and the version has reached
+Sprint 6 (Test Cases): generate TestCases-v<N>.md by reading, in order:
+1. That version's own Sprint 1-5 content (already written in
+   P0<N>_Sprint_Plan.md / P0<N>_Foundation.md-equivalent) — each Sprint's
+   "Acceptance Criteria" line is the raw material for that Sprint's test
+   case rows.
+2. TCS02.1's seven test types — classify each generated case by type.
+3. TCS01's template (Section 2.3) — every row uses the standard
+   ID/Description/Type/Priority/Steps/Expected Result/Status columns.
+4. TCS01 §2.4's Priority model — Critical for single-writer/money-
+   movement paths, High for the version's primary feature, Medium/Low
+   for edges.
+5. Prior versions' Critical+High cases (regression pack, TCS01 §2.6) —
+   listed as a required re-run block, not re-authored from scratch.
+6. CAP01 — only if that version's Sprint content references a sizing
+   target (heap, pool, MQ depth) — otherwise Performance Test rows are
+   omitted for that version, not invented.
+
+No new file type is introduced — TestCases-v<N>.md is exactly SDD01/
+TCS01's existing convention (`/docs/testcases/TestCases-v<N>.md`); this
+section only changes *when* it gets generated (its own dedicated sprint)
+and *how completely* (all 7 types considered, not just an
+undifferentiated list).
+
+---
+
+*TCS02 companion: TCS01 (format/priority/rubric this section reuses
+rather than duplicates), EPS01 (the real Dev→UAT→Prod promotion this
+section's phases will map onto once environments physically exist).*
+
+===============================================================================
 # SECTION 3 — EPS01: Environment Promotion Standards (doc 04)
 ===============================================================================
 

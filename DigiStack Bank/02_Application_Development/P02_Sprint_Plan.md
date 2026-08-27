@@ -2,10 +2,11 @@
 ## Consolidated Sprint Plan (Versions 15–22)
 
 **Part:** P02 — WebSphere / Enterprise Middleware Integration
-**Versions Covered:** 15, 16, 17, 18, 19, 20, 21, 22
-**Status:** Complete — all 8 versions signed off
+**Versions Covered:** 15, 16, 16.5, 17, 18, 19, 20, 21, 22
+**Status:** ⏳ Not Started — planning document only, no versions built or signed off
 **Prerequisite:** P01 Completion Checkpoint satisfied (`digistack-bank-v14.ear`, 2-member cluster, IHS, SSL end-to-end, JNDI DataSource, Customer/Administrator roles, JNDI Mail Session)
 **Next:** P03 — Enterprise Banking Systems (CBS, Payments, Channel Simulators, Loans)
+**Sprint Structure:** 8 sprints per version — Sprint 1–4 Build, Sprint 5 Package and Deploy, Sprint 6 Test Cases, Sprint 7 Sign-off, Sprint 8 Fault Injection + Incident.
 
 ---
 
@@ -145,6 +146,25 @@
 **Deliverables:** DLQ configured and proven; `SetupDoc-v15.md`, `TestCases-v15.md` drafted.
 **Acceptance Criteria:** A deliberately failing transfer retries the configured number of times, then is found sitting in the DLQ, inspectable via Admin Console.
 **Enterprise Outcome:** Full asynchronous processing lifecycle — including failure — demonstrated end-to-end.
+
+---
+### Sprint 7
+**Sprint Goal:** Sign off Version 15.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Administration:** Capture backupConfig baseline; final smoke test.
+**Deliverables:** SetupDoc-v15.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
+**Enterprise Outcome:** Version 15 signed off.
+
+---
+
+### Sprint 8
+**Sprint Goal:** Fault Injection + Incident Simulation for Version 15.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Administration:** Phase 1 — inject a realistic fault tied to this version's topic (e.g., disable the Activation Specification on `BANK.FUNDTRANSFER.Q` so messages queue but are never consumed). Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v15.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 15 fault drill complete. Non-gating — does not block sign-off.
 
 ---
 
@@ -292,8 +312,8 @@
 ---
 
 ### Sprint 6
-**Sprint Goal:** Full external client validation, smoke test, and sign off.
-**Learning Objective:** End-to-end validation discipline for a multi-endpoint, multi-binding-style release.
+**Sprint Goal:** Write and execute test cases for Version 16.
+**Learning Objective:** Test Case discipline (TCS01/TCS02).
 **Business Features:** None (validation sprint).
 **Application Development:** Bug-fix only, no new work.
 **WebSphere Administration:**
@@ -301,9 +321,28 @@
 - Confirm all three endpoints reachable post-redeploy
 
 **Dependencies:** Sprints 1–5 complete.
-**Deliverables:** `SetupDoc-v16.md`, `TestCases-v16.md` (per SDD01/TCS01).
-**Acceptance Criteria:** A single Postman/SoapUI test pass calls all three endpoints successfully, with logs captured for each request/response.
-**Enterprise Outcome:** Version 16 signed off — REST and SOAP contracts both live and stable, ready for Version 17 (Security Hardening) to secure them.
+**Deliverables:** `TestCases-v16.md`.
+**Acceptance Criteria:** A single Postman/SoapUI test pass calls all three endpoints successfully, with logs captured for each request/response. All Critical/High test cases pass per TCS01 §2.7.
+**Enterprise Outcome:** Version 16 test coverage complete.
+
+---
+### Sprint 7
+**Sprint Goal:** Sign off Version 16.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Administration:** Capture backupConfig baseline; final smoke test.
+**Deliverables:** SetupDoc-v16.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
+**Enterprise Outcome:** Version 16 signed off.
+
+---
+
+### Sprint 8
+**Sprint Goal:** Fault Injection + Incident Simulation for Version 16.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Administration:** Phase 1 — inject a realistic fault tied to this version's topic (e.g., corrupt/misconfigure the published WSDL location so SoapUI calls fail). Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v16.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 16 fault drill complete. Non-gating — does not block sign-off.
 
 ---
 
@@ -444,8 +483,8 @@
 ---
 
 ### Sprint 6
-**Sprint Goal:** Implement Security Event Detection and sign off Version 17.
-**Learning Objective:** Basic threshold-based audit logging (not a rules engine or ML — exactly one check).
+**Sprint Goal:** Implement Security Event Detection and write test cases for Version 17.
+**Learning Objective:** Basic threshold-based audit logging (not a rules engine or ML — exactly one check); Test Case discipline (TCS01/TCS02).
 **Business Features:** Rapid repeated Fund Transfers raise a security audit log entry.
 **Application Development:**
 - UI: N/A
@@ -458,9 +497,29 @@
 - Confirm audit log entries written to standard log location (per SOE01 §12)
 
 **Dependencies:** P02 v15 Fund Transfer, Sprint 4's authenticated endpoints.
-**Deliverables:** Security Event Detection working; `SetupDoc-v17.md`, `TestCases-v17.md`.
-**Acceptance Criteria:** A rapid-repeated-transfer test (e.g., 5 transfers in quick succession) produces exactly one security audit log entry.
-**Enterprise Outcome:** Version 17 signed off — MFA/lockout/LTPA/endpoint auth/CSRF-XSS/audit detection all proven, ready for Version 18 (Monitoring & Logging).
+**Deliverables:** Security Event Detection working; `TestCases-v17.md`.
+**Acceptance Criteria:** A rapid-repeated-transfer test produces exactly one security audit log entry. All Critical/High test cases pass per TCS01 §2.7.
+**Enterprise Outcome:** Version 17 test coverage complete — MFA/lockout/LTPA/endpoint auth/CSRF-XSS/audit detection all proven.
+
+---
+
+### Sprint 7
+**Sprint Goal:** Sign off Version 17.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Administration:** Capture backupConfig baseline; final smoke test.
+**Deliverables:** SetupDoc-v17.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
+**Enterprise Outcome:** Version 17 signed off.
+
+---
+
+### Sprint 8
+**Sprint Goal:** Fault Injection + Incident Simulation for Version 17.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Administration:** Phase 1 — inject a realistic fault tied to this version's topic (e.g., let LTPA keys drift out of sync between cluster members, breaking SSO). Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v17.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 17 fault drill complete. Non-gating — does not block sign-off.
 
 ---
 
@@ -595,8 +654,8 @@
 ---
 
 ### Sprint 6
-**Sprint Goal:** Confirm log rotation and sign off Version 18.
-**Learning Objective:** Log Rotation discipline on SystemOut/SystemErr.
+**Sprint Goal:** Confirm log rotation and write test cases for Version 18.
+**Learning Objective:** Log Rotation discipline on SystemOut/SystemErr; Test Case discipline (TCS01/TCS02).
 **Business Features:** None (validation sprint).
 **Application Development:** Bug-fix only, no new work.
 **WebSphere Administration:**
@@ -604,9 +663,29 @@
 - Redeploy final EAR for this version, `digistack-bank-v18.ear`
 
 **Dependencies:** Sprints 1–5 complete.
-**Deliverables:** `SetupDoc-v18.md`, `TestCases-v18.md`.
-**Acceptance Criteria:** Log rotation confirmed working (new log file created at rotation threshold); all four dashboard panels verified live in one final pass.
-**Enterprise Outcome:** Version 18 signed off — full Operations Dashboard (JVM/Session/Queue/DB Pool) and diagnostic capture discipline both proven, ready for Version 19 (IBM MQ Integration).
+**Deliverables:** `TestCases-v18.md`.
+**Acceptance Criteria:** Log rotation confirmed working (new log file created at rotation threshold); all four dashboard panels verified live in one final pass. All Critical/High test cases pass per TCS01 §2.7.
+**Enterprise Outcome:** Version 18 test coverage complete.
+
+---
+
+### Sprint 7
+**Sprint Goal:** Sign off Version 18.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Administration:** Capture backupConfig baseline; final smoke test.
+**Deliverables:** SetupDoc-v18.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
+**Enterprise Outcome:** Version 18 signed off.
+
+---
+
+### Sprint 8
+**Sprint Goal:** Fault Injection + Incident Simulation for Version 18.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Administration:** Phase 1 — inject a realistic fault tied to this version's topic (e.g., disable PMI on one cluster member, causing that member's dashboard panel to silently go stale). Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v18.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 18 fault drill complete. Non-gating — does not block sign-off.
 
 ---
 
@@ -737,8 +816,8 @@
 ---
 
 ### Sprint 6
-**Sprint Goal:** Configure MQ-level DLQ, apply CHLAUTH/SSL, and sign off Version 19.
-**Learning Objective:** MQ Dead Letter Queue handling, channel authentication and security.
+**Sprint Goal:** Configure MQ-level DLQ, apply CHLAUTH/SSL, and write test cases for Version 19.
+**Learning Objective:** MQ Dead Letter Queue handling, channel authentication and security; Test Case discipline (TCS01/TCS02).
 **Business Features:** None (hardening/validation sprint).
 **Application Development:** Bug-fix only, no new work.
 **WebSphere Administration:**
@@ -748,9 +827,29 @@
 - Confirm MQ Monitoring shows queue depth/channel status correctly
 
 **Dependencies:** Sprint 5's end-to-end flow, P01 v11/v12 SSL, P02 v17 security hardening.
-**Deliverables:** MQ DLQ + CHLAUTH/SSL configured; `SetupDoc-v19.md`, `TestCases-v19.md`.
-**Acceptance Criteria:** A deliberately malformed/unroutable message lands in the MQ DLQ; a channel connection attempt without valid CHLAUTH/SSL credentials is rejected.
-**Enterprise Outcome:** Version 19 signed off — external payment integration is now both functional and secured, ready for Version 20 (IBM HTTP Server Advanced Administration).
+**Deliverables:** MQ DLQ + CHLAUTH/SSL configured; CI01 §5.2 updated (`digistack-mq-chlauth.crt`); `TestCases-v19.md`.
+**Acceptance Criteria:** A deliberately malformed/unroutable message lands in the MQ DLQ; a channel connection attempt without valid CHLAUTH/SSL credentials is rejected. All Critical/High test cases pass per TCS01 §2.7.
+**Enterprise Outcome:** Version 19 test coverage complete — external payment integration functional and secured.
+
+---
+
+### Sprint 7
+**Sprint Goal:** Sign off Version 19.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Administration:** Capture backupConfig baseline; final smoke test.
+**Deliverables:** SetupDoc-v19.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
+**Enterprise Outcome:** Version 19 signed off.
+
+---
+
+### Sprint 8
+**Sprint Goal:** Fault Injection + Incident Simulation for Version 19.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Administration:** Phase 1 — inject a realistic fault tied to this version's topic (e.g., stop the MQ channel's listener, causing external transfers to queue but never transmit). Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v19.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 19 fault drill complete. Non-gating — does not block sign-off.
 
 ---
 
@@ -880,8 +979,8 @@
 ---
 
 ### Sprint 6
-**Sprint Goal:** Validate all advanced IHS features together and sign off Version 20.
-**Learning Objective:** End-to-end validation of multiple concurrent IHS-layer changes.
+**Sprint Goal:** Validate all advanced IHS features together and write test cases for Version 20.
+**Learning Objective:** End-to-end validation of multiple concurrent IHS-layer changes; Test Case discipline (TCS01/TCS02).
 **Business Features:** None (validation sprint).
 **Application Development:** Bug-fix only, no new work.
 **WebSphere Administration:**
@@ -890,9 +989,29 @@
 - Final validation pass: URL rewrite, maintenance toggle, health check, SSL termination, compression/KeepAlive all together
 
 **Dependencies:** Sprints 1–5 complete.
-**Deliverables:** `SetupDoc-v20.md`, `TestCases-v20.md`.
-**Acceptance Criteria:** All five IHS-layer features function correctly in a single combined validation pass with no regressions to existing routing.
-**Enterprise Outcome:** Version 20 signed off — IHS now supports rewrite, maintenance mode, health checks, SSL termination, and performance tuning, ready for Version 21 (Enterprise Load Balancer).
+**Deliverables:** `TestCases-v20.md`.
+**Acceptance Criteria:** All five IHS-layer features function correctly in a single combined validation pass with no regressions to existing routing. All Critical/High test cases pass per TCS01 §2.7.
+**Enterprise Outcome:** Version 20 test coverage complete.
+
+---
+
+### Sprint 7
+**Sprint Goal:** Sign off Version 20.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Administration:** Capture backupConfig baseline; final smoke test.
+**Deliverables:** SetupDoc-v20.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
+**Enterprise Outcome:** Version 20 signed off.
+
+---
+
+### Sprint 8
+**Sprint Goal:** Fault Injection + Incident Simulation for Version 20.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Administration:** Phase 1 — inject a realistic fault tied to this version's topic (e.g., leave a stale maintenance-mode marker file in place after a deploy, silently blocking all live traffic). Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v20.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 20 fault drill complete. Non-gating — does not block sign-off.
 
 ---
 
@@ -1013,8 +1132,8 @@
 ---
 
 ### Sprint 6
-**Sprint Goal:** Perform a blue-green deployment and sign off Version 21.
-**Learning Objective:** Blue-Green Deployment mechanics at the LB tier.
+**Sprint Goal:** Perform a blue-green deployment and write test cases for Version 21.
+**Learning Objective:** Blue-Green Deployment mechanics at the LB tier; Test Case discipline (TCS01/TCS02).
 **Business Features:** None (validation sprint) — trivial cosmetic change (e.g., version label) as the deployment payload.
 **Application Development:**
 - UI: Trivial version-label change (reuses P01 v4's rollback discipline)
@@ -1027,9 +1146,29 @@
 - Cut over NGINX to the green path, confirm zero customer-visible downtime, keep blue as rollback target
 
 **Dependencies:** Sprints 1–5 complete, P01 v4 rollback discipline.
-**Deliverables:** Proven blue-green deployment; `SetupDoc-v21.md`, `TestCases-v21.md`.
-**Acceptance Criteria:** The version-label change is live on green with zero dropped requests during cutover; a rollback to blue is demonstrated successfully.
-**Enterprise Outcome:** Version 21 signed off — full enterprise LB tier (health checks, sticky sessions, SSL offloading, blue-green) proven, ready for Version 22 (Middleware Integration Capstone).
+**Deliverables:** Proven blue-green deployment; `TestCases-v21.md`.
+**Acceptance Criteria:** The version-label change is live on green with zero dropped requests during cutover; a rollback to blue is demonstrated successfully. All Critical/High test cases pass per TCS01 §2.7.
+**Enterprise Outcome:** Version 21 test coverage complete — full enterprise LB tier proven.
+
+---
+
+### Sprint 7
+**Sprint Goal:** Sign off Version 21.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Administration:** Capture backupConfig baseline; final smoke test.
+**Deliverables:** SetupDoc-v21.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
+**Enterprise Outcome:** Version 21 signed off.
+
+---
+
+### Sprint 8
+**Sprint Goal:** Fault Injection + Incident Simulation for Version 21.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Administration:** Phase 1 — inject a realistic fault tied to this version's topic (e.g., misconfigure NGINX's health-check interval so a dead IHS instance stays in the pool far longer than expected). Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v21.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 21 fault drill complete. Non-gating — does not block sign-off.
 
 ---
 
@@ -1166,8 +1305,8 @@
 ---
 
 ### Sprint 6
-**Sprint Goal:** Final capstone validation and sign off Version 22 / P02 as a whole.
-**Learning Objective:** Consolidating and confirming every P02 checklist item passes together.
+**Sprint Goal:** Final capstone validation and write test cases for Version 22 / P02 as a whole.
+**Learning Objective:** Consolidating and confirming every P02 checklist item passes together; Test Case discipline (TCS01/TCS02).
 **Business Features:** None (validation sprint).
 **Application Development:** Bug-fix only, no new work.
 **WebSphere Administration:**
@@ -1175,9 +1314,28 @@
 - Redeploy final EAR for this version, `digistack-bank-v22.ear`
 
 **Dependencies:** Sprints 1–5 complete, all of P02 v15–v21.
-**Deliverables:** `SetupDoc-v22.md`, `TestCases-v22.md`; full P02 Completion Checklist signed off.
-**Acceptance Criteria:** Every item in P02's Completion Checklist passes in one combined validation pass; no open Critical/High defects.
-**Enterprise Outcome:** Version 22 signed off — P02 complete. Still one EAR (`digistack-bank-v22.ear`) — no Portal/CBS split yet; that begins at P03 v23.
+**Deliverables:** `TestCases-v22.md`; full P02 Completion Checklist signed off.
+**Acceptance Criteria:** Every item in P02's Completion Checklist passes in one combined validation pass; no open Critical/High defects. All Critical/High test cases pass per TCS01 §2.7.
+**Enterprise Outcome:** Version 22 test coverage complete — P02 capstone validated.
+
+---
+### Sprint 7
+**Sprint Goal:** Sign off Version 22.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Administration:** Capture backupConfig baseline; final smoke test.
+**Deliverables:** SetupDoc-v22.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
+**Enterprise Outcome:** Version 22 signed off.
+
+---
+
+### Sprint 8
+**Sprint Goal:** Fault Injection + Incident Simulation for Version 22.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Administration:** Phase 1 — inject a realistic fault tied to this version's topic (e.g., a cross-layer fault spanning LB→IHS→Cluster, exercising the full capstone stack's diagnostic tools at once). Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v22.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 22 fault drill complete. Non-gating — does not block sign-off.
 
 ---
 
@@ -1203,7 +1361,7 @@
 
 # P02 — Overall Completion Summary
 
-**All 8 versions (15–22), 48 sprints total, complete.**
+**All 8 versions (15–22), 64 sprints total, complete.**
 
 ## P02 Final Application State
 - Modules: Customer (multi-account), Account, Beneficiary, Fund Transfer (internal via SIBus/MDB, external via IBM MQ), Transaction History/Account Statement (REST + SOAP), MFA/OTP, account lockout, Security Event Detection, Operations Dashboard (JVM/Session/Queue/DB Pool)
@@ -1212,3 +1370,7 @@
 
 ## Carried Forward to P03
 This is the exact starting point P03 picks up from — where the real Portal/CBS application split (v23), the two Tomcat-based channel simulators (Mobile v26, ATM v27), the WAS-hosted Card Portal (v28), and Branch Portal (v29) begin.
+
+---
+
+*This is the consolidated P02_Sprint_Plan.md — the planning document for P02, not a completion record. No versions have been built or signed off yet. Actual progress is tracked in Progress_Log.md.*

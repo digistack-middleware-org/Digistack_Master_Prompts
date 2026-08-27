@@ -125,7 +125,7 @@ Once frozen, a folder is only reopened for a documented correction — never sil
 | Doc ID | Title | Version | Status |
 |---|---|---|---|
 | IDX | Master Index | 1.4 | Active |
-| STD | Standing Rules | 1.13 | Active |
+| STD | Standing Rules | 1.14 | Active |
 | SOE01 | Golden Image Specification | 1.10 | Active |
 | ARCH01 | Enterprise Architecture | 1.0 | Active |
 | ARCH02 | Solution Architecture | 1.1 | Active |
@@ -212,6 +212,27 @@ version is actually rebuilt and signed off again.
 ---
 
 ## Open Questions / Decisions Pending
+
+**Resolved — STD v1.9 PIS01/FIS01 Sprint-Count Retroactivity Correction, 2026-08-27.**
+
+STD's v1.9 change note (PIS01/FIS01 addendum) stated the Sprint 7/8
+structural change was "effective P02 onward (v15-v78) — NOT retroactive
+to P01 (v1-v14), which remains signed off under its original 6-sprint
+structure per version." This directly contradicted `P01_Sprint_Plan.md`,
+which was already authored with the full 8-sprint structure (Sprint 7
+Sign-off, Sprint 8 Fault Injection + Incident) across all 14 versions.
+
+Corrected: STD bumped to v1.14 with a new change note stating the
+8-sprint structure applies project-wide, P01 through the final Part
+(v1-v78), no exceptions — matching what `P01_Sprint_Plan.md` already
+reflects and what STD's own "Applies to" line already claimed elsewhere
+in the same section. Since P01 v1-v14 have not actually been built (full
+reset #2, confirmed 2026-08-25), no retroactive rework is required —
+this is a documentation-consistency fix only, same category as the
+2026-07-28 STD/SOE01 port-table correction and the 2026-08-25 STD/SOE01
+version-pin revert. No architectural or technical change. Standing
+Reference Documents table above updated to reflect STD v1.14.
+
 **Open — Three Unscoped UI Elements (Business toggle, Open an Account,
 Forgot Password), logged 2026-08-24, no target version assigned.**
 

@@ -13,7 +13,7 @@ CAP01
 
 
 Exports:
-Versions 1-14
+Versions 1-4, 4.5, 5-14 (15 versions total; v4.5 = Basic IHS Standalone Era)
 First EAR deployment
 Login/session
 Basic transactions
@@ -30,9 +30,19 @@ Reports/JVM tuning
 Used By:
 P02
 P03
+P04
 
 Next:
 P02
+
+Used By Note (added 2026-08-25)
+--------------------------------
+P04 added to Used By: P04 v31 formally retires P02 v18's dashboard,
+whose underlying JVM/heap data traces back to this Part's v14 (JVM Heap
+Tuning) and v7 (Connection Pool Sizing) work; P04 v33 also names this
+Part's v14 thread-pool tuning topic explicitly when introducing
+WebSphere's distinct thread pools. Both are direct content
+dependencies on this Part, not just indirect ones through P02/P03.
 
 ---
 
@@ -57,6 +67,61 @@ Each version reuses the same tiny app and either:
 (b) touches zero new banking functionality — pure infra/admin exercise.
 
 ---
+Part-Start Architecture Diagram (generate first, before Version 1 work begins)
+--------------------------------------------------------------------------------
+Per 01_Architecture/README.md's Version-Start Diagram Check, generated once
+at the start of this Part — pruned to only the diagram files P01's versions
+(v1-v14) actually populate or extend. Files outside this tree stay
+untouched until a later Part's own start-of-Part diagram unlocks them.
+
+                 DIGISTACK BANK — P01 (v1-v14)
+                       |
+       +---------------+---------------+
+       |               |               |
+       v               v               v
+   NETWORK           SERVERS        DEPLOYMENT
+       |               |               |
+ 01_Network_       02_VM_          08_Deployment_
+ Diagram.md         Layout.md       Architecture.md
+ (v1 basic,        (v1 dsb-dmgr,   (v1 first EAR,
+  v8 IHS,           v5 Node2,       extended every
+  v11/v12 SSL)       v8 IHS)        packaging change)
+       |
+       v
+              WebSphere ND
+                       |
+       +---------------+---------------+
+       |                               |
+       v                               v
+   REQUESTS                         CLUSTER
+       |                               |
+ 03_Request_Flows.md           04_Cluster_Architecture.md
+ (v1 basic path,               (v5 cluster stood up,
+  v7 JNDI, v8 IHS,               v6 DMgr/federation
+  v12 mTLS)                      deep dive)
+       |
+       v
+   APPLICATION
+       |
+       v
+   PostgreSQL
+       |
+       v
+ 06_Database_ER_Diagram.md
+ (v1 app_config, v2 users,
+  v3 accounts, v6 is_frozen —
+  redrawn every schema change)
+
+   SECURITY
+       |
+       v
+ 07_Security_Architecture.md
+ (v10 roles/registry,
+  v11/v12 SSL/mTLS)
+
+Not in scope this Part: 05_MQ_Architecture.md (MQ doesn't exist until P02
+v19), 09_DR_Architecture.md (DR is P05). Both stay Not Populated for the
+duration of P01.
 
 Version 1 — Project Setup & Enterprise Architecture
 ------------------------------------------------------

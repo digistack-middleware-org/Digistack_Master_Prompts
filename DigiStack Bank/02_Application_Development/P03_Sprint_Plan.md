@@ -3,9 +3,10 @@
 
 **Part:** P03 — Enterprise Banking Systems (CBS, Payments, Channel Simulators, Loans)
 **Versions Covered:** 23, 24, 25, 26, 27, 28, 29, 30
-**Status:** Complete — all 8 versions signed off
+**Status:** ⏳ Not Started — planning document only, no versions built or signed off
 **Prerequisite:** P02 Completion Checkpoint satisfied (`digistack-bank-v22.ear`, full middleware stack — LB, IHS, WAS Cluster, SIBus JMS, IBM MQ, Web Services, Security Hardening, Monitoring — all operational)
 **Next:** P03.1 — Interview Preparation
+**Sprint Structure:** 8 sprints per version — Sprint 1–4 Build, Sprint 5 Package and Deploy, Sprint 6 Test Cases, Sprint 7 Sign-off, Sprint 8 Fault Injection + Incident.
 
 ---
 
@@ -156,6 +157,26 @@
 **Deliverables:** `SetupDoc-v23.md` (with required "Migration & Ownership Transfer" section per STDGAP01 §3.8), `TestCases-v23.md` (including negative tests), old Portal DB formally decommissioned.
 **Acceptance Criteria:** Every item in the Ownership Matrix confirmed correct; full regression pack (all prior TestCases-v1–v22) passes against the new topology; no open Critical/High defects.
 **Enterprise Outcome:** Version 23 signed off — the architectural pivot is complete and verified, not just deployed. CBS is now the single system of record for the rest of the roadmap.
+
+---
+
+### Sprint 7
+**Sprint Goal:** Sign off Version 23.
+**Learning Objective:** SetupDoc discipline (SDD01), with the required Migration & Ownership Transfer section.
+**WebSphere Administration:** Capture backupConfig baseline for all four EARs; final smoke test across CBS, Portal, Notification Service, Reporting Service.
+**Deliverables:** SetupDoc-v23.md (including Migration & Ownership Transfer section per STDGAP01 §3.8).
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured for all four applications; smoke test passes; migration row-count reconciliation re-confirmed.
+**Enterprise Outcome:** Version 23 signed off — the architectural pivot point of the whole project.
+
+---
+
+### Sprint 8
+**Sprint Goal:** Fault Injection + Incident Simulation for Version 23.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Administration:** Phase 1 — inject a realistic fault tied to this version's topic (e.g., misconfigure `jdbc/CBSDataSource`'s JAAS Auth Alias so CBS cannot reach `digistack_cbs`, while Portal continues calling CBS normally). Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v23.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 23 fault drill complete. Non-gating — does not block sign-off.
 
 ---
 
@@ -329,6 +350,26 @@
 
 ---
 
+### Sprint 7
+**Sprint Goal:** Sign off Version 24.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Administration:** Capture backupConfig baseline; final smoke test.
+**Deliverables:** SetupDoc-v24.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
+**Enterprise Outcome:** Version 24 signed off.
+
+---
+
+### Sprint 8
+**Sprint Goal:** Fault Injection + Incident Simulation for Version 24.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Administration:** Phase 1 — inject a realistic fault tied to this version's topic (e.g., break the FK constraint linking accounts to cif, causing new account lookups to silently fail). Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v24.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 24 fault drill complete. Non-gating — does not block sign-off.
+
+---
+
 ## Version 24 Deliverables
 - `digistack-cbs-v24.ear` (CIF Service, updated Account Service)
 - `V24__create_cif_table.sql`, `V25__add_cif_id_to_accounts.sql`
@@ -497,6 +538,25 @@
 **Enterprise Outcome:** Version 25 signed off — Payment Hub proven as a genuine Saga-pattern coordinator, the deliberate architectural counterpoint to CBS's single-writer design.
 
 ---
+### Sprint 7
+**Sprint Goal:** Sign off Version 25.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Administration:** Capture backupConfig baseline for Payment Hub; final smoke test.
+**Deliverables:** SetupDoc-v25.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
+**Enterprise Outcome:** Version 25 signed off.
+
+---
+
+### Sprint 8
+**Sprint Goal:** Fault Injection + Incident Simulation for Version 25.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Administration:** Phase 1 — inject a realistic fault tied to this version's topic (e.g., stop Payment Hub's EJB Timer Service, causing NEFT requests to queue in staging status but never enter a batch window). Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v25.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 25 fault drill complete. Non-gating — does not block sign-off.
+
+---
 
 ## Version 25 Deliverables
 - `digistack-paymenthub-v25.ear`
@@ -660,6 +720,26 @@
 **Deliverables:** SetupDoc-v26.md, TestCases-v26.md.
 **Acceptance Criteria:** Login, Balance, Mini Statement, and IMPS Quick Pay all pass together in one combined validation pass; negative DB-access test confirms zero direct connectivity; full regression pack (v1–v25) passes.
 **Enterprise Outcome:** Version 26 signed off — first Tomcat-based channel proven fully functional and architecturally clean, setting the pattern ATM Simulator (v27) reuses directly.
+
+---
+
+### Sprint 7
+**Sprint Goal:** Sign off Version 26.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Administration:** Capture backupConfig baseline for Tomcat/IHS routing config; final smoke test.
+**Deliverables:** SetupDoc-v26.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
+**Enterprise Outcome:** Version 26 signed off.
+
+---
+
+### Sprint 8
+**Sprint Goal:** Fault Injection + Incident Simulation for Version 26.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Administration:** Phase 1 — inject a realistic fault tied to this version's topic (e.g., break the IHS virtual host rule for `mobile.digistack.cloud` so it silently falls through to the WAS plugin instead of Tomcat). Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v26.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 26 fault drill complete. Non-gating — does not block sign-off.
 
 ---
 
@@ -831,6 +911,25 @@
 **Enterprise Outcome:** Version 27 signed off — two independent Tomcat-hosted channels (Mobile, ATM) now proven to coexist cleanly on shared infrastructure, ready for Card Portal (v28) to complete the card-lifecycle picture.
 
 ---
+### Sprint 7
+**Sprint Goal:** Sign off Version 27.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Administration:** Capture backupConfig baseline; final smoke test.
+**Deliverables:** SetupDoc-v27.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
+**Enterprise Outcome:** Version 27 signed off.
+
+---
+
+### Sprint 8
+**Sprint Goal:** Fault Injection + Incident Simulation for Version 27.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Administration:** Phase 1 — inject a realistic fault tied to this version's topic (e.g., misconfigure the lockout threshold shared with P02 v17 so a legitimate customer gets locked out mid-withdrawal at the ATM). Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v27.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 27 fault drill complete. Non-gating — does not block sign-off.
+
+---
 
 ## Version 27 Deliverables
 - `digistack-atm-sim.war` (deployed to Tomcat, alongside v26's Mobile WAR)
@@ -998,6 +1097,26 @@
 **Deliverables:** SetupDoc-v28.md, TestCases-v28.md (including the Card Portal-never-writes and Block-Card-blocks-ATM negative/integration tests).
 **Acceptance Criteria:** Issue/Activate/Generate PIN/Block/Hotlist/Reset PIN/Status Lookup all pass together in one combined pass; zero-DB-access confirmed; cross-app Block Card integration re-verified; full regression pack (v1–v27) passes.
 **Enterprise Outcome:** Version 28 signed off — seven independent WAS EARs plus two Tomcat apps now coexist and cross-integrate correctly, the fullest heterogeneous topology proof point so far in the roadmap.
+
+---
+
+### Sprint 7
+**Sprint Goal:** Sign off Version 28.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Administration:** Capture backupConfig baseline for CBS + Card Portal; final smoke test.
+**Deliverables:** SetupDoc-v28.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
+**Enterprise Outcome:** Version 28 signed off.
+
+---
+
+### Sprint 8
+**Sprint Goal:** Fault Injection + Incident Simulation for Version 28.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Administration:** Phase 1 — inject a realistic fault tied to this version's topic (e.g., stall the IBM MQ "Card Issued" event publish so Notification Service never receives confirmation, while the card record itself issues successfully). Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v28.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 28 fault drill complete. Non-gating — does not block sign-off.
 
 ---
 
@@ -1171,6 +1290,26 @@
 
 ---
 
+### Sprint 7
+**Sprint Goal:** Sign off Version 29.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Administration:** Capture backupConfig baseline for CBS + Branch Portal + Reporting Service; final smoke test.
+**Deliverables:** SetupDoc-v29.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
+**Enterprise Outcome:** Version 29 signed off.
+
+---
+
+### Sprint 8
+**Sprint Goal:** Fault Injection + Incident Simulation for Version 29.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Administration:** Phase 1 — inject a realistic fault tied to this version's topic (e.g., let the EOD EJB Timer job fail silently mid-run, leaving the NEFT batch window open past its scheduled close). Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v29.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 29 fault drill complete. Non-gating — does not block sign-off.
+
+---
+
 ## Version 29 Deliverables
 - `digistack-cbs-v29.ear` (new OperationsService, BatchService modules), `digistack-branchportal-v29.ear`, updated `digistack-reportingservice-v29.ear`
 - `V29__create_bod_eod_log.sql`
@@ -1341,6 +1480,26 @@
 
 ---
 
+### Sprint 7
+**Sprint Goal:** Sign off Version 30.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Administration:** Capture backupConfig baseline; final smoke test across full P03 stack.
+**Deliverables:** SetupDoc-v30.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes; full P03 Completion Checklist re-verified.
+**Enterprise Outcome:** Version 30 signed off — P03 complete.
+
+---
+
+### Sprint 8
+**Sprint Goal:** Fault Injection + Incident Simulation for Version 30.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Administration:** Phase 1 — inject a realistic fault tied to this version's topic (e.g., corrupt one loan's EMI due-date value so its per-loan EJB Timer never fires, while other loans continue auto-debiting normally). Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v30.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 30 fault drill complete. Non-gating — does not block sign-off.
+
+---
+
 ## Version 30 Deliverables
 - `digistack-cbs-v30.ear` (new LoanService, EMIScheduleService, NPAFlagService modules)
 - `V30__create_loan_tables.sql`
@@ -1363,7 +1522,7 @@
 
 # P03 — Overall Completion Summary
 
-**All 8 versions (23–30), 48 sprints total, complete.**
+**All 8 versions (23–30), 64 sprints total, complete.**
 
 ## P03 Final Application State
 Total deployable applications: Internet Banking Portal, CBS, Payment Hub, Notification Service, Reporting Service, Branch Portal, Card Portal (7 WAS EARs) + Mobile Banking, ATM Simulator (2 Tomcat apps) = **9 distinct deployable applications**.
@@ -1374,3 +1533,7 @@ CBS internal modules (single EAR, per v23's architectural decision): CIF, Accoun
 
 ## Carried Forward to P03.1
 CBS as system of record, Payment Hub, Notification Service, Reporting Service, the two Tomcat-based channel simulators (Mobile/ATM), the WAS-hosted Card Portal, Branch Portal, and Loan Servicing all become subjects of Interview Preparation's Project Walkthrough, WebSphere Administration Q&A, Production Support, Troubleshooting Scenarios, and Banking Production Environment Q&A — followed by P04's observability instrumentation (APM, distributed tracing, chaos testing) once P03.1 is complete.
+
+---
+
+*This is the consolidated P03_Sprint_Plan.md — the planning document for P03, not a completion record. No versions have been built or signed off yet. Actual progress is tracked in Progress_Log.md.*

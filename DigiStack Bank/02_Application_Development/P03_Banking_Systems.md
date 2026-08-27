@@ -10,6 +10,7 @@ STD
 ARCH01
 ARCH02
 STDGAP01
+RACI01
 
 
 Exports:
@@ -25,6 +26,8 @@ Loan Management
 Governing Rule (single-writer discipline)
 
 Used By:
+P03.1
+P03.2
 P04
 P05
 P06
@@ -69,6 +72,67 @@ Cluster, SIBus JMS, IBM MQ, Web Services, Security Hardening, Monitoring —
 all operational).
 
 ---
+Part-Start Architecture Diagram (generate first, before Version 23 work begins)
+----------------------------------------------------------------------------------
+Pruned to what P03 (v23-v30) adds or extends. This is the Part with the
+biggest topology change — single EAR becomes 9 deployables — so more of
+the tree gets touched than in P02.
+
+                 DIGISTACK BANK — P03 (v23-v30)
+                       |
+       +---------------+---------------+
+       |               |               |
+       v               v               v
+   NETWORK           SERVERS        DEPLOYMENT
+       |               |               |
+ 01_Network_       02_VM_          08_Deployment_
+ Diagram.md         Layout.md       Architecture.md
+ (extended: v26/v27  (extended:      (extended: v23 CBS
+  dsb-tomcat          dsb-tomcat      split into CBS/
+  powers on)          powers on,      Portal/Notification/
+                       Mobile+ATM)    Reporting EARs;
+                                      v25 Payment Hub;
+                                      v28 Card Portal;
+                                      v29 Branch Portal)
+       |
+       v
+              WebSphere ND
+                       |
+       +---------------+---------------+
+       |                               |
+       v                               v
+   REQUESTS                         CLUSTER
+       |                               |
+ 03_Request_Flows.md           04_Cluster_Architecture.md
+ (extended: v23 Portal->CBS      (unchanged from P01/P02 —
+  REST/SOAP pivot replaces        still the 2-member
+  direct DB path; v26/v27          AppCluster; no new
+  Tomcat->CBS REST paths           members this Part)
+  added)
+       |
+       v
+   APPLICATION
+       |
+       v
+   PostgreSQL
+       |
+       v
+ 06_Database_ER_Diagram.md
+ (extended: v23 digistack_cbs
+  split from shared DB, migration
+  applied; v24 cif table; v28
+  card table; v29 bod_eod_log;
+  v30 loan tables)
+
+   SECURITY
+       |
+       v
+ 07_Security_Architecture.md
+ (extended: v26-v28 SSL cert
+  provisioning per new subdomain,
+  per CI01 §5.1)
+
+Still not in scope this Part: 09_DR_Architecture.md (P05).
 
 The One Governing Rule (Introduced at Version 23, Applies for the Rest of the Roadmap)
 -------------------------------------------------------------------------------------------

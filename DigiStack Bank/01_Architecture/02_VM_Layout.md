@@ -29,7 +29,8 @@ version of SOE01 §1a / CAP01 §1a's tables.
 | dsb-mq | IBM MQ | 1 | 1.5 GB | 20 GB | Off — powers on at P02 v19 |
 | dsb-monitor | Prometheus/Grafana | 1 | 1.5 GB | 30 GB | Off — powers on at P04 v31 |
 | dsb-elk | OpenSearch stack | 1 | 1.5 GB | 40 GB | Off — powers on at P04 v32 |
-| dsb-tomcat | Mobile/ATM host | 1 | 1 GB | 20 GB | Off — powers on at P03 v26/v27 |
+| dsb-tomcat  | Mobile/ATM host         | 1 | 1 GB   | 20 GB | Off — powers on at P03 v26/v27 |
+| dsb-tracing | Jaeger tracing backend  | 1 | 1 GB   | 10 GB | Off — powers on at P04 v33; co-locate on dsb-monitor if RAM permits per SOE01 §1a |
 
 Currently running: 2 VMs, 4 vCPU / 5 GB RAM — well under the 4-5
 concurrent-VM budget (SOE01 §1a). No cluster exists yet (that's a

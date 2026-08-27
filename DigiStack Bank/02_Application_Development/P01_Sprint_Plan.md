@@ -3,6 +3,7 @@
 **Part:** P01 — Foundation
 **Status:** ⏳ Not Started
 **Deployment Model:** ONE deployable EAR for this entire Part — `digistack-bank-vN.ear`. No Portal/CBS split (that happens in P03).
+**Sprint Structure:** 8 sprints per version — Sprint 1–4 Build, Sprint 5 Package and Deploy, Sprint 6 Test Cases, Sprint 7 Sign-off, Sprint 8 Fault Injection + Incident.
 
 ---
 
@@ -13,13 +14,13 @@
 **Business Scope:** Static Home page + one live DB read (`app_config` table). No transactions, no login yet.
 **WebSphere Focus:** EAR/WAR structure, deployment layout, context root, virtual host, first EAR deployment via Admin Console.
 **Expected Outcome:** `digistack-bank-v1.ear` deployed to WAS, reachable via context root/virtual host, Home page renders and confirms a live PostgreSQL read.
-**Prerequisites:** WebSphere ND = 9.0.5.28 (target/placeholder pin per STD, to be confirmed against the actual install during this Sprint), Rocky Linux 8.x VM (`dsb-dmgr`), PostgreSQL 13 installed, SOE01 Golden Image checklist passed.
+**Prerequisites:** WebSphere ND = 9.0.5.28 (target/placeholder pin per STD, to be confirmed against the actual install during this Sprint), Rocky Linux 8.x VM (`dsb-dmgr`), PostgreSQL 16 (target pin per STD §Version Pins and SOE01 §9 — confirm actual installed version during this Sprint and promote pin to CONFIRMED in STD/SOE01 once verified), SOE01 Golden Image checklist passed.
 
 ### Sprint 1
 **Goal:** Provision the base VM and validate the WebSphere ND install.
 **Learning Objective:** EAR/WAR structure and profile creation.
 **Business Features:** None (infra only).
-**WebSphere Admin:** Create standalone AppServer profile; validate against SOE01 checklist; confirm Admin Console reachable (9060/9043).
+**WebSphere Admin:** Create standalone AppServer profile `devdsbinappserver01` with cell name `devdsbincell01` and server name `server1` (per STD v1.10 naming convention); validate against SOE01 checklist; confirm Admin Console reachable (9060/9043).
 **Dependencies:** SOE01 §1/§9.
 **Deliverables:** Standalone profile created.
 **Acceptance Criteria:** Admin Console loads; profile status = Started.
@@ -68,15 +69,31 @@
 **Enterprise Outcome:** First real WAS deployment completed.
 
 ### Sprint 6
-**Goal:** Smoke test, document, sign off Version 1.
-**Learning Objective:** SetupDoc/TestCase discipline (SDD01/TCS01).
-**WebSphere Admin:** Confirm app status; capture backupConfig baseline.
-**Deliverables:** SetupDoc-v1.md, TestCases-v1.md.
-**Acceptance Criteria:** All Critical/High test cases pass.
+**Goal:** Write and execute test cases for Version 1.
+**Learning Objective:** Test Case discipline (TCS01/TCS02).
+**WebSphere Admin:** Confirm app status for test execution.
+**Deliverables:** TestCases-v1.md.
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7.
+**Enterprise Outcome:** Version 1 test coverage complete.
+
+### Sprint 7
+**Goal:** Sign off Version 1.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Admin:** Capture backupConfig baseline; final smoke test.
+**Deliverables:** SetupDoc-v1.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
 **Enterprise Outcome:** Version 1 signed off.
 
-**Version 1 Deliverables:** `digistack-bank-v1.ear`, `V1__create_app_config.sql`, SetupDoc-v1.md, TestCases-v1.md.
-**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed.
+### Sprint 8
+**Goal:** Fault Injection + Incident Simulation for Version 1.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Admin:** Phase 1 — inject a realistic fault tied to this version's topic. Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v1.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 1 fault drill complete. Non-gating — does not block sign-off.
+
+**Version 1 Deliverables:** `digistack-bank-v1.ear`, `V1__create_app_config.sql`, SetupDoc-v1.md, TestCases-v1.md, FaultDrill-v1.md.
+**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed; Fault drill complete (Sprint 8, non-gating).
 **Lessons Learned:** EAR/WAR/context-root/virtual-host mechanics; direct JDBC deliberately precedes JNDI (deferred to v7).
 **Technical Debt:** Direct JDBC (no pooling) — resolved at Version 7.
 
@@ -126,13 +143,31 @@
 **Acceptance Criteria:** Clean redeploy, zero manual profile changes; startup logs captured.
 
 ### Sprint 6
-**Goal:** Smoke test, document, sign off Version 2.
-**WebSphere Admin:** Confirm app status post-redeploy; capture backupConfig baseline (v2).
-**Deliverables:** SetupDoc-v2.md, TestCases-v2.md.
-**Acceptance Criteria:** Critical/High pass; v1 regression passes.
+**Goal:** Write and execute test cases for Version 1.
+**Learning Objective:** Test Case discipline (TCS01/TCS02).
+**WebSphere Admin:** Confirm app status for test execution.
+**Deliverables:** TestCases-v2.md.
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7.
+**Enterprise Outcome:** Version 1 test coverage complete.
 
-**Version 2 Deliverables:** `digistack-bank-v2.ear`, `V2__create_users.sql`, SetupDoc-v2.md, TestCases-v2.md.
-**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed.
+### Sprint 7
+**Goal:** Sign off Version 1.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Admin:** Capture backupConfig baseline; final smoke test.
+**Deliverables:** SetupDoc-v2.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
+**Enterprise Outcome:** Version 1 signed off.
+
+### Sprint 8
+**Goal:** Fault Injection + Incident Simulation for Version 2.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Admin:** Phase 1 — inject a realistic fault tied to this version's topic. Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v2.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 2 fault drill complete. Non-gating — does not block sign-off.
+
+**Version 2 Deliverables:** `digistack-bank-v2.ear`, `V2__create_users.sql`, SetupDoc-v2.md, TestCases-v2.md, FaultDrill-v2.md.
+**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed; Fault drill complete (Sprint 8, non-gating).
 **Lessons Learned:** HTTP session lifecycle; redeploy-over-running-app mechanics.
 **Technical Debt:** App-layer auth only (no WAS security roles) — deferred to Version 10.
 
@@ -168,7 +203,7 @@
 ### Sprint 4
 **Goal:** Build Controller and UI (Balance view + Deposit/Withdraw form).
 **Business Features:** View Balance; submit Deposit/Withdraw.
-**App Dev:** UI: Account.jsp. Backend: `AccountController` servlet.
+**App Dev:** UI: Dashboard.jsp (balance hidden by default behind a "View Balance" toggle per P01_Foundation.md v3 UI note). Backend: `AccountController` servlet.
 **Acceptance Criteria:** Balance displays; Deposit/Withdraw submit and redisplay updated balance.
 **Enterprise Outcome:** First full 4-layer enterprise request path proven.
 
@@ -179,13 +214,31 @@
 **Acceptance Criteria:** Clean redeploy; ClassLoader policy documented with concrete example.
 
 ### Sprint 6
-**Goal:** Smoke test, document, sign off Version 3.
-**WebSphere Admin:** Confirm app status; capture backupConfig baseline (v3).
-**Deliverables:** SetupDoc-v3.md, TestCases-v3.md.
-**Acceptance Criteria:** Critical/High pass; v1/v2 regression passes.
+**Goal:** Write and execute test cases for Version 1.
+**Learning Objective:** Test Case discipline (TCS01/TCS02).
+**WebSphere Admin:** Confirm app status for test execution.
+**Deliverables:** TestCases-v3.md.
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7.
+**Enterprise Outcome:** Version 3 test coverage complete.
 
-**Version 3 Deliverables:** `digistack-bank-v3.ear`, `V3__create_accounts.sql`, SetupDoc-v3.md, TestCases-v3.md.
-**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed.
+### Sprint 7
+**Goal:** Sign off Version 3.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Admin:** Capture backupConfig baseline; final smoke test.
+**Deliverables:** SetupDoc-v3.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
+**Enterprise Outcome:** Version 3 signed off.
+
+### Sprint 8
+**Goal:** Fault Injection + Incident Simulation for Version 3.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Admin:** Phase 1 — inject a realistic fault tied to this version's topic. Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v3.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 3 fault drill complete. Non-gating — does not block sign-off.
+
+**Version 3 Deliverables:** `digistack-bank-v3.ear`, `V3__create_accounts.sql`, SetupDoc-v3.md, TestCases-v3.md, FaultDrill-v3.md.
+**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed; Fault drill complete (Sprint 8, non-gating).
 **Lessons Learned:** Controller→Service→DAO→DB layering; ClassLoader behavior.
 **Technical Debt:** No concurrency/locking on balance updates — acceptable pre-clustering; revisited at v5 and P05 v38.
 
@@ -230,15 +283,278 @@
 **Acceptance Criteria:** Browser shows "v4"; no manual config changes needed.
 
 ### Sprint 6
-**Goal:** Smoke test, document, sign off Version 4.
-**WebSphere Admin:** Confirm app status; capture backupConfig baseline (v4).
-**Deliverables:** SetupDoc-v4.md, TestCases-v4.md (rollback/update cases only).
-**Acceptance Criteria:** Rollback test passes; v1–v3 regression passes.
+**Goal:** Write and execute test cases for Version 4.
+**Learning Objective:** Test Case discipline (TCS01/TCS02).
+**WebSphere Admin:** Confirm app status for test execution.
+**Deliverables:** TestCases-v4.md.
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7.
+**Enterprise Outcome:** Version 4 test coverage complete.
 
-**Version 4 Deliverables:** `digistack-bank-v4.ear`, SetupDoc-v4.md, TestCases-v4.md (no schema change).
-**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed.
+### Sprint 7
+**Goal:** Sign off Version 4.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Admin:** Capture backupConfig baseline; final smoke test.
+**Deliverables:** SetupDoc-v4.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
+**Enterprise Outcome:** Version 4 signed off.
+
+### Sprint 8
+**Goal:** Fault Injection + Incident Simulation for Version 4.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Admin:** Phase 1 — inject a realistic fault tied to this version's topic. Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v4.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 4 fault drill complete. Non-gating — does not block sign-off.
+
+**Version 4 Deliverables:** `digistack-bank-v4.ear`, SetupDoc-v4.md, TestCases-v4.md, FaultDrill-v4.md (no schema change).
+**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed; Fault drill complete (Sprint 8, non-gating).
 **Lessons Learned:** Update Application vs. Uninstall+Install; rollback is real and testable.
 **Technical Debt:** None introduced.
+
+---
+# Version 4.5 — Basic IHS (Standalone Era)
+
+## Version Overview
+**Objective:** Introduce IBM HTTP Server as the front door to the standalone
+AppServer — proving the Browser→IHS→WAS→DB flow before clustering exists.
+This is the first of two IHS milestones: v4.5 wires IHS to the standalone
+server; v8 migrates the same `dsb-ihs` VM to front the cluster.
+**Business Scope:** Zero new functionality — existing Home page + DB read
+(v1) is the test subject. No SSL yet (HTTP only), no custom error pages
+(deferred to v8), no static assets (deferred to v8).
+**WebSphere Focus:** IHS install, Web Server Definition creation, basic
+plugin-cfg.xml generation and propagation against a Standalone AppServer,
+reverse-proxy routing verification.
+**Flow Proven:**
+Browser (port 80)
+│
+▼
+dsb-ihs — IBM HTTP Server
+│ plugin-cfg.xml → dsb-dmgr:9080 (standalone server1)
+│
+▼
+dsb-dmgr — Standalone WAS AppServer (server1)
+│
+▼
+dsb-db — PostgreSQL (port 5432)
+**Expected Outcome:** IHS installed on `dsb-ihs`; Web Server object defined
+in WAS Admin Console; plugin-cfg.xml generated and propagated pointing at
+the standalone AppServer; Home page loads via IHS port 80 and DB read
+confirms the full path is live.
+**Prerequisites:** P01 v4 signed off. `dsb-ihs` VM powered on (1 vCPU,
+1 GB RAM, per SOE01 §1a).
+**VM Note (per SOE01 §1a):** `dsb-ihs` is powered on from this version
+onward and remains on for the rest of P01. A typical session here
+(dsb-dmgr, dsb-ihs, dsb-db) totals ~6 GB RAM / ~5 vCPU — within this
+host's budget.
+
+### Sprint 1
+**Goal:** Install IBM HTTP Server on the `dsb-ihs` VM.
+**Learning Objective:** IHS install process; confirming the default IHS
+page proves the web server binary is running before any WAS integration
+is attempted.
+**Business Features:** None (infra only).
+**WebSphere Admin (GUI):** SSH into `dsb-ihs`; run IBM Installation Manager
+to install IHS 9.0.5.28 (target, matches WAS ND pin per SOE01 §9);
+start IHS (`./apachectl start`); confirm default IHS page reachable from
+Windows host browser on `http://dsb-ihs-ip:80`.
+**WebSphere Admin (wsadmin):** Not applicable for binary install — IHS
+install is OS-level only. wsadmin steps begin at Sprint 2 (Web Server
+Definition).
+**Dependencies:** SOE01 §1a (dsb-ihs VM spec), SOE01 §9 (IHS version pin).
+**Deliverables:** IHS installed and running on `dsb-ihs`.
+**Acceptance Criteria:** Default IHS "It works!" page reachable on port 80
+from Windows host browser. IHS process visible in `ps aux | grep httpd`.
+**Enterprise Outcome:** Web tier VM operational — ready to be wired into
+WAS.
+
+### Sprint 2
+**Goal:** Define the Web Server object in WAS Admin Console and via
+wsadmin — both paths required per standing project rule.
+**Learning Objective:** Web Server Definition — what it is (a WAS-side
+object that represents IHS and tells WAS how to generate plugin config
+for it), and why it must exist before a plugin can be generated.
+**Business Features:** None.
+**WebSphere Admin (GUI):**
+Servers → Server Types → Web Servers → New.
+  - Server name: `webserver1`
+  - Host: `dsb-ihs` hostname/IP
+  - Installation path: IHS install root (e.g. `/apps/IBM/HTTPServer`)
+  - WAS install path: WAS install root on `dsb-dmgr`
+  - Port: 80
+Save → confirm `webserver1` listed with status Stopped (expected —
+plugin not yet propagated).
+**WebSphere Admin (wsadmin Jython):**
+```python
+# Connect to standalone AppServer (not DMgr — v5 is where DMgr arrives)
+# Run from dsb-dmgr:
+# /apps/IBM/WebSphere/AppServer/bin/wsadmin.sh -lang jython
+
+import AdminConfig
+cell = AdminConfig.list('Cell').split('\r\n')[0]
+node = AdminConfig.list('Node').split('\r\n')[0]
+
+# Create Web Server definition
+AdminTask.createWebServer(
+    node,
+    ['-name', 'webserver1',
+     '-templateName', 'IHS',
+     '-serverConfig',
+     ['-webPort', '80',
+      '-webInstallRoot', '/apps/IBM/HTTPServer',
+      '-webProtocol', 'HTTP',
+      '-configurationFile', '',
+      '-adminPort', '8008',
+      '-adminUserID', '',
+      '-adminPasswd', ''
+     ],
+     '-primaryServerConfig',
+     ['-webHostName', 'dsb-ihs-hostname-or-ip']
+    ]
+)
+AdminConfig.save()
+print "Web Server definition created."
+```
+**Acceptance Criteria:** `webserver1` visible in Admin Console →
+Web Servers list. wsadmin script completes without error.
+**Enterprise Outcome:** WAS now knows IHS exists — prerequisite for plugin
+generation.
+
+### Sprint 3
+**Goal:** Generate plugin-cfg.xml against the standalone AppServer —
+both Admin Console and wsadmin paths.
+**Learning Objective:** What plugin-cfg.xml actually is — a routing table
+that tells IHS "for this URL pattern, forward to this WAS server on
+this port." Generated by WAS, consumed by IHS. Without it, IHS cannot
+forward any request to WAS.
+**Business Features:** None.
+**WebSphere Admin (GUI):**
+Servers → Server Types → Web Servers → select `webserver1` →
+Generate Plug-in.
+Confirm success message: "Plugin configuration file generated."
+**WebSphere Admin (wsadmin Jython):**
+```python
+# Generate plugin for webserver1
+AdminTask.generatePluginCfg(
+    ['-serverName', 'webserver1',
+     '-nodeName', AdminConfig.list('Node').split('\r\n')[0],
+     '-options', ''
+    ]
+)
+print "plugin-cfg.xml generated."
+```
+**Acceptance Criteria:** `plugin-cfg.xml` file exists on `dsb-dmgr` under
+the WAS profile's `config/cells/<cell>/nodes/<node>/servers/webserver1/`
+directory. File contents reference `dsb-dmgr` hostname and port 9080
+(standalone AppServer HTTP port).
+**Enterprise Outcome:** Routing table created — IHS can now be told where
+to send traffic.
+
+### Sprint 4
+**Goal:** Propagate plugin-cfg.xml to `dsb-ihs`; configure IHS to load
+the plugin; restart IHS; verify reverse-proxy routing is active.
+**Learning Objective:** Propagation — why the file generated on WAS
+(dsb-dmgr) must be physically copied to IHS (dsb-ihs). They are different
+VMs. Without propagation, IHS has no routing table and forwards nothing.
+**Business Features:** None.
+**WebSphere Admin (GUI):**
+Servers → Server Types → Web Servers → select `webserver1` →
+Propagate Plug-in.
+Confirm success message: "Plugin configuration file propagated."
+Then on `dsb-ihs`: confirm `plugin-cfg.xml` exists at the IHS plugin
+install path (e.g. `/apps/IBM/HTTPServer/Plugins/config/webserver1/`).
+**WebSphere Admin (wsadmin Jython):**
+```python
+AdminTask.propagatePluginCfg(
+    ['-serverName', 'webserver1',
+     '-nodeName', AdminConfig.list('Node').split('\r\n')[0]
+    ]
+)
+print "plugin-cfg.xml propagated to dsb-ihs."
+```
+**IHS httpd.conf — add these two lines** (if not auto-added by IHS
+plugin install):
+
+LoadModule was_ap22_module /apps/IBM/HTTPServer/Plugins/bin/64bits/mod_was_ap22_http.so
+WebSpherePluginConfig /apps/IBM/HTTPServer/Plugins/config/webserver1/plugin-cfg.xml
+
+Restart IHS: `./apachectl restart`
+**Acceptance Criteria:** IHS restarts without error. `dsb-ihs` IHS error
+log shows plugin loaded: `[notice] mod_was_ap22_http: plugin loaded`.
+**Enterprise Outcome:** IHS is now a live reverse proxy in front of WAS.
+
+### Sprint 5
+**Goal:** End-to-end flow verification — Browser→IHS→WAS→DB.
+**Learning Objective:** Proving the full path works before signing off.
+This is what a real WAS admin does after every IHS config change — hit
+the app through IHS, not directly, and confirm the DB read is live.
+**Business Features:** None — uses existing Home page + DB read from v1.
+**WebSphere Admin (GUI):** From Windows host browser, navigate to
+`http://dsb-ihs-ip:80/digistack-bank` (IHS port, not WAS port 9080).
+Confirm: Home page renders AND the `app_config` value from PostgreSQL
+is displayed (proving the full Browser→IHS→WAS→DB path is live).
+Then confirm IHS access_log shows the request was received.
+Then confirm WAS SystemOut.log shows the request was forwarded from IHS
+(look for the `X-Forwarded-For` header or plugin-generated log entries).
+**WebSphere Admin (wsadmin Jython):**
+```python
+# Check webserver1 status via wsadmin
+import AdminControl
+print AdminControl.getAttribute(
+    AdminControl.queryNames('type=WebServer,name=webserver1,*'),
+    'state'
+)
+```
+**Acceptance Criteria:**
+1. Home page loads via `http://dsb-ihs-ip:80/digistack-bank` — NOT via
+   `dsb-dmgr:9080` (direct WAS port).
+2. `app_config` value visible on page — proves DB read through the full
+   chain.
+3. IHS `access_log` shows the GET request.
+4. WAS `SystemOut.log` shows the request handled.
+5. Deliberately stop the IHS web server (`./apachectl stop`) — confirm
+   browser gets a connection error (not a WAS error page), proving IHS
+   is the real front door.
+**Enterprise Outcome:** Browser→IHS→WAS→DB path proven end-to-end.
+
+### Sprint 6
+**Goal:** Write and execute test cases for Version 4.5.
+**Learning Objective:** Test Case discipline (TCS01/TCS02).
+**WebSphere Admin:** Confirm app status for test execution.
+**Deliverables:** TestCases-v4.5.md.
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7.
+**Enterprise Outcome:** Version 4.5 test coverage complete.
+
+### Sprint 7
+**Goal:** Sign off Version 4.5.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Admin:** Capture backupConfig baseline; final smoke test.
+**Deliverables:** SetupDoc-v4.5.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
+**Enterprise Outcome:** Version 4.5 signed off.
+
+### Sprint 8
+**Goal:** Fault Injection + Incident Simulation for Version 4.5.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Admin:** Phase 1 — inject a realistic fault tied to this version's topic. Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v4.5.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 4.5 fault drill complete. Non-gating — does not block sign-off.
+**Version 4.5 Deliverables:** SetupDoc-v4.5.md, TestCases-v4.5.md, FaultDrill-v4.5.md,
+`webserver1` Web Server Definition, plugin-cfg.xml (standalone era),
+IHS httpd.conf with plugin directives.
+**Exit Criteria (target, not yet verified):** Browser→IHS→WAS→DB path
+proven; IHS log confirms traffic; regression passes; plugin debt logged; Fault drill complete (Sprint 8, non-gating).
+**Lessons Learned:** plugin-cfg.xml is a routing table — generated on WAS,
+consumed by IHS, must be physically propagated between two different VMs.
+Regeneration (v8) is a normal, expected admin operation when topology
+changes (standalone → cluster).
+**Technical Debt:**
+- plugin-cfg.xml points at standalone AppServer only — must be
+  regenerated at v8 to point at cluster members.
+- HTTP only (no SSL) — enforced at v11.
+- No custom error pages — added at v8.
+- No static assets at IHS layer — added at v8.
 
 ---
 
@@ -266,7 +582,7 @@
 
 ### Sprint 3
 **Goal:** Create a 2-member WebSphere cluster.
-**WebSphere Admin:** Create `AppCluster` with 2 members; start both, confirm "Started".
+**WebSphere Admin:** Create `devdsbinappcluster01` with 2 members (per STD v1.10 naming convention); start both, confirm "Started".
 **Acceptance Criteria:** Both members reachable individually.
 
 ### Sprint 4
@@ -276,18 +592,36 @@
 
 ### Sprint 5
 **Goal:** Prove session replication and failover.
-**WebSphere Admin:** Login + Deposit on Member 1; kill Member 1 mid-session; confirm session/balance survive on Member 2.
+**Version 5 Deliverables:** `digistack-bank-v5.ear`, SetupDoc-v5.md, TestCases-v5.md (no schema change).
 **Acceptance Criteria:** Session attribute intact after failover; no duplicate/lost transaction.
 **Enterprise Outcome:** Core HA guarantee proven for the first time.
 
 ### Sprint 6
-**Goal:** Smoke test, document, sign off Version 5.
-**WebSphere Admin:** Confirm cluster member status; capture backupConfig baseline (v5, cell-level).
-**Deliverables:** SetupDoc-v5.md, TestCases-v5.md (includes failover test).
-**Acceptance Criteria:** Failover test passes; v1–v4 regression passes on cluster.
+**Goal:** Write and execute test cases for Version 5.
+**Learning Objective:** Test Case discipline (TCS01/TCS02).
+**WebSphere Admin:** Confirm app status for test execution.
+**Deliverables:** TestCases-v5.md.
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7.
+**Enterprise Outcome:** Version 5 test coverage complete.
 
-**Version 5 Deliverables:** `digistack-bank-v5.ear`, SetupDoc-v5.md, TestCases-v5.md (no schema change).
-**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed.
+### Sprint 7
+**Goal:** Sign off Version 5.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Admin:** Capture backupConfig baseline; final smoke test.
+**Deliverables:** SetupDoc-v5.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
+**Enterprise Outcome:** Version 5 signed off.
+
+### Sprint 8
+**Goal:** Fault Injection + Incident Simulation for Version 5.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Admin:** Phase 1 — inject a realistic fault tied to this version's topic. Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v5.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 5 fault drill complete. Non-gating — does not block sign-off.
+
+**Version 5 Deliverables:** `digistack-bank-v5.ear`, SetupDoc-v5.md, TestCases-v5.md, FaultDrill-v5.md (no schema change).
+**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed; Fault drill complete (Sprint 8, non-gating).
 **Lessons Learned:** DMgr/federation is a clustering prerequisite; session replication protects in-flight state.
 **Technical Debt:** Federation/wsadmin at "bare operational" depth — full deep dive deferred to v6.
 
@@ -332,13 +666,31 @@
 **Acceptance Criteria:** Both members serve v6 identically, no drift.
 
 ### Sprint 6
-**Goal:** Smoke test, document, sign off Version 6.
-**WebSphere Admin:** Confirm both members' status; capture backupConfig baseline (v6).
-**Deliverables:** SetupDoc-v6.md, TestCases-v6.md (includes wsadmin-scripted test).
-**Acceptance Criteria:** Freeze/Unfreeze (UI + wsadmin) pass; v1–v5 regression passes on cluster.
+**Goal:** Write and execute test cases for Version 6.
+**Learning Objective:** Test Case discipline (TCS01/TCS02).
+**WebSphere Admin:** Confirm app status for test execution.
+**Deliverables:** TestCases-v6.md.
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7.
+**Enterprise Outcome:** Version 6 test coverage complete.
 
-**Version 6 Deliverables:** `digistack-bank-v6.ear`, `V4__add_frozen_flag.sql`, SetupDoc-v6.md, TestCases-v6.md, wsadmin script.
-**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed.
+### Sprint 7
+**Goal:** Sign off Version 6.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Admin:** Capture backupConfig baseline; final smoke test.
+**Deliverables:** SetupDoc-v6.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
+**Enterprise Outcome:** Version 6 signed off.
+
+### Sprint 8
+**Goal:** Fault Injection + Incident Simulation for Version 6.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Admin:** Phase 1 — inject a realistic fault tied to this version's topic. Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v6.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 6 fault drill complete. Non-gating — does not block sign-off.
+
+**Version 6 Deliverables:** `digistack-bank-v6.ear`, `V4__add_frozen_flag.sql`, SetupDoc-v6.md, TestCases-v6.md, FaultDrill-v6.md wsadmin script.
+**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed; Fault drill complete (Sprint 8, non-gating).
 **Lessons Learned:** Node Sync vs. Full Resync; wsadmin as a genuine operational path; admin features layer cleanly onto Service-layer code.
 **Technical Debt:** Freeze/Unfreeze open to any logged-in user — deferred to Version 10 (role gating).
 
@@ -382,31 +734,115 @@
 **Acceptance Criteria:** All features function as v6; deliberate failure rolls back correctly.
 
 ### Sprint 6
-**Goal:** Smoke test, document, sign off Version 7.
-**WebSphere Admin:** Confirm pool metrics; capture backupConfig baseline (v7).
-**Deliverables:** SetupDoc-v7.md, TestCases-v7.md (pool-exhaustion negative test, rollback test).
-**Acceptance Criteria:** No hardcoded credentials (negative test); v1–v6 regression passes on pooled DS.
+**Goal:** Write and execute test cases for Version 7.
+**Learning Objective:** Test Case discipline (TCS01/TCS02).
+**WebSphere Admin:** Confirm app status for test execution.
+**Deliverables:** TestCases-v7.md.
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7.
+**Enterprise Outcome:** Version 7 test coverage complete.
 
-**Version 7 Deliverables:** `digistack-bank-v7.ear`, SetupDoc-v7.md, TestCases-v7.md, JDBC Provider/DataSource/JAAS Alias config.
-**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed.
+### Sprint 7
+**Goal:** Sign off Version 7.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Admin:** Capture backupConfig baseline; final smoke test.
+**Deliverables:** SetupDoc-v7.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
+**Enterprise Outcome:** Version 7 signed off.
+
+### Sprint 8
+**Goal:** Fault Injection + Incident Simulation for Version 7.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Admin:** Phase 1 — inject a realistic fault tied to this version's topic. Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v7.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 7 fault drill complete. Non-gating — does not block sign-off.
+
+**Version 7 Deliverables:** `digistack-bank-v7.ear`, SetupDoc-v7.md, TestCases-v7.md, FaultDrill-v7.md, JDBC Provider/DataSource/JAAS Alias config.
+**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed; Fault drill complete (Sprint 8, non-gating).
 **Lessons Learned:** Pool sizing math prevents DB exhaustion at scale; JAAS Auth Alias is the correct credential-externalization point.
 **Technical Debt:** None — closes prior debt.
 
 ---
 
-# Version 8 — IBM HTTP Server (IHS)
+# Version 8 — Full IHS (Cluster Era)
 
 ## Version Overview
-**Objective:** Install IHS as front door to the WAS cluster; generate/propagate plugin-cfg.xml; configure custom error pages.
-**Business Scope:** One static asset (logo/CSS) served by IHS. Custom 404/500 error pages.
-**WebSphere Focus:** IBM HTTP Server, Web Server Definition, Plugin Generation, Plugin Propagation, Reverse Proxy, Virtual Hosts, Custom Error Documents.
-**Expected Outcome:** IHS installed; plugin-cfg.xml generated/propagated; static asset served by IHS; custom 404/500 served by IHS.
-**Prerequisites:** P01 v7 signed off.
+**Objective:** Migrate the existing `dsb-ihs` IBM HTTP Server (installed
+at v4.5 for the standalone AppServer) to front the WAS cluster. IHS is
+NOT reinstalled — it already exists. This version regenerates
+plugin-cfg.xml against the cluster topology, adds static assets and
+custom error pages, and proves the full cluster-aware routing path.
+This closes the technical debt introduced at v4.5.
+**Business Scope:** One static asset (logo/CSS) served directly by IHS.
+Custom 404/500 error pages at the IHS layer.
+**WebSphere Focus:** Plugin regeneration against cluster topology, Web
+Server Definition update, static asset serving, custom error pages
+(ErrorDocument), virtual host confirmation, plugin propagation to cluster.
+**Migration Action (what changes on dsb-ihs at this version):**
+
+BEFORE (v4.5 state — still live entering this version):
+plugin-cfg.xml → dsb-dmgr:9080 (standalone server1)
+
+AFTER (v8 state):
+plugin-cfg.xml → ClusterMember1:9080
+ClusterMember2:9081
+(load balancing + failover now active)
+
+**Full Flow After v8:**
+Browser (port 80/443)
+│
+▼
+dsb-ihs — IBM HTTP Server
+│ plugin-cfg.xml now points at BOTH cluster members
+│
+├─────────────────────┐
+▼ ▼
+ClusterMember1 ClusterMember2
+│ │
+└──────────┬──────────┘
+▼
+dsb-db PostgreSQL
+
+**Expected Outcome:** plugin-cfg.xml regenerated and propagated against
+cluster; static asset confirmed IHS-served; custom 404/500 confirmed
+IHS-served; all existing features work via IHS cluster routing.
+**Prerequisites:** P01 v7 signed off. `dsb-ihs` already running (from
+v4.5). Cluster already running (from v5).
 
 ### Sprint 1
-**Goal:** Install IBM HTTP Server on `dsb-ihs`.
-**WebSphere Admin:** Install IHS; confirm default page on port 80.
-**Acceptance Criteria:** Default IHS page reachable.
+**Goal:** Regenerate plugin-cfg.xml against the cluster topology —
+both Admin Console and wsadmin paths. This is the core migration action
+that replaces the standalone-era plugin with a cluster-aware one.
+**Learning Objective:** Why regeneration is needed — the plugin file
+generated at v4.5 lists only one server (standalone AppServer port 9080).
+After clustering (v5), the topology changed: two cluster members now
+exist. IHS cannot route to members it doesn't know about. Regeneration
+reads the current WAS topology and writes a new plugin file that lists
+both members, their ports, and their weights for load balancing.
+**Business Features:** None.
+**WebSphere Admin (GUI):**
+Servers → Server Types → Web Servers → select `webserver1` →
+Generate Plug-in.
+Open the generated `plugin-cfg.xml` and confirm it now lists BOTH
+cluster member hostnames and ports (not just the old standalone
+server1 entry).
+**WebSphere Admin (wsadmin Jython):**
+```python
+# Regenerate plugin against cluster topology
+AdminTask.generatePluginCfg(
+    ['-serverName', 'webserver1',
+     '-nodeName', AdminConfig.list('Node').split('\r\n')[0],
+     '-options', ''
+    ]
+)
+print "plugin-cfg.xml regenerated against cluster."
+```
+**Acceptance Criteria:** Generated `plugin-cfg.xml` contains entries for
+both ClusterMember1 (port 9080) and ClusterMember2 (port 9081). Old
+standalone server1 entry is no longer the sole endpoint. File timestamp
+confirms this is a fresh generation, not the v4.5 file.
+**Enterprise Outcome:** Plugin routing table now reflects real cluster
+topology — foundation for all subsequent sprints in this version.
 
 ### Sprint 2
 **Goal:** Define the Web Server in WAS Admin Console; generate plugin-cfg.xml.
@@ -433,13 +869,31 @@
 **Acceptance Criteria:** Broken URL → custom 404; forced outage → custom 500, both via IHS.
 
 ### Sprint 6
-**Goal:** Package/deploy `digistack-bank-v8.ear`; smoke test; sign off Version 8.
-**WebSphere Admin:** Deploy v8; confirm plugin routing/static assets/error pages end-to-end.
-**Deliverables:** SetupDoc-v8.md, TestCases-v8.md (404/500 and static-asset-during-outage tests).
-**Acceptance Criteria:** v1–v7 regression passes via IHS routing (not direct WAS ports); 404/500 tests pass.
+**Goal:** Write and execute test cases for Version 8.
+**Learning Objective:** Test Case discipline (TCS01/TCS02).
+**WebSphere Admin:** Confirm app status for test execution.
+**Deliverables:** TestCases-v8.md.
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7.
+**Enterprise Outcome:** Version 8 test coverage complete.
 
-**Version 8 Deliverables:** `digistack-bank-v8.ear`, SetupDoc-v8.md, TestCases-v8.md, Web Server definition/plugin-cfg.xml/ErrorDocument config.
-**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed.
+### Sprint 7
+**Goal:** Sign off Version 8.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Admin:** Capture backupConfig baseline; final smoke test.
+**Deliverables:** SetupDoc-v8.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
+**Enterprise Outcome:** Version 8 signed off.
+
+### Sprint 8
+**Goal:** Fault Injection + Incident Simulation for Version 8.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Admin:** Phase 1 — inject a realistic fault tied to this version's topic. Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v8.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 8 fault drill complete. Non-gating — does not block sign-off.
+
+**Version 8 Deliverables:** `digistack-bank-v8.ear`, SetupDoc-v8.md, TestCases-v8.md, FaultDrill-v8.md, Web Server definition/plugin-cfg.xml/ErrorDocument config.
+**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed; Fault drill complete (Sprint 8, non-gating).
 **Lessons Learned:** Plugin generation/propagation is explicit, not automatic; static content belongs at the web tier.
 **Technical Debt:** Single IHS instance (no LB/HA yet) — enterprise load balancing is P02 v21.
 
@@ -461,7 +915,7 @@
 
 ### Sprint 2
 **Goal:** Enable memory-to-memory session replication across the cluster.
-**WebSphere Admin:** Enable replication domain for `AppCluster`; confirm both members registered as partners.
+**WebSphere Admin:** Enable replication domain for `devdsbinappcluster01`; confirm both members registered as partners.
 **Acceptance Criteria:** Admin Console shows both members actively replicating.
 
 ### Sprint 3
@@ -481,13 +935,31 @@
 **Acceptance Criteria:** App functions as v8; tuning documented with rationale.
 
 ### Sprint 6
-**Goal:** Smoke test, document, sign off Version 9.
-**WebSphere Admin:** Confirm replication domain health; capture backupConfig baseline (v9).
-**Deliverables:** SetupDoc-v9.md, TestCases-v9.md (timeout, sticky-routing, restart-failover tests).
-**Acceptance Criteria:** All three tests pass; v1–v8 regression passes on replicated cluster.
+**Goal:** Write and execute test cases for Version 9.
+**Learning Objective:** Test Case discipline (TCS01/TCS02).
+**WebSphere Admin:** Confirm app status for test execution.
+**Deliverables:** TestCases-v9.md.
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7.
+**Enterprise Outcome:** Version 9 test coverage complete.
 
-**Version 9 Deliverables:** `digistack-bank-v9.ear`, SetupDoc-v9.md, TestCases-v9.md, replication domain/session timeout config.
-**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed.
+### Sprint 7
+**Goal:** Sign off Version 9.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Admin:** Capture backupConfig baseline; final smoke test.
+**Deliverables:** SetupDoc-v9.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
+**Enterprise Outcome:** Version 9 signed off.
+
+### Sprint 8
+**Goal:** Fault Injection + Incident Simulation for Version 9.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Admin:** Phase 1 — inject a realistic fault tied to this version's topic. Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v9.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 9 fault drill complete. Non-gating — does not block sign-off.
+
+**Version 9 Deliverables:** `digistack-bank-v9.ear`, SetupDoc-v9.md, TestCases-v9.md, FaultDrill-v4.md, replication domain/session timeout config.
+**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed; Fault drill complete (Sprint 8, non-gating).
 **Lessons Learned:** Sticky sessions (routing) and replication (data protection) are distinct mechanisms.
 **Technical Debt:** None introduced.
 
@@ -531,13 +1003,31 @@
 **Acceptance Criteria:** Customer can Deposit/Withdraw but not Freeze/Unfreeze; Administrator can do both.
 
 ### Sprint 6
-**Goal:** Smoke test, document, sign off Version 10.
-**WebSphere Admin:** Confirm Global Security status; capture backupConfig baseline (v10).
-**Deliverables:** SetupDoc-v10.md, TestCases-v10.md (Customer-denied negative test).
-**Acceptance Criteria:** Negative test passes; v1–v9 regression passes with security enabled.
+**Goal:** Write and execute test cases for Version 10.
+**Learning Objective:** Test Case discipline (TCS01/TCS02).
+**WebSphere Admin:** Confirm app status for test execution.
+**Deliverables:** TestCases-v10.md.
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7.
+**Enterprise Outcome:** Version 10 test coverage complete.
 
-**Version 10 Deliverables:** `digistack-bank-v10.ear`, SetupDoc-v10.md, TestCases-v10.md, File Registry/groups/role mapping/web.xml constraints.
-**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed.
+### Sprint 7
+**Goal:** Sign off Version 10.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Admin:** Capture backupConfig baseline; final smoke test.
+**Deliverables:** SetupDoc-v10.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
+**Enterprise Outcome:** Version 10 signed off.
+
+### Sprint 8
+**Goal:** Fault Injection + Incident Simulation for Version 10.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Admin:** Phase 1 — inject a realistic fault tied to this version's topic. Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v10.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 10 fault drill complete. Non-gating — does not block sign-off.
+
+**Version 10 Deliverables:** `digistack-bank-v10.ear`, SetupDoc-v10.md, TestCases-v10.md, FaultDrill-v10.md, File Registry/groups/role mapping/web.xml constraints.
+**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed; Fault drill complete (Sprint 8, non-gating).
 **Lessons Learned:** Container-managed security constraints enforce authorization independent of UI.
 **Technical Debt:** File registry only — LDAP federation is a deliberate future step (P06 v42).
 
@@ -578,13 +1068,31 @@
 **Acceptance Criteria:** App unchanged functionally; cert entry recorded with Annual renewal cadence.
 
 ### Sprint 6
-**Goal:** Smoke test, document, sign off Version 11.
-**WebSphere Admin:** Confirm HTTPS/redirect status; capture backupConfig baseline (v11).
-**Deliverables:** SetupDoc-v11.md, TestCases-v11.md (redirect + mixed-content tests).
-**Acceptance Criteria:** New tests pass; v1–v10 regression passes over HTTPS.
+**Goal:** Write and execute test cases for Version 11.
+**Learning Objective:** Test Case discipline (TCS01/TCS02).
+**WebSphere Admin:** Confirm app status for test execution.
+**Deliverables:** TestCases-v11.md.
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7.
+**Enterprise Outcome:** Version 11 test coverage complete.
 
-**Version 11 Deliverables:** `digistack-bank-v11.ear`, SetupDoc-v11.md, TestCases-v11.md, IHS SSL config.
-**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed.
+### Sprint 7
+**Goal:** Sign off Version 11.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Admin:** Capture backupConfig baseline; final smoke test.
+**Deliverables:** SetupDoc-v11.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
+**Enterprise Outcome:** Version 11 signed off.
+
+### Sprint 8
+**Goal:** Fault Injection + Incident Simulation for Version 11.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Admin:** Phase 1 — inject a realistic fault tied to this version's topic. Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v11.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 11 fault drill complete. Non-gating — does not block sign-off.
+
+**Version 11 Deliverables:** `digistack-bank-v11.ear`, SetupDoc-v11.md, TestCases-v11.md, FaultDrill-v11.md, IHS SSL config.
+**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed; Fault drill complete (Sprint 8, non-gating).
 **Lessons Learned:** Web-tier SSL is distinct from end-to-end SSL (deferred to v12).
 **Technical Debt:** Self-signed cert only; internal hops beyond IHS unencrypted until v12.
 
@@ -625,13 +1133,31 @@
 **Acceptance Criteria:** Renewal completes with no interruption; CI01 updated (`digistack-mtls-internal-hop.crt`).
 
 ### Sprint 6
-**Goal:** Smoke test, document, sign off Version 12.
-**WebSphere Admin:** Confirm SSL status at every hop; capture backupConfig baseline (v12).
-**Deliverables:** SetupDoc-v12.md, TestCases-v12.md (mTLS-rejection + cert-renewal tests).
-**Acceptance Criteria:** New tests pass; v1–v11 regression passes over full SSL/mTLS chain.
+**Goal:** Write and execute test cases for Version 12.
+**Learning Objective:** Test Case discipline (TCS01/TCS02).
+**WebSphere Admin:** Confirm app status for test execution.
+**Deliverables:** TestCases-v12.md.
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7.
+**Enterprise Outcome:** Version 12 test coverage complete.
 
-**Version 12 Deliverables:** `digistack-bank-v12.ear`, SetupDoc-v12.md, TestCases-v12.md, plugin SSL/SSL Repertoires/mTLS config.
-**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed.
+### Sprint 7
+**Goal:** Sign off Version 12.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Admin:** Capture backupConfig baseline; final smoke test.
+**Deliverables:** SetupDoc-v12.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
+**Enterprise Outcome:** Version 12 signed off.
+
+### Sprint 8
+**Goal:** Fault Injection + Incident Simulation for Version 12.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Admin:** Phase 1 — inject a realistic fault tied to this version's topic. Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v12.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 12 fault drill complete. Non-gating — does not block sign-off.
+
+**Version 12 Deliverables:** `digistack-bank-v12.ear`, SetupDoc-v12.md, TestCases-v12.md, FaultDrill-v12.md, plugin SSL/SSL Repertoires/mTLS config.
+**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed; Fault drill complete (Sprint 8, non-gating).
 **Lessons Learned:** SSL Repertoires provide explicit, reusable scoping; mTLS requires client authentication too.
 **Technical Debt:** Only one internal hop carries mTLS, per NFR matrix's "≥1 internal hop" requirement — intentional scope.
 
@@ -674,13 +1200,31 @@
 **Acceptance Criteria:** Email trigger works consistently cluster-wide.
 
 ### Sprint 6
-**Goal:** Smoke test, document, sign off Version 13.
-**WebSphere Admin:** Confirm Mail Session status; capture backupConfig baseline (v13).
-**Deliverables:** SetupDoc-v13.md, TestCases-v13.md (successful-delivery + misconfigured-failure tests).
-**Acceptance Criteria:** Both tests pass; v1–v12 regression passes with SMTP correctly configured.
+**Goal:** Write and execute test cases for Version 13.
+**Learning Objective:** Test Case discipline (TCS01/TCS02).
+**WebSphere Admin:** Confirm app status for test execution.
+**Deliverables:** TestCases-v13.md.
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7.
+**Enterprise Outcome:** Version 13 test coverage complete.
 
-**Version 13 Deliverables:** `digistack-bank-v13.ear`, SetupDoc-v13.md, TestCases-v13.md, SMTP Mail Provider/JNDI Mail Session/Resource Environment Entry.
-**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed.
+### Sprint 7
+**Goal:** Sign off Version 13.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Admin:** Capture backupConfig baseline; final smoke test.
+**Deliverables:** SetupDoc-v13.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
+**Enterprise Outcome:** Version 13 signed off.
+
+### Sprint 8
+**Goal:** Fault Injection + Incident Simulation for Version 13.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Admin:** Phase 1 — inject a realistic fault tied to this version's topic. Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v13.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 13 fault drill complete. Non-gating — does not block sign-off.
+
+**Version 13 Deliverables:** `digistack-bank-v13.ear`, SetupDoc-v13.md, TestCases-v13.md, FaultDrill-v13.md, SMTP Mail Provider/JNDI Mail Session/Resource Environment Entry.
+**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed; Fault drill complete (Sprint 8, non-gating).
 **Lessons Learned:** JNDI Mail Session mirrors the DataSource externalization pattern; breaking a working integration is the fastest way to learn its failure mode.
 **Technical Debt:** Single channel (email only) — SMS/push explicitly out of scope for this Part.
 
@@ -723,13 +1267,31 @@
 **Acceptance Criteria:** Report generation no longer degrades concurrent Login/Deposit/Withdraw responsiveness.
 
 ### Sprint 6
-**Goal:** Smoke test, document, sign off Version 14 — completing P01.
-**WebSphere Admin:** Confirm final heap/thread pool settings; capture backupConfig baseline (v14, final P01 baseline).
-**Deliverables:** SetupDoc-v14.md, TestCases-v14.md (large-dataset report test with before/after GC comparison).
-**Acceptance Criteria:** Report test passes with no OOM; v1–v13 regression passes; before/after GC improvement documented.
+**Goal:** Write and execute test cases for Version 14.
+**Learning Objective:** Test Case discipline (TCS01/TCS02).
+**WebSphere Admin:** Confirm app status for test execution.
+**Deliverables:** TestCases-v14.md.
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7.
+**Enterprise Outcome:** Version 14 test coverage complete.
 
-**Version 14 Deliverables:** `digistack-bank-v14.ear`, SetupDoc-v14.md, TestCases-v14.md, tuned JVM heap/thread pool config.
-**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed.
+### Sprint 7
+**Goal:** Sign off Version 14.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Admin:** Capture backupConfig baseline; final smoke test.
+**Deliverables:** SetupDoc-v14.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
+**Enterprise Outcome:** Version 14 signed off.
+
+### Sprint 8
+**Goal:** Fault Injection + Incident Simulation for Version 14.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Admin:** Phase 1 — inject a realistic fault tied to this version's topic. Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v14.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 14 fault drill complete. Non-gating — does not block sign-off.
+
+**Version 14 Deliverables:** `digistack-bank-v14.ear`, SetupDoc-v14.md, TestCases-v14.md, FaultDrill-v14.md, tuned JVM heap/thread pool config.
+**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed; Fault drill complete (Sprint 8, non-gating).
 **Lessons Learned:** Reproducing a real performance problem before tuning validates the fix against evidence, not a guess.
 **Technical Debt:** None — P01 closes clean.
 
@@ -745,6 +1307,10 @@
 | Debt Introduced At | Planned Resolution At | Item |
 |---|---|---|
 | v1 | v7 | Direct JDBC → JNDI DataSource/pooling |
+| v4.5 | v8 | plugin-cfg.xml points at standalone AppServer — regenerated against cluster at v8 |
+| v4.5 | v8 | No custom error pages at IHS layer — added at v8 |
+| v4.5 | v8 | No static assets at IHS layer — added at v8 |
+| v4.5 | v11 | HTTP only at IHS — SSL/HTTPS enforced at v11 |
 | v6 | v10 | Freeze/Unfreeze open access → role-gated |
 | v11 | v12 | Web-tier-only SSL → end-to-end SSL/mTLS |
 

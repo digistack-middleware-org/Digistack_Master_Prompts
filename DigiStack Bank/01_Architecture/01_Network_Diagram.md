@@ -44,11 +44,13 @@ Domain: digistack.cloud | Subnet: 192.168.10.0/24 | Default-deny, explicit-allow
         │   dsb-mq     .10.31  1vCPU/1.5GB [NOT BUILT — P02 v19] │
         └────────────────────────────────────────────────┘
                                  │
-        ┌────────────────────────────────────────────────┐
+        ┌────────────────────────────────────────────────┐ │
         │  Mgmt  (separate)                                │
         │   dsb-monitor .10.40  [NOT BUILT — P04 v31]      │
         │   dsb-elk     .10.41  [NOT BUILT — P04 v32]      │
-        └────────────────────────────────────────────────┘
+        │   dsb-tracing .10.42  [NOT BUILT — P04 v33,      │
+        │    co-locate on dsb-monitor if RAM permits]      │
+        └────────────────────────────────────────────────┘ │
 ```
 
 Live firewall-relevant ports at v1 (SOE01 §8, default-deny elsewhere):

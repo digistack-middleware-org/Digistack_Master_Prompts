@@ -1,5 +1,5 @@
 ID: STD
-Version: 1.13
+Version: 1.14
 Status: Active
 
 Title: Standing Rules
@@ -151,9 +151,7 @@ if it differs from the "13+" target.
 
 Version 1.9 change note (2026-08-05): Added PIS01 (Production Incident
 Simulation Standard) and FIS01 (Fault Injection Standard) as new
-addenda, mirroring NDS01's placement/format. Effective P02 onward
-(v15-v78) — NOT retroactive to P01 (v1-v14), which remains signed off
-under its original 6-sprint structure per version. From v15 onward,
+addenda, mirroring NDS01's placement/format. Effective project-wide, P01 through the final Part (v1-v78) — no exceptions. P01's Versions 1-14 also use the 8-sprint structure (Sprint 7 Sign-off, Sprint 8 Fault Injection + Incident), consistent with every later Part. This corrects an earlier note that mistakenly exempted P01 from this structure — P01_Sprint_Plan.md already reflects the correct 8-sprint format and was never actually built under the old 6-sprint structure (P01 v1-v14 remain unstarted per the 2026-08-25 reset), so no retroactive rework is needed. From v15 onward,
 every version's sprint count changes from 6 to 8: Sprint 7 (Incident
 Simulation, per PIS01) and Sprint 8 (Fault Injection Lab, per FIS01) are
 appended after the existing Sprint 6 (smoke test/sign-off). This is a
@@ -221,6 +219,13 @@ record is SetupDoc-v1.md §4.1/§4.3. Also added digistack_bank as the
 named early-build shared database (Database section), closing the
 ARCH01 gap where the pre-CBS-split shared DB had no defined name.
 
+
+
+Version 1.12 change note (2026-08-25): Header version bumped from 1.11
+to 1.12 to match this change note, which had been added without the
+metadata block being updated to match — same category of gap as the
+SOE01 v1.9 Used-By correction below.
+
 Version 1.13 change note (2026-08-25): Full reset #2 (VM + chat lost,
 confirmed with project owner 2026-08-25, per SESSION_STATE v1.5).
 WebSphere ND and PostgreSQL version pins reverted from CONFIRMED back
@@ -231,11 +236,6 @@ document's actual pins were never edited at that time and still read
 CONFIRMED (dated 2026-08-07) until this entry. Re-promote to CONFIRMED
 only once P01 v1 is rebuilt and signed off again, with a fresh
 SetupDoc-v1.md as the source record.
-
-Version 1.12 change note (2026-08-25): Header version bumped from 1.11
-to 1.12 to match this change note, which had been added without the
-metadata block being updated to match — same category of gap as the
-SOE01 v1.9 Used-By correction below.
 
 This entry replaces an earlier, garbled version of this same change
 note that named the same value ("Portal") on both sides of a claimed
@@ -250,6 +250,14 @@ anywhere in the project. If a real mismatch prompted the original
 metadata correction only, per this project's standing "correct the
 reference doc, not the built work" precedent (same as the 2026-07-28
 STD/SOE01 port-table fix). No architectural/technical change.
+
+Version 1.14 change note (2026-08-27): P01 (v1-v14) sprint structure
+updated from 6 sprints to 8 sprints, matching P02-P10's existing
+structure. Sprint 6 = Test Cases (TestCases-v<N>.md), Sprint 7 =
+Sign-off (SetupDoc, backupConfig, smoke test), Sprint 8 = Fault
+Injection + Incident (FaultDrill-v<N>.md). The prior PIS01/FIS01
+exclusion of P01 is removed — project owner decision 2026-08-27.
+Non-gating rule for Sprint 8 unchanged and applies to P01 as well.
 
 Dependency Matrix
 -----------------
@@ -514,6 +522,7 @@ dsb-db
 dsb-mq
 dsb-monitor
 dsb-elk
+dsb-tracing       (Jaeger — may co-locate on dsb-monitor; add as separate VM only if SOE01 §1a RAM budget permits)
 dsb-tomcat        (Mobile/ATM host)
 
 IP/VLAN Addressing + Resource Allocation (Lab Scheme)
@@ -534,6 +543,7 @@ dsb-db                   Data   .10.30    2      2 GB    40 GB         Almost al
 dsb-mq                   Data   .10.31    1      1.5 GB  20 GB         On-demand, P02 v19 onward
 dsb-monitor              Mgmt   .10.40    1      1.5 GB  30 GB         On-demand, P04 v31 onward only
 dsb-elk                  Mgmt   .10.41    1      1.5 GB  40 GB         On-demand, P04 v32 onward only
+dsb-tracing              Mgmt   .10.42    1      1 GB    10 GB         On-demand, P04 v33 onward; co-locate on dsb-monitor if RAM permits (per SOE01 §1a budget)
 
 Totals if every VM ran simultaneously: 11 vCPU / ~13.5 GB RAM / 250 GB
 disk — exceeds this host's realistic ceiling (16 GB RAM, 14.8 GB usable,
@@ -716,226 +726,166 @@ a functionally frozen application set. Any exception must be documented
 inline in the relevant Part file, not assumed.
 
 ===============================================================================
-PIS01 — Production Incident Simulation Standard
+PIS01/FIS01 — Merged Fault Injection & Incident Simulation Standard
 ===============================================================================
 
-Applies to: Sprint 7 of every Version from P02 onward (v15-v78). NOT
-retroactive to P01 (v1-v14) — those versions keep their original 6-sprint
-structure exactly as signed off.
+Applies to: Sprint 8 of every Version in the project, P01 through the
+final Part (v1-v78) — no exceptions.
 
 Why This Exists
 ----------------
-Reading logs and fixing a known bug is not the same skill as walking into
-a live incident with no idea what's wrong. Every real WebSphere admin job
-starts exactly the way Sprint 7 is structured: a ticket, angry users, an
-alert, and a system that won't say what's wrong until you go find out.
-This standard exists to force that exact experience, every version, so
-the muscle gets built repeatedly rather than practiced once and assumed.
+A narrated ticket disconnected from the real environment teaches
+pattern-matching against a script, not real troubleshooting. A live
+fault with no ticket skips the "how do I even know something's wrong"
+step a real admin actually starts from. Merging them fixes both: a real
+change is made to the actual build, and the incident ticket you receive
+describes exactly what that real fault would look like from the outside —
+so your investigation is against a genuinely broken system, not a
+narrated hypothetical.
 
-Sprint 7 Structure — Two Phases, Strictly Separated
+Sprint 8 Structure — Three Phases, Strictly Separated
 ---------------------------------------------------------
 
-### Phase 1 — Incident Presented (no solution)
-Every Sprint 7 opens with an incident package containing ALL of the
-following, and nothing beyond them:
-
-- **Business Impact** — what's breaking for the bank/customers right now
-- **Incident Ticket** — ticket ID, severity, reported time, reporter
-- **User Complaints** — realistic, as if forwarded from a support queue
-- **Monitoring Alerts** — whatever alerting exists at this point in the
-  roadmap (pre-P04: a plausible alert description; P04 v34 onward: tied
-  to the real Alertmanager rules built by then)
-- **Symptoms Only** — observable behavior, never the cause
-- **Environment Details** — which VM(s)/app(s)/component(s) are in play
-- **Available Logs** — named and excerpted (SystemOut.log, SystemErr.log,
-  FFDC, IHS access_log/error_log, plugin log, GC log, etc. — whichever
-  are relevant to this incident)
-- **Access Granted** — explicitly states what's available to investigate
-  with: WAS Admin Console, wsadmin, Linux shell, IHS (when applicable),
-  Database (when applicable)
-
-**Hard rule:** Phase 1 never contains the root cause, the fix, or a hint
-strong enough to shortcut genuine diagnosis. If asked "is it X?" mid-
-investigation, a specific yes/no on that exact guess is fair (a senior
-admin would confirm/deny a hypothesis) — but nothing is volunteered
-unprompted. If the trainee asks for a hint outright, redirect back to
-"what would you check next" rather than answering directly.
-
-### Phase 2 — Solution (only after the trainee responds)
-Phase 2 triggers only when the trainee submits their diagnosis/fix
-attempt, or explicitly asks to see the solution. It then contains:
-
-- **Root Cause Analysis (RCA)**
-- **Correct Fix** — complete, runnable, per NDS01 Rule 1 (no fragments)
-- **Verification Steps** — concrete, per NDS01 Rule 5 (exact screen/log
-  line/output to confirm)
-- **Preventive Actions**
-- **Best Practices**
-- **Production Recommendations**
-
-Rules
------
-1. Every incident ties to that version's actual WebSphere topic (per
-   that version's roadmap "WebSphere Topic" field) — e.g. a JDBC-topic
-   version gets a connection-pool-exhaustion-style incident, not an
-   unrelated one.
-2. Phase 1 and Phase 2 are delivered as separate responses/turns, never
-   in the same message — Phase 2 must wait for the trainee's attempt.
-3. Documented as `IncidentSim-v<N>.md`, written using the template below,
-   committed to `/docs/incidents/`.
-4. Difficulty may scale up as the roadmap progresses (later versions can
-   assume familiarity with earlier troubleshooting patterns) but every
-   incident must still be genuinely solvable using only what that
-   version's Access Granted list provides.
-5. **Non-gating (project owner decision, 2026-08-05):** Sprint 7 is
-   supplementary training practice. It does NOT block a version's
-   sign-off, and is NOT part of TCS01 §2.7's Sign-off Rubric or EPS01
-   §3.2/3.3's promotion checklists. A version signs off exactly as
-   before — Sprint 6's existing Critical/High test-case pass + no open
-   Critical/High defects — regardless of whether Sprint 7 has been
-   completed at that point. Sprint 7 may be completed after a version is
-   already signed off without reopening or blocking anything.
-
-Standard Template — IncidentSim-v<N>.md
--------------------------------------------
-```markdown
-# Production Incident Simulation — Version <N>: <Title>
-
-**Part:** <Part number and title>
-**Sprint:** 7
-**Topic tie-in:** <which WebSphere topic this incident exercises>
-
-## Phase 1 — Incident
-
-### Business Impact
-### Incident Ticket
-### User Complaints
-### Monitoring Alerts
-### Symptoms
-### Environment Details
-### Available Logs
-### Access Granted
-
----
-*(Trainee investigates here — this section stays blank until Phase 2 is requested)*
----
-
-## Phase 2 — Solution
-### Root Cause Analysis
-### Correct Fix
-### Verification Steps
-### Preventive Actions
-### Best Practices / Production Recommendations
-```
-
-===============================================================================
-FIS01 — Fault Injection Standard
-===============================================================================
-
-Applies to: Sprint 8 of every Version from P02 onward (v15-v78). NOT
-retroactive to P01.
-
-Why This Exists
-----------------
-PIS01's incidents are narrated. FIS01 is the hands-on counterpart — a
-real fault, actually introduced into the real lab environment, that the
-trainee diagnoses and fixes themselves using real tools: Admin Console,
-wsadmin, Linux commands, JVM/SystemOut/SystemErr/FFDC log analysis,
-plugin log checks, JDBC/JMS/cluster/node-sync verification, component
-restarts. This is a live lab, not a reading exercise — the trainee is
-expected to actually touch the environment, not describe what they would
-do.
-
-Sprint 8 Structure — Two Phases, Strictly Separated
----------------------------------------------------------
-
-### Phase 1 — Fault Injected (no reveal)
+### Phase 1 — Fault Injection (real, into the actual environment)
 - The fault is real: either the trainee is given exact instructions to
   make a specific change (introduced "blind" — they follow steps without
   being told what failure it causes), or Claude directs a change to be
   made without stating its effect up front.
-- Once injected, the trainee is told only that "something in <this
-  version's component scope> is now broken" — no further hint.
-- The trainee then investigates using real tools: Admin Console, wsadmin,
-  Linux shell commands, log analysis (SystemOut.log, SystemErr.log,
-  FFDC, plugin logs, GC logs as relevant), JDBC/JMS/cluster/Node Sync
-  verification, and component restarts as they judge necessary.
+- The fault must be realistic and tied to that version's actual
+  WebSphere/application topic — never an arbitrary/unrelated break.
+- The fault must be genuinely diagnosable using only the tools that
+  version's own build has actually established (WAS Admin Console,
+  wsadmin, IHS logs, WAS logs, application logs, DB/MQ tools, Linux
+  commands per SOE01 §12's standard paths).
+- The injection steps are given as complete, exact instructions per
+  NDS01 Rule 1/2 — never "just break something," always a specific,
+  reproducible change.
+- Nothing about the fault's effect, symptom, or cause is stated at this
+  point — that's Phase 2's job.
+
+### Phase 2 — Incident Raised (triggered by "continue sprint" after injection)
+Once the fault from Phase 1 is actually in place, "continue sprint"
+produces an incident ticket in this exact format — describing the real
+symptoms that specific injected fault would actually produce, not a
+generic scripted incident:
+INCIDENT ID:
+SEVERITY:
+TIME:
+APPLICATION/SERVICE:
+
+BUSINESS IMPACT:
+
+CUSTOMER/BUSINESS SYMPTOM:
+<realistic banking symptom, derived from the actual fault injected>
+
+INITIAL ALERT/TICKET:
+<short production ticket>
+
+OBSERVED ERROR:
+<realistic error message this specific fault would actually produce —
+HTTP error, WAS error, application error, MQ/JMS/DB/IHS error, etc.>
+
+SCOPE:
+<what is affected>
+
+NOT AFFECTED:
+<what still works>
+
+RECENT CHANGE:
+<only if appropriate; never states the fault's exact nature/cause>
+
+STARTING EVIDENCE:
+<only the evidence normally available at incident creation — no
+diagnostic conclusions>
+
+STOP HERE.
+
+
+Hard rules for Phase 2:
+1. The ticket is generated only from the real fault actually injected in
+   Phase 1 — never a stock/unrelated scenario.
+2. No root cause, solution, troubleshooting steps, commands,
+   configuration changes, hints, expected diagnosis, or RCA appear
+   anywhere in this output.
+3. If asked mid-investigation "is it X?" — a specific yes/no on that
+   exact hypothesis is fair (a senior admin would confirm/deny a
+   guess), but nothing beyond that exact question is volunteered.
+4. If a hint is explicitly requested, redirect back to "what would you
+   check next" rather than answering directly.
+
+### Phase 3 — Investigation, RCA, and Help (person-driven)
+- The person investigates using real tools against the real fault: Admin
+  Console, wsadmin, Linux shell commands, log analysis (SystemOut.log,
+  SystemErr.log, FFDC, plugin logs, GC logs as relevant), JDBC/JMS/
+  cluster/Node Sync verification, and component restarts as judged
+  necessary.
 - Claude may answer factual questions about what the trainee observes
   (e.g. "what does this specific log line mean") without revealing the
-  root cause itself.
+  root cause itself, per Phase 2's hard rules.
+- The person may explicitly ask for help at any point — Claude then
+  gives proportional assistance (a nudge toward the next diagnostic
+  step, not the answer outright) unless the person explicitly asks to
+  see the full RCA/solution.
+- RCA Review (root cause, correct fix, verification steps, preventive
+  actions, best practices) is produced only on explicit request — as a
+  separate, later message, never bundled into Phase 2's ticket or
+  volunteered mid-investigation.
+- Once revealed/fixed, the trainee restores the environment to a
+  known-good state (real fix applied, or reverted via VM snapshot per
+  SOE01's snapshot discipline) before Sprint 8 is considered closed — a
+  fault is never left live past its own drill.
 
-### Phase 2 — Solution (only after the trainee fixes it or asks to see the solution)
-- Confirms whether the trainee's fix actually resolved it (or explains
-  why it didn't, if they got it wrong)
-- Full Root Cause Analysis
-- The exact fault that was injected (what changed, and why it broke
-  what it broke)
-- Correct Fix (complete steps, per NDS01 Rule 1)
-- Verification Steps
-- Preventive Actions / Best Practices
-
-Rules
------
-1. The fault must be realistic and tied to that version's actual
-   WebSphere topic — never an arbitrary/unrelated break.
-2. The fault must be genuinely diagnosable using only the tools STD/
-   SOE01 already establish as available in this environment (Admin
-   Console, wsadmin, Linux shell, logs per SOE01 §12's standard paths).
-3. Every fault injection step and its later reveal are both given as
-   complete, exact instructions per NDS01 Rule 1/2 — never "just break
-   something," always a specific, reproducible change.
-4. Phase 2 never triggers automatically after injection — it waits for
-   the trainee's fix attempt or an explicit request to see the solution.
-5. Once revealed, the trainee restores the environment to a known-good
-   state (either by applying the correct fix for real, or by reverting
-   via VM snapshot per SOE01's snapshot discipline) before Sprint 8 is
-   considered closed — a fault is never left live in the environment
-   past its own drill.
-6. Documented as `FaultDrill-v<N>.md`, using the template below,
-   committed to `/docs/faultdrills/`.
-7. **Non-gating (project owner decision, 2026-08-05):** Same as PIS01
-   Rule 5 — Sprint 8 is supplementary and does not block sign-off. A
-   version's Sign-off Rubric (TCS01 §2.7) and promotion checklist
-   (EPS01 §3.2/3.3) are unaffected by Sprint 8's completion status.
-
-Standard Template — FaultDrill-v<N>.md
--------------------------------------------
+Documentation
+-----------------
+Documented as `FaultDrill-v<N>.md`, committed to `/docs/faultdrills/`,
+using this structure:
 ```markdown
-# Fault Injection Lab — Version <N>: <Title>
+# Fault Injection & Incident — Version <N>: <Title>
 
 **Part:** <Part number and title>
 **Sprint:** 8
-**Topic tie-in:** <which WebSphere topic this fault exercises>
+**Topic tie-in:** <which WebSphere/application topic this fault exercises>
 
 ## Phase 1 — Fault Injected
-### Injection Steps (exact, followed by the trainee or Claude-directed)
+### Injection Steps (exact)
 ### What the Trainee Is Told
-### Tools Available for Diagnosis
+
+## Phase 2 — Incident Ticket
+(exact PIS01/FIS01 format above, generated from the real fault)
 
 ---
 *(Trainee's troubleshooting log goes here — commands run, logs checked,
-findings — filled in live during the drill)*
+findings — filled in live during investigation)*
 ---
 
-## Phase 2 — Solution
+## Phase 3 — RCA Review (only on explicit request)
 ### What Was Actually Broken
 ### Root Cause Analysis
-### Correct Fix (complete steps)
+### Correct Fix (complete steps, per NDS01 Rule 1)
 ### Verification Steps
 ### Preventive Actions / Best Practices
 ### Environment Restored? (Y/N, method used)
 ```
 
-Cross-Reference
------------------
-PIS01 and FIS01 sit alongside NDS01 (delivery completeness) and SDD01/
-TCS01 (SetupDoc/TestCase templates) — they govern two new *kinds* of
-Sprint deliverable, using the same completeness discipline NDS01 already
-requires (full steps, no fragments, concrete verification), applied to
-incident/fault scenarios instead of build-out work.
+Non-Gating Rule
+-------------------
+(project owner decision, 2026-08-05, carried forward unchanged) — Sprint
+8 is supplementary training practice. It does NOT block a version's
+sign-off and is NOT part of TCS01 §2.7's rubric or EPS01 §3.2/3.3's
+promotion checklists. A version signs off on its Sign-off sprint
+(Sprint 7) exactly as before, regardless of whether Sprint 8 has been
+completed. Sprint 8 may be completed after a version is already signed
+off, without reopening anything.
+
+Supersession Note
+----------------------
+This section replaces the prior separate PIS01 (narrated-ticket-only,
+Sprint 7) and FIS01 (hands-on-fault-only, Sprint 8) standards in full.
+Both are now this single merged Sprint 8 sequence, fault-first, applied
+to every version in the project.
 
 Version Numbering Impact
 ----------------------------
 No version numbers change. Only each version's internal sprint count
-changes, from 6 to 8, starting at P02 v15. P01 (v1-v14) is unaffected and
-stays a 6-sprint structure per its own already-signed-off pattern.
+changes, from 6 to 8. This applies to every version in the project,
+P01 through the final Part (v1-v78) — no exceptions.

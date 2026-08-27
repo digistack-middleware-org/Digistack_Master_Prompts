@@ -70,3 +70,47 @@ uses for its Version Pins ("target" → "CONFIRMED").
 
 *This is the 01_Architecture index. Companion standards: ARCH01/ARCH02
 (00_Core) — text source of truth this folder visualizes.*
+
+                 DIGISTACK BANK
+                       |
+       +---------------+---------------+
+       |               |               |
+       v               v               v
+   NETWORK           SERVERS        DEPLOYMENT
+       |               |               |
+   Network.md      VM_Layout.md   Deployment.md
+       |
+       +-------------------------------+
+                                       |
+                                       v
+                              WebSphere ND
+                                       |
+                       +---------------+---------------+
+                       |                               |
+                       v                               v
+                   REQUESTS                         CLUSTER
+                       |                               |
+                 Request_Flows.md              Cluster_Architecture.md
+                       |
+                       v
+                 APPLICATION
+                       |
+             +---------+---------+
+             |                   |
+             v                   v
+         PostgreSQL            IBM MQ
+             |                   |
+             v                   v
+          DB ER.md            MQ.md
+
+
+        SECURITY
+           |
+           v
+     Security.md
+
+
+        FUTURE
+           |
+           v
+       DR.md

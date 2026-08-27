@@ -21,24 +21,25 @@
 ## P01 — Foundation
 
 ### Version History
-Latest working version: v3
-Latest approved version: v3
-Next planned version: v4
+Latest working version: —
+Latest approved version: —
+Next planned version: v1
 
 ### Completion
 Source:
 - P01_Foundation.md
 
 Progress:
-- 3 / 14 versions complete
+- 0 / 15 versions complete
 
 Remaining:
-- v4 through v14
+- v1 through v4, v4.5, v5 through v14 (all)
 
 ### AI Resume Context
-Current Objective: Version 3 signed off (2026-08-11). Beginning Version 4 — EAR Update, Rollback & Application Lifecycle.
-Current Milestone: v3 complete — Deposit/Withdraw working with Controller→Service→DAO layering, overdraft prevention proven.
-Next Task: Begin Version 4, Sprint 1 — trivial UI change ("v4" label) to observe Update Application mechanics.
+Current Objective: Full reset #2 (2026-08-25) — VM + chat lost. Resume at Version 1 Sprint 1, VM provisioning, from a blank machine.
+Current Milestone: Nothing complete — rebuild required.
+Next Task: Begin Version 1, Sprint 1 — provision dsb-dmgr VM, install WebSphere ND 9.0.5.28 (target), create standalone AppServer profile devdsbinappserver01.
+
 ---
 
 ## P02 — WebSphere / Enterprise Middleware Integration
@@ -148,7 +149,9 @@ here for folder-level visibility (per STDGAP01 §7).*
 ## Pause / Resume Log
 
 | Date Paused | Paused At (Version + Sprint) | Reason | Exact Resume Point |
+|---|---|---|---|
 | 2026-08-11 | v1, pre-Sprint-1 | Lab VM + chat session lost | Full reset — resume at Version 1 Sprint 1, VM provisioning, from a blank machine. See Progress_Log.md Open Questions for full reset note. |
+| 2026-08-25 | v1, pre-Sprint-1 | Lab VM + chat lost again (reset #2) | Full reset — resume at Version 1 Sprint 1, VM provisioning, from a blank machine. See Progress_Log.md 2026-08-25 reset entry. |
 
 *"Exact Resume Point" must be specific enough for a cold-start chat to
 pick up without re-reading everything — e.g., "P01 v3 Sprint 4: DAO layer

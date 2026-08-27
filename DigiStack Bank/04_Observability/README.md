@@ -26,7 +26,7 @@ Source:
 - P04_Observability.md
 
 Progress:
-- 0 / 5 versions complete
+- 0 / 6 versions complete
 
 Remaining:
 - v31 — Application & Infrastructure Observability Foundations
@@ -34,6 +34,7 @@ Remaining:
 - v33 — APM, Distributed Tracing & SRE Methodology
 - v34 — Alerting, Dashboard Engineering & Synthetic Monitoring
 - v35 — Production Operations, Capacity Planning & Reporting
+- v35.5 — Enterprise Incident Management & ServiceNow Integration
 
 ---
 

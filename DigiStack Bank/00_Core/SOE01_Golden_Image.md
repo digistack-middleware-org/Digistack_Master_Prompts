@@ -141,10 +141,14 @@ this host — the table below is.
 | IBM MQ | 1 | 1.5 GB | 20 GB | From P02 v19 onward, only when MQ topics are active |
 | Monitoring (Prometheus/Grafana/Alertmanager) | 1 | 1.5 GB | 30 GB | Only from P04 v31 onward, and only during observability-focused sessions |
 | ELK stack | 1 | 1.5 GB | 40 GB | Only from P04 v32 onward, only during logging-focused sessions |
+| Jaeger (dsb-tracing) | 1 | 1 GB | 10 GB | Only from P04 v33 onward; co-locate on dsb-monitor if host RAM budget allows — never run simultaneously with full monitoring + ELK stack unless host can sustain it |
 | Tomcat (Mobile/ATM host) | 1 | 1 GB | 20 GB | Only when Mobile/ATM topics are active (P03 v26/v27 onward) |
 
 Concurrent-VM budget: **do not run more than 4-5 of the above
-simultaneously.** A typical P01/P02-era session (DMgr+Node1, Node2, IHS,
+simultaneously.** dsb-tracing (Jaeger) is treated as co-located on
+dsb-monitor where possible — power on dsb-tracing as a separate VM only
+when the host has headroom; never run dsb-monitor + dsb-elk + dsb-tracing
+simultaneously unless actual free RAM on the host confirms it. A typical P01/P02-era session (DMgr+Node1, Node2, IHS,
 PostgreSQL) totals ~7-8 GB RAM and ~4 vCPU allocated — leaves headroom for
 the Windows host and VMware Workstation overhead on a 16 GB machine. Once
 P04's monitoring/ELK VMs exist, they are powered on only for the session

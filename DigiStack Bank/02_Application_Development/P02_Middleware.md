@@ -9,6 +9,7 @@ IDX
 STD
 ARCH02
 STDGAP01
+RACI01
 
 
 Exports:
@@ -73,6 +74,46 @@ Use free IBM MQ Advanced for Developers and NGINX/HAProxy as F5/Citrix ADC
 stand-ins — same as originally noted.
 
 ---
+Part-Start Architecture Diagram (generate first, before Version 15 work begins)
+----------------------------------------------------------------------------------
+Pruned to what P02 (v15-v22) adds or extends on top of P01's tree. Files
+P01 already populated (Network, VM Layout, Request Flows, Cluster,
+Deployment, DB ER, Security) aren't redrawn here — only what's new or
+materially extended this Part.
+
+                 DIGISTACK BANK — P02 (v15-v22)
+                       |
+              (inherits P01's Network/VM/Deployment/
+               Cluster/Security tree unchanged)
+                       |
+                       v
+              WebSphere ND
+                       |
+       +---------------+---------------+
+       |                               |
+       v                               v
+   REQUESTS                          MQ
+       |                               |
+ 03_Request_Flows.md            05_MQ_Architecture.md
+ (extended: v15 JMS/SIBus         (NEW this Part — v19,
+  producer/consumer added          Queue Manager, BANK.
+  to the request path)             PAYMENT.REQUEST.Q/
+       |                           RESPONSE.Q, DLQ, CHLAUTH)
+       v
+   APPLICATION
+       |
+       v
+   PostgreSQL
+       |
+       v
+ 06_Database_ER_Diagram.md
+ (extended: v15 Customer/Account/
+  Beneficiary/Fund Transfer,
+  v17 OTP/lockout/audit fields,
+  v19 external-flag on Beneficiary)
+
+Not in scope this Part: 09_DR_Architecture.md (still P05). Cluster
+topology (04) is unchanged from P01 — no new members added in P02.
 
 Version 15 — JMS & Asynchronous Banking
 --------------------------------------------

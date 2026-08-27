@@ -13,6 +13,14 @@ SOE01
 CAP01
 RACI01
 
+Content Prerequisites (not formal Import Rule dependencies — listed here
+for traceability; these Parts' applications are what this Part instruments):
+P01 (v14 JVM tuning, v7 connection pool sizing)
+P02 (v18 Operations Dashboard superseded here at v31)
+P03 (9 deployables this Part instruments — CBS, Portal, PaymentHub,
+     NotificationService, ReportingService, BranchPortal, CardPortal,
+     MobileBanking, ATMSimulator)
+
 Exports:
 Versions 31-35.5
 Application & Infrastructure Observability Foundations
@@ -24,6 +32,8 @@ Enterprise Incident Management & ServiceNow Integration —
 Unified Monitoring Portal (monitoring.digistack.cloud)
 
 Used By:
+P03.1 (Interview-3/4 cite P04 v31/v33/v34/v35 as forward references — now resolved)
+P03.2 (Chapter 2 production scenarios reference P04 components)
 P05
 P06
 
@@ -41,7 +51,27 @@ is operated like a real bank runs it."
 Prerequisite
 ------------------
 P03 Completion Checkpoint satisfied — 9 distinct deployables (7 WAS EARs +
-2 Tomcat apps) live, CBS is sole writer of digistack_cbs.
+2 Tomcat apps) live, CBS is sole writer of digistack_cbs. Named
+explicitly, per P03's Carried Forward to P04: digistack-cbs.ear (CBS),
+Internet Banking Portal EAR, Payment Hub EAR, Notification Service EAR,
+Reporting Service EAR, Branch Portal EAR, Card Portal EAR (7 WAS EARs) +
+Mobile Banking Simulator WAR, ATM Simulator WAR (2 Tomcat apps).
+
+P03.1 and P03.2 (Interview Preparation) are recommended complete before
+starting this Part — P03.1's "Carried Forward to P04" note states the same.
+P04 is not a technical dependency of P03.1/P03.2, but the observability
+work here assumes the same P01–P03 platform fluency those Parts are
+designed to solidify. Reading order: P03 → P03.2 → P03.1 → P04.
+
+Glossary note (added 2026-08-26): SOE01 and CAP01, imported above (and by
+P01), are the project's Standard Operating Environment and Capacity/
+Sizing reference documents respectively — SOE01 defines the baseline OS/
+JVM/middleware versions and patching conventions every VM in this roadmap
+follows; CAP01 defines the lab-scale VM sizing conventions this Part
+refers to elsewhere as "doc 01" (see Version 33's Load-Test Scale
+Disclaimer). Neither has its own authored file yet in this project — until
+one exists, treat both as external reference documents whose conventions
+this roadmap follows rather than restates.
 
 Deployment Model
 ------------------
@@ -51,6 +81,37 @@ built. This Part is 100% infrastructure/tooling — the strictest "zero new
 banking functionality" run of the whole roadmap.
 
 ---
+Part-Start Architecture Diagram (generate first, before Version 31 work begins)
+----------------------------------------------------------------------------------
+P04 is the first Part where the 01_Architecture/ file set (9 diagrams,
+all scoped to network/VM/cluster/request/DB/security/deployment/DR) has
+no dedicated file for what this Part actually builds — observability
+tooling (Prometheus/Grafana/OpenSearch/Jaeger/Alertmanager) isn't covered
+by any of the 9 filenames in that folder's index. This Part's tree is
+therefore mostly "no diagram file to touch," which is worth stating
+explicitly rather than silently skipping the check.
+
+                 DIGISTACK BANK — P04 (v31-v35.5)
+                       |
+              (inherits P01-P03's full tree unchanged —
+               zero new banking functionality, zero new
+               network/VM/cluster/deployment topology)
+                       |
+                       v
+                 SERVERS
+                       |
+                 02_VM_Layout.md
+                 (extended: v31 digistack-monitoring-01,
+                  v32 digistack-elk-01, v33
+                  digistack-tracing-01 all power on)
+
+No dedicated 01_Architecture/ file exists for the observability stack
+itself (Prometheus/Grafana/OpenSearch/Jaeger/Alertmanager topology) —
+this is a gap worth flagging back to IDX/01_Architecture/README.md if a
+10th diagram file is ever wanted for this Part's own request/data flow
+(Version 31's own "Request Flow" ASCII diagrams inside P04_Observability.md
+itself currently serve that purpose informally). Not in scope: 09_DR_
+Architecture.md (P05, next Part).
 
 End-to-End Enterprise Request Flow (Observability View)
 ------------------------------------------------------------
@@ -178,7 +239,15 @@ reaches equivalent coverage. SetupDoc-v31.md should note this retirement
 explicitly (what URL/app v18's dashboard lived at, and confirmation it's
 been taken down) so the decommission isn't silently assumed, consistent
 with how this project already treats every other retirement (e.g., the
-legacy Portal database after v23, the old WAS platform after P07 v48).
+legacy Portal database after v23).
+
+Forward reference flag (added 2026-08-26): an earlier draft of this note
+also cited "the old WAS platform after P07 v48" as a second precedent.
+P07 is not yet authored, so that citation was a forward reference only,
+not an already-real precedent — removed above. The v23 Portal-database
+retirement is sufficient precedent on its own. If P07 v48 does retire a
+WAS platform version once authored, it should follow this same
+documented-retirement convention, not the other way around.
 
 Minimum App Needed
 Zero new banking functionality. Every one of P03's 9 applications gets:
@@ -195,6 +264,24 @@ Zero new banking functionality. Every one of P03's 9 applications gets:
 - Monitoring data retention is set explicitly (Prometheus 30 days,
   OpenSearch 90 days, Jaeger 7 days) rather than left at each tool's
   default
+
+/health Endpoint Authentication Note (added 2026-08-25)
+----------------------------------------------------------
+Several P03 applications enforce role-based authentication that could
+block unauthenticated Prometheus scrapes of the /health endpoint:
+- Internet Banking Portal: Customer / Administrator roles (P01 v10)
+- Branch Portal: Branch Teller role (P03 v29)
+- Card Portal: own auth (P03 v28)
+Resolution: /health and /metrics endpoints are placed on a sub-context
+that bypasses the application's role-mapping authorization filter. This
+is a standard pattern (health/readiness probes must be reachable by the
+monitoring system without end-user credentials). The bypass is
+implemented as a Servlet filter exclusion list in each EAR's web.xml and
+documented in SetupDoc-v31.md. The bypass does NOT expose any banking
+data — /health returns only {status: UP/DOWN} and /metrics returns only
+numeric counters/gauges. Prometheus scraping uses a dedicated monitoring
+service account (not a customer or teller credential) configured in each
+application's security descriptor.
 
 Log PII Masking Requirement (resolved gap)
 P03 v24 introduces CIF data including Aadhaar and PAN verification, and
@@ -216,6 +303,19 @@ for troubleshooting and reconciliation. SetupDoc-v31.md must show the
 actual masking implementation (regex/field-level) used, and this
 requirement is checked again explicitly at P09 v72's security/compliance
 audit.
+
+PII Masking — P02 v16.5 Pagination Fetch Path (added 2026-08-25)
+------------------------------------------------------------------
+P02 v16.5 fetches the full SOAP Account Statement result set into servlet
+memory before slicing it into pages. If any log line emitted during that
+fetch contains unmasked account numbers (e.g., a debug log printing the
+raw SOAP response body), the masking rule above applies there too. The
+structured-log format defined here must cover the Portal's servlet layer,
+not just the CBS/Payment Hub/Notification Service application logs.
+SetupDoc-v31.md must confirm the masking implementation is applied to the
+Portal EAR's structured logger, and a negative test (deliberately log the
+raw SOAP fetch, confirm the account number is masked in the output) is
+required in TestCases-v31.md.
 
 Enterprise Tools: Prometheus, Node Exporter, JMX Exporter, PostgreSQL
 Exporter, Grafana (dashboard shell only — dashboard design is Version 34).
@@ -239,8 +339,8 @@ IBM WebSphere ND Cell (DMgr / Node Agent / Cluster Members)
 + Mobile/ATM Tomcat instances (lightweight exporter)
 
 
-VM Setup Note: New VM introduced: digistack-monitoring-01 (Prometheus,
-Grafana, Alertmanager, exporters).
+VM Setup Note: New VM introduced: dsb-monitor (Prometheus, Grafana,
+Alertmanager, exporters — per STD §VM Hostnames).
 
 Topics Covered: PMI, JMX, Health Policies, JVM Monitoring, Cluster
 Monitoring, JDBC Pool Monitoring, Session Monitoring.
@@ -249,12 +349,15 @@ Enterprise Learning: Capacity Planning (intro), Health Monitoring, SLA
 Monitoring (intro — formalized in v35), Middleware Operations.
 
 Sprint Deliverable: Every one of the 9 P03 applications exposes a working
-/health endpoint and metrics endpoint; Prometheus scrapes Node/JMX/
-PostgreSQL exporters across the full WAS + Tomcat topology; a bare Grafana
-instance renders live JVM heap, session count, and cluster health with no
-manual polling; P02 v18's custom Operations Dashboard is confirmed
-retired, with its former data sources now flowing into this Grafana
-instance instead.
+/health endpoint and metrics endpoint (with auth bypass for monitoring
+service account, per the /health Endpoint Authentication Note above);
+Prometheus scrapes Node/JMX/PostgreSQL exporters across the full WAS +
+Tomcat topology; a bare Grafana instance renders live JVM heap, session
+count, and cluster health with no manual polling; P02 v18's custom
+Operations Dashboard is confirmed retired, with its former data sources
+now flowing into this Grafana instance instead; a negative test confirms
+account numbers in servlet log lines from the Portal's SOAP fetch path
+(P02 v16.5) are masked per the PII Masking rule above.
 
 ---
 
@@ -265,6 +368,34 @@ for troubleshooting and production support — and give Version 31's
 app-level structured logs somewhere to land.
 
 Minimum App Needed: Zero new banking functionality.
+
+Correlation ID Standard (added 2026-08-25)
+-------------------------------------------
+The Sprint Deliverable for this version requires searching a failed Fund
+Transfer "by correlation ID" across CBS, Payment Hub, and Notification
+Service logs — but no prior version defined what a correlation ID is, who
+sets it, or what format it takes.
+
+Definition, effective retroactively from P02 v15 (Fund Transfer introduced):
+- Format: FT-{YYYYMMDD}-{5-digit-zero-padded-sequence}, e.g.
+  FT-20260825-00192 (matches the example already used in v35.5).
+- Set by: the Internet Banking Portal's Fund Transfer Servlet at the moment
+  the transfer request is accepted (before the JMS message is enqueued).
+- Propagated via: JMS message header (JMSCorrelationID property) from
+  Portal → SIBus/MDB → CBS; HTTP header (X-Correlation-ID) on any REST
+  call leg (Portal → CBS REST, Payment Hub → CBS REST); SOAP header on
+  the Account Statement SOAP call (P02 v16).
+- Logged by: every service that touches the transfer (Portal, CBS, Payment
+  Hub, Notification Service, MQ) must include the correlation ID in every
+  structured log line relating to that transfer.
+- Scope: Fund Transfer only in P02–P03. Extended to IMPS/NEFT at P03 v25
+  (Payment Hub) using the same format with prefix PT- for payment
+  transactions.
+This standard is documented once here (v32, where it first becomes
+operationally necessary) and applied retroactively as a code fix to P02
+v15 onward. SetupDoc-v32.md must include a "Correlation ID Retrofit"
+section confirming the header propagation is in place across all affected
+EARs before the log pipeline is stood up.
 
 Enterprise Tools: Filebeat, Logstash, OpenSearch (Elasticsearch-compatible),
 OpenSearch Dashboards (Kibana-compatible).
@@ -293,8 +424,8 @@ OpenSearch Dashboards
 Operations & Support Team
 
 
-VM Setup Note: New VM introduced: digistack-elk-01 (Filebeat targets ship
-to Logstash → OpenSearch → OpenSearch Dashboards).
+VM Setup Note: New VM introduced: dsb-elk (Filebeat targets ship to
+Logstash → OpenSearch → OpenSearch Dashboards — per STD §VM Hostnames).
 
 Topics Covered: HPEL, FFDC, Trace Specification, Log Rotation, Heap Dumps,
 Thread Dumps, GC Logs.
@@ -305,9 +436,10 @@ Investigation.
 
 Sprint Deliverable: A single OpenSearch Dashboards view lets you search a
 failed Fund Transfer across CBS, Payment Hub, and Notification Service
-logs by correlation ID, without touching any individual VM's log files
-directly; a manually triggered thread dump and heap dump are captured,
-shipped through the pipeline, and located in OpenSearch.
+logs by correlation ID (per the Correlation ID Standard defined above),
+without touching any individual VM's log files directly; a manually
+triggered thread dump and heap dump are captured, shipped through the
+pipeline, and located in OpenSearch.
 
 ---
 
@@ -368,6 +500,24 @@ platform could handle in real production; SetupDoc-v33.md should record
 the actual achieved concurrency honestly, without implying it validates
 production-scale capacity.
 
+SLO Placeholder Note (added 2026-08-25)
+----------------------------------------
+The Sprint Deliverable states the SLO as "99% of Fund Transfers complete
+under Xms, 99.9% monthly availability." The X and N (concurrent users) are
+intentional TBDs — they cannot be filled in before the load test runs,
+because this lab environment's capacity varies by hardware. SetupDoc-v33.md
+must fill these in from actual load-test results before this version is
+signed off. The SLO template is:
+  - Latency SLO:      99% of Fund Transfers complete under [X]ms
+                      (fill from p99 latency at load-test steady state)
+  - Availability SLO: 99.9% monthly availability
+                      (fixed target — not hardware-dependent)
+  - Saturation point: first component to saturate at [N] concurrent users
+                      (fill from JMeter + RED/USE data)
+TestCases-v33.md must include a test case that reads the SLO values from
+SetupDoc-v33.md and verifies the running system meets them under the
+recorded load.
+
 Request Flow
 
 Customer Request → IHS → WAS Cluster → {Banking Portal, CBS, IBM MQ} → PostgreSQL
@@ -379,8 +529,8 @@ Jaeger (distributed tracing)
 JMX Exporter → Prometheus → Grafana (perf metrics)
 
 
-VM Setup Note: New VM introduced: digistack-tracing-01 (Jaeger backend/UI
-— may co-locate on digistack-monitoring-01 if capacity allows).
+VM Setup Note: New VM introduced: dsb-tracing (Jaeger backend/UI — may
+co-locate on dsb-monitor per SOE01 §1a RAM budget; per STD §VM Hostnames).
 
 Topics Covered: JVM Tuning, Thread Pool Tuning, JDBC Pool Tuning, Dynamic
 Cache, Performance Advisor, Garbage Collection Analysis.
@@ -391,11 +541,11 @@ Error Budgets.
 
 Sprint Deliverable: A single Fund Transfer trace is visible end-to-end in
 Jaeger across Portal → CBS → MQ → Notification Service, with per-hop
-latency; an SLO ("99% of Fund Transfers complete under Xms, 99.9% monthly
-availability") is defined and its current error budget is calculated from
-real traced data; a load test proves the SLO holds under N concurrent
-users and identifies the first component to saturate (RED/USE data
-pinpoints it).
+latency; an SLO is defined (with Xms and N filled in from actual load-test
+results per the SLO Placeholder Note above) and its current error budget is
+calculated from real traced data; a load test proves the SLO holds under N
+concurrent users and identifies the first component to saturate (RED/USE
+data pinpoints it).
 
 ---
 
@@ -410,6 +560,29 @@ which were entirely missing from the original scope.
 Minimum App Needed: Zero new banking functionality. Scheduled synthetic
 transactions run against existing endpoints (login, balance check, Fund
 Transfer, ATM request, card payment) every 5 minutes.
+
+Synthetic Monitoring Service Account (added 2026-08-25)
+---------------------------------------------------------
+Synthetic Login, Fund Transfer, Balance Check, ATM Request, and Card
+Payment checks require real credentials and a real test account in the
+system — they cannot run against production customer accounts, and they
+must not generate real financial transactions visible to customers or
+reconciliation. Resolution:
+- A dedicated synthetic monitoring user (username: digistack-synthetic,
+  role: Customer) is created in the WAS user registry (file-based or LDAP,
+  per P01 v10) and in digistack_cbs (a real account with a synthetic test
+  balance, not deducted from any real customer's funds).
+- A dedicated test Beneficiary (for Fund Transfer synthetic check) is
+  registered under this account, pointing to a second synthetic account
+  (digistack-synthetic-dest) so the transfer completes end-to-end without
+  touching any real account.
+- Synthetic transactions are tagged with a synthetic=true header/flag so
+  they are: (a) excluded from Business Dashboard KPIs (real customer
+  metrics only), (b) included in availability/SLO tracking (that's their
+  purpose), and (c) excluded from the Notification Service's email triggers
+  (no alert emails for synthetic test transfers).
+- SetupDoc-v34.md must include setup of the synthetic service account as
+  a prerequisite step before synthetic monitoring is enabled.
 
 Alert Engineering (doc 14 gap): Alertmanager routing rules covering:
 priority tiers (P1–P4), threshold design, escalation matrix, alert
@@ -430,8 +603,9 @@ transaction count, daily active users, transactions per minute.
 
 Synthetic Monitoring (doc 14 gap): Scheduled synthetic Login, Fund
 Transfer, Balance Check, ATM Request, Card Payment, and Health Endpoint
-checks every 5 minutes, alerting Alertmanager on failure — proves the
-platform is monitored even with zero real user traffic.
+checks every 5 minutes using the synthetic service account above, alerting
+Alertmanager on failure — proves the platform is monitored even with zero
+real user traffic.
 
 Request Flow
 
@@ -453,9 +627,10 @@ Sprint Deliverable: A deliberately induced failure (kill a cluster member)
 fires a P2 alert through Alertmanager to email within the defined
 threshold window, with no duplicate alerts and no false positive during a
 defined maintenance window; a Business Dashboard shows live Fund Transfer
-success rate and daily active users; a synthetic Fund Transfer check
-catches a deliberately broken endpoint within 5 minutes, before any real
-customer would.
+success rate and daily active users (synthetic transactions excluded from
+KPI counts per the Synthetic Monitoring Service Account note above); a
+synthetic Fund Transfer check catches a deliberately broken endpoint
+within 5 minutes, before any real customer would.
 
 ---
 
@@ -512,9 +687,28 @@ one:
 - Saturate a JDBC connection pool deliberately → confirm the v34 alert
   fires before the incident is manually noticed, and the resulting
   runbook-driven response is the one written above
-- Kill one OpenSearch/Prometheus/Jaeger node itself → confirm the
-  observability platform's own resilience (monitoring the monitors), not
-  just the banking app's
+- Kill one monitoring VM process (Prometheus on digistack-monitoring-01,
+  or OpenSearch on digistack-elk-01) → confirm the observability
+  platform's own resilience (monitoring the monitors)
+
+Chaos Scenario 4 — Single-VM Monitoring Resilience Note (added 2026-08-25)
+---------------------------------------------------------------------------
+The original draft described chaos scenario 4 as "Kill one
+OpenSearch/Prometheus/Jaeger node" — implying a multi-node cluster where
+killing one node tests failover. This project's VM setup (v31/v32) uses
+single-instance deployments: one digistack-monitoring-01 for Prometheus,
+one digistack-elk-01 for OpenSearch. There is no second node to fail over
+to. Scenario 4 is therefore restated as: kill the Prometheus process
+(not the VM) on dsb-monitor, confirm Alertmanager fires a
+"monitoring system degraded" alert and Grafana shows data gaps, then
+restart Prometheus and confirm it re-scrapes and back-fills within its
+retention window. Same for the OpenSearch process on dsb-elk.
+This tests process-level resilience and recovery (a real operational
+concern) without requiring a multi-node cluster that isn't in this
+project's VM inventory. If a multi-node observability cluster is desired
+for a more realistic test, that is new infrastructure scope requiring a
+doc 01 VM inventory update before this scenario can be run as originally
+described.
 
 Each chaos scenario is run once, its detection time recorded (feeds the
 MTTD figure below), and the outcome — caught vs. missed — becomes an
@@ -561,11 +755,12 @@ Sprint Deliverable: A simulated hung-thread incident is worked
 start-to-finish using its written runbook — detected via v34's alerting,
 diagnosed via v32's log pipeline and v31's JMX data, resolved, and closed
 with a documented RCA; the four chaos scenarios above are each run once
-with detection outcomes recorded; a Monthly Capacity Report is generated
-from real Version 31–34 metrics and includes a JVM heap growth forecast;
-an SLA Report for Fund Transfer shows actual measured availability against
-the Version 33 SLO, with MTTR/MTTD calculated from the incident and chaos
-runs above.
+with detection outcomes recorded (scenario 4 per the single-VM resilience
+restatement above); a Monthly Capacity Report is generated from real
+Version 31–34 metrics and includes a JVM heap growth forecast; an SLA
+Report for Fund Transfer shows actual measured availability against the
+Version 33 SLO (with Xms and N filled from SetupDoc-v33.md), with
+MTTR/MTTD calculated from the incident and chaos runs above.
 
 ---
 
@@ -610,8 +805,38 @@ standard tools themselves — the portal composes them, it doesn't
 duplicate or supersede them.
 
 Minimum App Needed: Zero new banking functionality. The portal itself is
-a new small internal WAS application (read-only dashboards + ServiceNow
-API calls) — not part of the 9 banking deployables.
+a new small internal WAS application (digistack-monitoring-portal.ear)
+deployed to a dedicated monitoring server (not a member of the banking
+cluster — it must remain reachable even if the banking cluster is fully
+down). This is the 10th deployable in the project (the 8th WAS EAR) but
+is NOT counted among the 9 banking deployables — it is infrastructure,
+not a banking application, the same way digistack-monitoring-01 is a VM
+in the topology but not a banking server. SetupDoc-v35.5.md must document
+its deployment target server (dsb-monitor, co-located — not a new VM),
+context root (/monitoring), and that it is excluded from the 9-app banking
+count.
+
+ServiceNow Integration — Concepts vs. Simulation Clarification
+(added 2026-08-25)
+---------------------------------------------------------------
+v35 lists "ServiceNow (concepts only)" under Enterprise Tools. v35.5
+describes "Automatic Ticket Creation" with a specific API call timeline.
+These are reconciled as follows:
+- No live ServiceNow instance is required. The Alertmanager webhook calls
+  a local ServiceNow simulator — a lightweight stub server
+  (digistack-servicenow-stub, running on digistack-monitoring-01) that
+  accepts the same REST API calls as a real ServiceNow instance and
+  returns realistic INC-number responses. It does not require a
+  ServiceNow licence or cloud account.
+- The stub is documented in SetupDoc-v35.5.md with its API contract so
+  it can be replaced by a real ServiceNow developer instance (free tier)
+  or a mock if preferred — the Alertmanager webhook configuration is
+  identical either way.
+- "Concepts only" means the candidate understands ServiceNow's ITSM
+  workflow (incident lifecycle, priority routing, assignment groups) and
+  can discuss it in an interview — not that the integration is entirely
+  theoretical. The stub makes the auto-ticket timeline real and
+  demonstrable, without requiring enterprise licensing.
 
 V35.5 Architecture
 
@@ -636,7 +861,7 @@ V35.5 Architecture
               Incident Management
                        │
                        ▼
-                  ServiceNow
+            ServiceNow Stub / Instance
                        │
                        ▼
                 WAS Support Team
@@ -690,8 +915,7 @@ Capacity Report, SLA Report, and RCA Reports produced in v35.
 
 Portal V4 — Manage Incident (new in this version)
 Purpose: Close the loop from alert to resolved incident, wired to
-ServiceNow (concepts only, per v35's Enterprise Tools list — no live
-ServiceNow instance is required to complete this version).
+ServiceNow stub (per the ServiceNow Integration clarification above).
 
 New menu item added to the portal: 🚑 Incident Management. Selecting it
 opens the Incident Management screen:
@@ -731,7 +955,7 @@ administrator never manually opens the ticket. Example timeline:
 14:32:00  JDBC Pool = 96%
 14:32:05  Prometheus Alert Rule fires
 14:32:06  Alertmanager receives alert
-14:32:08  ServiceNow API called
+14:32:08  ServiceNow stub API called
 14:32:09  INC0010042 CREATED
 14:32:10  WAS-L3 assigned
 ```
@@ -795,7 +1019,7 @@ INC0010042
 ```
 
 Flow: WAS → Prometheus → Alert Rule → Alertmanager → P2/P1 alert →
-monitoring.digistack.cloud → Incident Management → ServiceNow API →
+monitoring.digistack.cloud → Incident Management → ServiceNow stub API →
 ticket (e.g., INC0010042) → team assignment (e.g., WAS-L3) →
 Acknowledged → Investigation (pulls Metrics/Logs/Trace inline from Portal
 V2) → Root Cause Found → Runbook (v35) → Fix in Progress → Resolved →
@@ -814,18 +1038,7 @@ exists for deep-dive metric exploration, OpenSearch still exists for raw
 log search, Jaeger still exists for full trace inspection, Alertmanager
 still exists as the actual alerting engine, and ServiceNow still exists
 as the actual system of record for incidents. The portal embeds/links
-into each of these; it does not reimplement their functionality:
-
-```
-Portal
-  │
-  ├── Prometheus / Grafana → Metrics
-  ├── OpenSearch            → Logs
-  ├── Jaeger                → Traces
-  ├── Alertmanager          → Alerts
-  ├── Runbooks              → Operations
-  └── ServiceNow            → Incidents
-```
+into each of these; it does not reimplement their functionality.
 
 This is the same relationship v31 already established between the
 Operations Dashboard and the underlying PMI/JMX data — except here it's
@@ -846,21 +1059,6 @@ Monitor Observe Operate Manage Incident
  (v31) (v31-34) (v35)   (this version)
 ```
 
-Underlying tools remain fully intact and directly accessible underneath
-every one of those four views — the portal is the entry point, not a
-replacement:
-
-```
-Portal
-  │
-  ├── Prometheus / Grafana → Metrics
-  ├── OpenSearch            → Logs
-  ├── Jaeger                → Traces
-  ├── Alertmanager          → Alerts
-  ├── Runbooks              → Operations
-  └── ServiceNow            → Incidents
-```
-
 How this Part reads end-to-end (V31→V35.5 narrative):
 V31 Monitor — "Is it healthy?" (Prometheus + Grafana)
 V32 Log — "What happened?" (Filebeat + Logstash + OpenSearch)
@@ -876,8 +1074,9 @@ incident spanning more than one team — the portal surfaces the assignment,
 it does not redefine who holds authority.
 
 Topics Covered: Dashboard Engineering (consolidation), Portal
-Architecture, ServiceNow Integration (concepts), Single-Pane-of-Glass
-Design, Incident Workflow Automation, Alert-to-Ticket Deduplication.
+Architecture, ServiceNow Integration (concepts + stub simulation),
+Single-Pane-of-Glass Design, Incident Workflow Automation,
+Alert-to-Ticket Deduplication.
 
 Enterprise Learning: Observability Portal Design, NOC/SOC-style unified
 monitoring, Incident Management tooling integration, Executive/Operations
@@ -886,12 +1085,12 @@ reporting surfaces.
 Sprint Deliverable: monitoring.digistack.cloud is reachable and shows all
 four portal views (V1–V4); a live P2 alert (e.g., JDBC pool exhaustion
 from v35's chaos testing) is visible flowing through Portal V2 (alert
-raised) → Portal V4 (ticket auto-created within seconds, assigned,
-acknowledged, investigated using inline Metrics/Logs/Trace, root-caused,
-fixed, resolved, verified, RCA'd, closed) — with the sustained-alert
-scenario proven to update the single existing incident rather than
-spawning duplicates — demonstrating the full v31–v35 stack operating
-through one interface rather than six separate tools.
+raised) → Portal V4 (ticket auto-created within seconds via ServiceNow
+stub, assigned, acknowledged, investigated using inline Metrics/Logs/
+Trace, root-caused, fixed, resolved, verified, RCA'd, closed) — with the
+sustained-alert scenario proven to update the single existing incident
+rather than spawning duplicates — demonstrating the full v31–v35 stack
+operating through one interface rather than six separate tools.
 
 ---
 
@@ -910,19 +1109,30 @@ Completion Checklist
 □ Deduplication proven: a sustained alert condition updates a single
   existing incident rather than creating duplicate tickets, using the
   same correlation ID discipline as V34's Alertmanager grouping (v35.5)
-□ All 9 P03 applications expose working /health and metrics endpoints
-  (v31)
+□ All 9 P03 applications expose working /health and metrics endpoints,
+  with auth bypass for monitoring service account confirmed per
+  /health Endpoint Authentication Note (v31)
+□ PII masking confirmed on Portal's SOAP fetch path (P02 v16.5),
+  negative test in TestCases-v31.md (v31)
 □ Prometheus/Grafana operational across Linux, WAS/JVM, and PostgreSQL
   layers (v31)
 □ P02 v18's custom Operations Dashboard confirmed retired, with its data
   sources migrated into this Part's Prometheus/Grafana stack (v31)
+□ Correlation ID standard documented in SetupDoc-v32.md, retrofit
+  confirmed across all affected EARs before log pipeline stood up (v32)
 □ Centralized logging live via Filebeat → Logstash → OpenSearch →
   OpenSearch Dashboards, covering all 9 apps + IHS + MQ + Linux + DB (v32)
 □ End-to-end distributed trace of a Fund Transfer visible in Jaeger across
   Portal → CBS → MQ → Notification Service (v33)
+□ SLO latency (Xms) and saturation point (N users) filled from load-test
+  results in SetupDoc-v33.md; TestCases-v33.md verifies system meets SLO
+  under recorded load (v33)
 □ At least one SLO/SLI/Error Budget formally defined and measured from
   real data (v33)
 □ Golden Signals / RED / USE applied to at least one service each (v33)
+□ Synthetic monitoring service account (digistack-synthetic) created in
+  WAS registry and digistack_cbs; synthetic transactions tagged and
+  excluded from Business Dashboard KPIs (v34)
 □ Alerting proven end-to-end (threshold → Alertmanager → email) with
   maintenance-window suppression tested (v34)
 □ Business Dashboard and at least one other purpose-built dashboard (Ops,
@@ -932,15 +1142,21 @@ Completion Checklist
 □ At least two fully worked production runbooks exist and were exercised
   against a real simulated incident (v35)
 □ All four chaos/resilience scenarios run at least once, with detection
-  outcomes recorded (v35)
+  outcomes recorded; scenario 4 per single-VM restatement (v35)
 □ Availability/SLA formalized (MTTR/MTTD/MTBF) for Fund Transfer and Login
   (v35)
 □ At least one of each Production Reporting artifact generated from real
   data (v35)
-□ All five versions' TestCases-v31.md–v35.md signed off per Test Case
+□ digistack-monitoring-portal.ear deployed to dedicated monitoring server,
+  context root /monitoring, deployment documented in SetupDoc-v35.5.md (v35.5)
+□ ServiceNow stub (digistack-servicenow-stub) set up and documented with
+  API contract in SetupDoc-v35.5.md (v35.5)
+□ All six versions' TestCases-v31.md–v35.5.md signed off per Test Case
   Standards
-□ VM inventory (doc 01) updated with digistack-monitoring-01,
-  digistack-elk-01, digistack-tracing-01
+□ VM inventory (STD §VM Hostnames / SOE01 §1a) updated with dsb-monitor,
+  dsb-elk, dsb-tracing (per STD naming convention — already added per
+  FIX 6a/6b); monitoring portal server noted as WAS application deployment
+  target on dsb-monitor (co-located, not a new VM)
 □ Promoted Dev → UAT → Prod per Environment Promotion Standards,
   part4-release tag applied
 
@@ -950,32 +1166,46 @@ Application code: unchanged from P03 (digistack-bank family of EARs +
 Mobile/ATM Tomcat apps) — zero new banking functionality was added in this
 Part.
 
+New WAS Application (infrastructure, not counted in the 9 banking deployables)
+- digistack-monitoring-portal.ear — Unified Monitoring Portal at
+  monitoring.digistack.cloud, deployed to a dedicated monitoring server
+  outside the banking cluster (v35.5)
+
 New VMs
-- digistack-monitoring-01 — Prometheus, Grafana, Alertmanager, exporters
-  (v31)
-- digistack-elk-01 — Filebeat/Logstash/OpenSearch/OpenSearch Dashboards
-  (v32)
-- digistack-tracing-01 — Jaeger (v33, may co-locate with monitoring VM)
+- dsb-monitor — Prometheus, Grafana, Alertmanager, exporters,
+  ServiceNow stub (v31/v35.5) — per STD §VM Hostnames
+- dsb-elk — Filebeat/Logstash/OpenSearch/OpenSearch Dashboards
+  (v32) — per STD §VM Hostnames
+- dsb-tracing — Jaeger (v33, may co-locate on dsb-monitor per SOE01 §1a
+  RAM budget) — per STD §VM Hostnames
 
 Observability Infrastructure Added
 - Prometheus + Node/JMX/PostgreSQL exporters (v31) — supersedes and
   retires P02 v18's custom PMI/JMX Operations Dashboard
+- /health and /metrics endpoints on all 9 apps, with monitoring-service-
+  account auth bypass (v31)
+- Correlation ID standard (FT-/PT- format), propagated across Portal,
+  CBS, Payment Hub, Notification Service via JMS/HTTP/SOAP headers (v32
+  retrofit of P02 v15+)
 - Grafana (base instance v31; purpose-built dashboards v34)
 - WebSphere native: PMI, JMX, TPV (v31)
 - Filebeat → Logstash → OpenSearch → OpenSearch Dashboards (v32)
 - OpenTelemetry SDK + Jaeger distributed tracing (v33)
 - Formal SRE methodology: Golden Signals, RED, USE, SLO/SLI/SLA, Error
-  Budgets (v33)
+  Budgets (v33); SLO values filled from SetupDoc-v33.md load-test results
 - Alertmanager with tiered alert routing and maintenance windows (v34)
+- Synthetic monitoring service account + tagged synthetic transactions (v34)
 - Business/Executive/SLA/NOC dashboards (v34)
 - Synthetic monitoring jobs (v34)
-- Production runbooks, chaos/resilience testing, capacity forecasting,
-  availability/SLA reporting (v35)
+- Production runbooks, chaos/resilience testing (single-VM restatement for
+  scenario 4), capacity forecasting, availability/SLA reporting (v35)
+- ServiceNow stub (digistack-servicenow-stub) on digistack-monitoring-01
+  (v35.5)
 - Unified Monitoring & Incident Management Portal at
-  monitoring.digistack.cloud, consolidating v31-v35 into four views
-  (Monitor / Observe / Operate / Manage Incident), with automatic
-  alert-to-ServiceNow-ticket creation, assignment, deduplication, and
-  full incident lifecycle tracking through to RCA and closure (v35.5)
+  monitoring.digistack.cloud (digistack-monitoring-portal.ear), four views:
+  Monitor / Observe / Operate / Manage Incident, with automatic
+  alert-to-ServiceNow-stub ticket creation, assignment, deduplication, and
+  full incident lifecycle tracking (v35.5)
 
 Carried Forward to P05
 ---------------------------
@@ -986,4 +1216,6 @@ metrics, logs, and traces built here, not a separate ad hoc check. The
 chaos-testing discipline from v35 is also the direct precedent for P05's
 DR failover drills. The v35.5 Unified Portal becomes the single screen used
 to observe and manage those DR drills, rather than a separate DR-specific
-dashboard being built from scratch in P05.
+dashboard being built from scratch in P05. The Correlation ID standard
+(v32) carries forward to P05's DR scenarios — correlation IDs must survive
+a failover event and remain traceable in the DR site's log pipeline.
