@@ -229,7 +229,7 @@ deployed as its own WebSphere EAR (digistack-cardportal-vN.ear) on the same ND c
 Notification Service, and Reporting Service (Branch Portal joins at v29) — not on Tomcat.
 
 
-This raises the WAS EAR count to seven by end of this Part, giving practice
+This raises the WAS EAR count to six (seven once Branch Portal joins at v29 — i.e., seven by end of this Part), giving practice
 across: multiple EAR deployments, context roots, virtual hosts, classloader
 isolation, shared libraries, security roles, independent deployment/rollback
 per application, application startup order, cluster deployment, session
@@ -1038,7 +1038,7 @@ authorization when tested against the ATM Simulator (Version 27) — proving
 Card Portal (WAS), ATM Simulator (Tomcat), and CBS are properly integrated
 across the heterogeneous topology, not siloed.
 
-Dashboard UI Note (added 2026-08-24, updated 2026-08-24)
+Dashboard UI Note (added 2026-08-24)
 --------------------------------------------------------
 The Dashboard's "Your Cards" section (placeholder since P01 v3, shown as
 "Coming soon — v28" per P01 v2's UI convention) activates here as a
@@ -1046,8 +1046,7 @@ summary tile: masked card number + status, with a "Manage Card"
 action that redirects the customer from the Internet Banking Portal's
 Dashboard to card.digistack.cloud (Card Portal, its own WAS EAR). This is
 a navigation hand-off, not an embedded iframe/API call from the Portal —
-the Portal shows only the minimal card summary (via REST/SOAP read from
-Card Portal, per this Part's Governing Rule), full card management
+the Portal shows only the minimal card summary (via REST/SOAP read from CBS's Card Service, per this Part's Governing Rule — Card Portal is a presentation, not a data provider), full card management
 (activate/block/PIN reset/hotlist) happens on Card Portal itself after
 redirect.
 

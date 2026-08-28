@@ -1,7 +1,7 @@
 # 04_HA_DR
 
 **Status:** ⏳ Not Started
-**Depends On:** 03_Observability (frozen), 00_Core
+**Depends On:** 04_Observability (P04 Completion Checkpoint satisfied) — aligns folder naming with P05's actual prerequisite wording ("P04 Completion Checkpoint satisfied — full observability stack operational across all 9 P03 applications")
 **Feeds Into:** 05_Multi_Region
 
 ---

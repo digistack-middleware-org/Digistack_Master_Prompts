@@ -115,7 +115,7 @@ SetupDoc-v37.md, not built): a dedicated leased line or site-to-site VPN
 between Hyderabad and Bangalore, sized and monitored specifically because
 replication lag against that link is what the v37 RPO numbers are
 actually measured against — a slower or saturated link directly degrades
-RPO regardless of how well PostgreSQL streaming replication itself is
+RPO regardless of how well Oracle 21c XE (digistack_cbs) streaming replication itself is
 configured. For this lab, the two sites are simulated as two VM/network
 segments with an artificial latency/bandwidth cap so replication lag is
 observable rather than instant.
@@ -151,7 +151,7 @@ IBM HTTP Server-1         IBM HTTP Server-2
               DigiStack CBS
                      │
                      ▼
-                PostgreSQL
+                Oracle 21c XE (digistack_cbs)
 ```
 
 Failure Type Taxonomy (introduced here, reused in v37/v38)
@@ -161,7 +161,7 @@ ambiguous:
 
 - Server Failure (a JVM/cluster member dies)
 - Application Failure (the app hangs/errors, server is fine)
-- Database Failure (PostgreSQL unreachable)
+- Database Failure (Oracle 21c XE (digistack_cbs) unreachable)
 - Storage Failure (disk full/unavailable)
 - Network Failure (connectivity between tiers lost)
 - DNS Failure (name resolution breaks)
@@ -291,7 +291,7 @@ missing from the original architecture and are filled in here):
 | WebSphere ND | HydCell01 — Portal Cluster, CBS Cluster, satellite EARs (active) | BlrCell01 — Portal Cluster, CBS Cluster, satellite EARs (standby/warm) |
 | CBS + other 8 P03 apps | Active | Deployed, standby/warm |
 | **IBM MQ / SIBus** | **Active Messaging Engine, persistent (DB or file store per v36's ME coverage)** | **Standby Messaging Engine, same store type, kept warm; queue depth and DLQ state reconciled as part of the DR drill, not assumed to replicate automatically** — MQ was previously absent from this table entirely, despite the source Part itself calling SIBus "load-bearing infrastructure since P02 v15." |
-| PostgreSQL | Primary | Standby (streaming replication target) |
+| Oracle 21c XE (digistack_cbs) | Primary | Standby (streaming replication target) |
 | **Observability stack (Grafana/Prometheus/Jaeger/OpenSearch)** | **Centrally hosted — not site-local to Hyderabad.** Deployed on infrastructure independent of both DCs (e.g., a third, lightweight monitoring-only environment) specifically so a genuine Site Failure at Hyderabad does not blind the team to the very drill they're trying to observe. This is a correction from the original design, which implicitly assumed the stack lived in Hyderabad. | Same centrally-hosted stack scrapes/ingests from Bangalore once traffic switches there — no separate Bangalore-local monitoring stack is stood up. |
 | **Security registry (LDAP / WAS federated repositories)** | **Active LDAP/registry** | **Replicated/standby registry**, synchronized on the same cadence as WAS cell config (below) — without this, a DR failover succeeds at the infrastructure layer but users and admins can't authenticate at Bangalore, which would surface as a false DR failure. |
 
@@ -328,7 +328,7 @@ CBS Cluster   Payment Hub / Notification   CBS Cluster    satellite EARs
 IBM MQ (active ME) ───────replication────► IBM MQ (standby ME)
    │                                          │
    ▼                                          ▼
-PostgreSQL (digistack_cbs) — Primary ──repl─► PostgreSQL — Standby
+Oracle 21c XE (digistack_cbs) — Primary ──repl─► Oracle 21c XE (digistack_cbs) — Standby
    │
    ├── Branch Portal, Card Portal (WAS)
    └── Mobile, ATM (Tomcat)
@@ -336,8 +336,7 @@ PostgreSQL (digistack_cbs) — Primary ──repl─► PostgreSQL — Standby
 LDAP / Security Registry (Hyd, active) ──sync─► LDAP / Security Registry (Blr, standby)
 ```
 
-DR Activities: Backup/Restore, Database Replication (concepts —
-streaming replication, standby promotion), MQ Replication/Reconciliation
+DR Activities: Backup/Restore, Database Replication (concepts — Oracle Data Guard standby, manual promotion), MQ Replication/Reconciliation
 (standby Messaging Engine queue-depth and DLQ state checked against
 Primary as part of every drill — new, closes the previously-missing MQ
 gap), Configuration Synchronization (WAS cell config — exported/imported
@@ -349,8 +348,7 @@ Failback to Primary once it's confirmed healthy again.
 Enterprise Storage (concept-level — not implemented, just understood):
 Shared Storage, SAN/NAS, Snapshot Backup. These aren't built in this
 project (no real SAN available), but knowing where they fit — e.g., a
-storage-level snapshot as a faster restore path than a full pg_dump
-restore — is expected enterprise DR knowledge, and belongs in
+storage-level snapshot as a faster restore path than a full Oracle Data Pump (expdp) restore — is expected enterprise DR knowledge, and belongs in
 SetupDoc-v37.md as a documented concept even though the lab itself uses
 simple VM/file-based backups.
 
@@ -466,12 +464,12 @@ Processing resumes — exactly once, not twice
 ```
 
 Database Continuity
-Primary Database / Standby Database, Streaming Replication, Failover
+Primary Database / Standby Database, Oracle Data Guard (concept-level), Failover
 concepts (manual promotion is fine for this project's scale), Read
 Replica (concept), Automatic Promotion (concept — noted as a production
 enhancement beyond this project's scope), Point-in-Time Recovery (PITR),
 Connection Pool Recovery, JDBC Failover — confirming the WAS-managed
-DataSource (P01 v7) reconnects cleanly once PostgreSQL is back.
+DataSource (P01 v7) reconnects cleanly once Oracle 21c XE (digistack_cbs) is back.
 
 Failure scenario:
 ```
@@ -527,7 +525,7 @@ posture. Full inventory:
 | Plugin backup | plugin-cfg.xml |
 | SSL certificate / keystore backup | Certificate Inventory |
 | **LDAP / security registry backup** | **Registry export/dump — added here to match the LDAP replication introduced in v37; without a registry backup, restoring Bangalore's registry after a failed sync has no fallback** |
-| Database backup | pg_dump + PITR base backups |
+| Database backup | Oracle 21c XE (digistack_cbs) — RMAN backups + Data Pump exports, consistent with P05 v37's standby replication model |
 | Application EAR/WAR backup | All 7 EARs + 2 WARs |
 | **MQ / Queue Manager backup** | **Queue Manager configuration and persistent message store — added here to match the MQ component now explicit in v37's DR architecture** |
 | Deployment scripts backup | wsadmin scripts, Ansible if used |
@@ -606,7 +604,7 @@ Production Exercises (this version's test cases)
    prevents duplication
 2. Shut down an entire node while users remain logged in
 3. Restart IBM HTTP Server during production traffic
-4. Simulate a PostgreSQL outage and observe JDBC failover/recovery
+4. Simulate a Oracle 21c XE (digistack_cbs) outage and observe JDBC failover/recovery
 5. Stop the IBM MQ Queue Manager and verify persistent messages process
    correctly on recovery
 6. Perform a rolling cluster maintenance window with zero downtime
@@ -651,7 +649,7 @@ that, on server restart after a crash mid-two-phase-commit, WebSphere can
 automatically resolve most in-doubt transactions by replaying the log
 against the resource managers involved. The harder, genuinely
 differentiating case is heuristic completion: situations where a resource
-manager (e.g., PostgreSQL) and the WebSphere Transaction Manager disagree
+manager (e.g., Oracle 21c XE (digistack_cbs)) and the WebSphere Transaction Manager disagree
 on the outcome of a transaction — one believes it committed, the other
 believes it rolled back — and automatic recovery isn't possible; an
 administrator must manually inspect the transaction log and force a
@@ -694,7 +692,7 @@ Completion Checklist
   least once, measured against the RPO/RTO table (v37)
 □ Idempotency/duplicate-prevention proven on Fund Transfer via a
   deliberate double-submit test (v38)
-□ Database continuity (streaming replication, PITR, JDBC failover)
+□ Database continuity (Data Guard standby, PITR, JDBC failover)
   demonstrated (v38)
 □ MQ continuity (persistent messages, queue/channel recovery)
   demonstrated (v38)
@@ -727,7 +725,7 @@ this Part.
 New Infrastructure
 - Secondary DR site (Bangalore DC) — full WAS ND (separate cell,
   BlrCell01), IHS, Load Balancer, CBS + satellite EARs, MQ standby
-  Messaging Engine, LDAP/registry replica, PostgreSQL standby (v37)
+  Messaging Engine, LDAP/registry replica, Oracle 21c XE (digistack_cbs) standby (v37)
 - Centrally-hosted observability stack independent of both DCs (v37)
 - Database streaming replication, PITR capability (v38)
 - Formal DR runbook, expanded backup inventory (now including LDAP/MQ),

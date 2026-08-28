@@ -4,7 +4,7 @@ Status: Active
 
 Title: Multi-Region Enterprise Banking & Middleware Architecture
 
-Imports: IDX STD ARCH02 STDGAP01 CAP01 RACI01
+Imports: IDX STD ARCH02 P05 STDGAP01 CAP01 RACI01
 
 Exports: Versions 39-43
 Global Shared Services (standing layer)
@@ -236,7 +236,7 @@ Regional Components (per region)
 - DigiStack CBS
 - Regional Messaging Engine / queue manager (local SIBus, connected
   outward to the Global MQ Hub — see Regional MQ vs. Global MQ Hub above)
-- Regional PostgreSQL Cluster — Primary + Standby (streaming
+- Regional Oracle 21c XE (digistack_cbs) — Primary + Standby (streaming
   replication), not a single database instance. This preserves
   continuity with the Primary/Standby pattern already established for DR
   in P05 v37, rather than introducing a second, inconsistent replication
@@ -304,7 +304,7 @@ in the roadmap:
 |---|---|---|
 | Application Health | /health liveness/readiness endpoint | P04, Version 31 |
 | WebSphere Health | Cluster member status | P01 v5 clustering, P05 v36 HA |
-| Database Health | PostgreSQL connectivity + replication lag | P05 v37/v38 streaming replication |
+| Database Health | Oracle 21c XE (digistack_cbs) connectivity + replication lag | P05 v37/v38 streaming replication |
 
 GSLB polls these same endpoints per region rather than a bespoke probe —
 a region is only considered healthy if all three layers report healthy,
@@ -610,7 +610,7 @@ rather than assumed to carry over silently)
 
 | Item | Scope in P06 |
 |---|---|
-| WAS profile / IHS / plugin / SSL-keystore / DB / EAR-WAR / MQ / scripts / Git / Grafana / Prometheus backups (P05 v38 baseline) | Performed independently per region (India, Singapore, Dubai) — three separate backup sets, not one |
+| WAS profile / IHS / plugin / SSL-keystore / DB (Oracle 21c XE) / EAR-WAR / MQ / scripts / Git / Grafana / Prometheus backups (P05 v38 baseline) | Performed independently per region (India, Singapore, Dubai) — three separate backup sets, not one |
 | Golden cell configuration template | Version-controlled in Git (Global Shared Services); this is new in P06 and not part of P05's original inventory |
 | Central LDAP / LTPA key material | Backed up centrally (Global Shared Services), not per-region, since it's shared infrastructure |
 | Cross-region certificate trust store (v41) | Backed up centrally alongside the Enterprise PKI/CA in Global Shared Services |
@@ -636,7 +636,7 @@ IBM HTTP Server Cluster  IBM HTTP Server Cluster  IBM HTTP Server Cluster
 Internet    CBS  ATM / Card / Branch / Payment Hub /
 Banking          Notification / Reporting
         │
-Regional PostgreSQL Cluster (Primary/Standby)
+Regional Oracle 21c XE Cluster (Primary/Standby)
 
 ──────────────────────────────────────────────────────────────────────────
                         Global Shared Services

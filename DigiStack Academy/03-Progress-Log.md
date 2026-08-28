@@ -47,7 +47,7 @@ No prior ✅/date status data was lost — all v5 fixes are structural/labeling/
 
 *Tomcat VM removed from plan — not used anywhere in this course; repurpose as second IHS node for Module 17.13 (IHS HA) if desired.*
 
-> **Note on `05-Day-by-Day-Plan-RETROFITTED.md`:** Day 0 and Day 1 in that file still reference the pre-upgrade "WAS 8.5.5 ND" text from before the version anchor was locked to 9.0.5.28. When you next touch that file, update:
+> **Note on `05-Day-by-Day-Plan-RETROFITTED.md`:** ~~Day 0/Day 1 8.5.5 wording~~ — **RESOLVED in v2 gap-fix pass of that file.** Day 0 now reads "install WAS 9.0.5.28 ND..." and Day 1 reads "9.0.5.28 ND primary / 8.5.5 ND legacy-awareness only / Version Divergence Cheat Sheet." No further action needed. (Retained for changelog history.)
 > - Day 0 → "...smoke test: install **WAS 9.0.5.28 ND**, create standalone profile, start server, hit Admin Console login..."
 > - Day 1 → "Topic 0.1 Version Anchor (**WAS 9.0.5.28 ND primary** — 8.5.5 ND legacy-awareness only / Liberty awareness-only / IBM J9 JDK 8 / RHEL 8 primary, AIX called out) + 0.2 Rule Going Forward + 0.3 start Version Divergence Cheat Sheet"
 
@@ -499,6 +499,7 @@ No prior ✅/date status data was lost — all v5 fixes are structural/labeling/
 | **Module 21: Incidents (22-Sprint batch)** | ☐ | | Add FFDC/error-rate panel to DigiStack dashboard on incident batch 2 |
 
 ### Module 22: Patch & Vulnerability Management
+> ⚠️ **Sequencing note:** Taught early in the day plan at **Days 52–58** (Arc 2 position, immediately after Module 3 Installation — patch before you build on it). Listed under Arc 5 here only for topic-grouping. Mark this block complete when Days 52–58 are done.
 | Topic | Status | Date | Notes |
 |---|---|---|---|
 | 22.1 CVE Monitoring | ☐ | | |

@@ -8,7 +8,8 @@ Generated from `05-Day-by-Day-Plan-RENUMBERED.md` + the recommendations in `06-S
 
 ## v11 Gap-Content Merge — Changelog
 
-**10 new topic-days added** from cross-verification of WAS-Program-v11-Restructured.md against the existing 389-day course. All 171 v11 topics were checked; 160 were already covered. The following 10 genuine gaps were inserted inline with full day renumbering:
+**11 new days added (10 v11 topic-days + 1 supplementary MQ Standalone Install & MQSC Basics Lab)** from cross-verification of WAS-Program-v11-Restructured.md against the existing 389-day course.
+ All 171 v11 topics were checked; 160 were already covered. The following 10 genuine gaps were inserted inline with full day renumbering:
 
 | New Day | Module | New Topic |
 |---|---|---|
@@ -99,13 +100,13 @@ Applied to every real deployment/config-change lab starting with Module 6. Modul
 ## Documentation portfolio (track as a running checklist in the Progress Log)
 
 - **Architecture diagrams:** cell topology (Arc 1 capstone), DigiStack full-stack diagram (Arc 2), cluster diagram (Arc 3)
-- **Runbooks:** install, profile creation, federation, sync, deployment/rollback, cluster ops, JDBC, MQ, IHS, SSL, backup, health-check, DR (tagged inline below at Days 173, 176, 205, 297)
+- **Runbooks:** install, profile creation, federation, sync, deployment/rollback, cluster ops, JDBC, MQ, IHS, SSL, backup, health-check, DR (tagged inline below at Days 175, 178 205, 300)
 - **Incident reports:** one per completed module's incident batch
 - **Automation scripts:** deployment, cluster deploy, patching, health-check report generator, CI/CD pipeline
 - **Change records:** one real RFC per major Arc 2+ deployment
 - **Resume/interview artifacts:** Days 396–399
 
-## DigiStack observability dashboard (stood up Days 260–267, extended per-module — tagged inline below)
+## DigiStack observability dashboard (stood up Day 262 — Topic 19.8, extended per-module — tagged inline below)
 
 Cluster health → connection-pool metrics → queue depth/DLQ → plugin routing/503s → GC/heap trends → FFDC/error rate, each added as the corresponding module completes, so by Arc 6 the dashboard itself is audit evidence.
 
@@ -392,13 +393,13 @@ Use this list to cross-check against `03-Progress-Log.md`. Each entry below = on
 - **Day 259** — Module 19: User Management & Security — Topic 19.5 Admin Roles *(DigiStack security/registry config)*
 - **Day 260** — Module 19: User Management & Security — Topic 19.6 RunAs Roles & J2C Authentication Alias Deep Dive *(DigiStack security/registry config)*
 - **Day 261** — Module 19: User Management & Security — Topic 19.7 Role-to-Group Mapping *(DigiStack security/registry config)*
-- **Day 262** — Module 19: User Management & Security — Topic 19.8 Java 2 Security *(DigiStack security/registry config)* *[Stand up persistent DigiStack Grafana/Prometheus dashboard — extended per-module below, not a one-off lab]*
-- **Day 263** — Module 19: User Management & Security — Topic 19.9 SSL Config Architecture *(DigiStack security/registry config)* *[Stand up persistent DigiStack Grafana/Prometheus dashboard — extended per-module below, not a one-off lab]*
-- **Day 264** — Module 19: User Management & Security — Topic 19.10 Admin Security Recovery *(DigiStack security/registry config)* *[Stand up persistent DigiStack Grafana/Prometheus dashboard — extended per-module below, not a one-off lab]*
-- **Day 265** — Module 19: User Management & Security — Topic 19.11 wsadmin with Security On *(DigiStack security/registry config)* *[Stand up persistent DigiStack Grafana/Prometheus dashboard — extended per-module below, not a one-off lab]*
+- **Day 262** — Module 19: User Management & Security — Topic 19.8 Java 2 Security *(DigiStack security/registry config)* *[Extend persistent DigiStack Grafana/Prometheus dashboard — see Day 262 stand-up]*
+- **Day 263** — Module 19: User Management & Security — Topic 19.9 SSL Config Architecture *(DigiStack security/registry config)* *[Extend persistent DigiStack Grafana/Prometheus dashboard — see Day 262 stand-up]*
+- **Day 264** — Module 19: User Management & Security — Topic 19.10 Admin Security Recovery *(DigiStack security/registry config)* *[Extend persistent DigiStack Grafana/Prometheus dashboard — see Day 262 stand-up]*
+- **Day 265** — Module 19: User Management & Security — Topic 19.11 wsadmin with Security On *(DigiStack security/registry config)* *[Extend persistent DigiStack Grafana/Prometheus dashboard — see Day 262 stand-up]*
 - **Day 266** — Module 19: User Management & Security — Topic 19.12 CSIv2/IIOP Security Deep Dive *(DigiStack security/registry config)*
-- **Day 267** — Module 19: User Management & Security — Topic 19.13 Security Audit Checklist *(DigiStack security/registry config)* *[Stand up persistent DigiStack Grafana/Prometheus dashboard — extended per-module below, not a one-off lab]*
-- **Day 268** — Module 19: User Management & Security — Overall Module Lab *(DigiStack security/registry config)* *[Tag Console (C) / wsadmin (W) / Automation (A) coverage in Progress Log]* *[Stand up persistent DigiStack Grafana/Prometheus dashboard — extended per-module below, not a one-off lab]*
+- **Day 267** — Module 19: User Management & Security — Topic 19.13 Security Audit Checklist *(DigiStack security/registry config)* *[Extend persistent DigiStack Grafana/Prometheus dashboard — see Day 262 stand-up]*
+- **Day 268** — Module 19: User Management & Security — Overall Module Lab *(DigiStack security/registry config)* *[Tag Console (C) / wsadmin (W) / Automation (A) coverage in Progress Log]* *[Extend persistent DigiStack Grafana/Prometheus dashboard — see Day 262 stand-up]*
 - **Day 269** — Module 19: User Management & Security — Production Incidents — 22-Sprint Incident Delivery Structure begins (Sprints 1-3) *(DigiStack security/registry config)* *[Layer hypothesis (L1–L7) required before evidence-gathering; close with 15-min interview checkpoint (10 basic/10 intermediate/10 senior/5 troubleshooting/3 architecture/2 design-choice, drawn from running question bank)]*
 - **Day 270** — Module 19: User Management & Security — Production Incidents — 22-Sprint Incident Delivery Structure continues (Sprints 4-22 delivered one per response per Delivery Preferences pacing; not confined to these 2 calendar days) *(DigiStack security/registry config)* *[Layer hypothesis (L1–L7) required before evidence-gathering; close with 15-min interview checkpoint (10 basic/10 intermediate/10 senior/5 troubleshooting/3 architecture/2 design-choice, drawn from running question bank)]*
 - **Day 271** — Supplementary — Identity Protocols (Conceptual): Kerberos and SPNEGO — conceptual, where they intersect WAS admin security

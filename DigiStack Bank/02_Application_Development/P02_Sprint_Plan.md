@@ -1382,27 +1382,18 @@ shared library placement, Oracle SESSIONS/PROCESSES parameter sizing,
 connection pool math against Oracle's session model, migration utility
 deployment and lifecycle management.
 
-**Expected Outcome:** Oracle 21c XE installed on dsb-db alongside
-PostgreSQL; DIGISTACK_CBS PDB created and populated; jdbc/OracleDS
-DataSource live in WAS; all tables migrated with row-count verification;
-migration utility deployed, run, and decommissioned; expdp backup
-captured; existing application confirmed functional; dsb-db stable
-within 4 GB RAM running both engines.
+**Expected Outcome:** Oracle 21c XE installed on the new dedicated VM\ndsb-oracle; DIGISTACK_CBS PDB created and populated; jdbc/OracleDS\nDataSource live in WAS; all tables migrated with row-count verification;\nmigration utility deployed, run, and decommissioned; expdp backup\ncaptured; existing application confirmed functional; dsb-db (PostgreSQL)\nuntouched and running independently throughout.
 
 **Prerequisites:** P02 Version 22 Completion Checkpoint satisfied —
 full middleware stack (LB, IHS, WAS Cluster, SIBus JMS, IBM MQ, Web
 Services, Security Hardening, Monitoring) operational on PostgreSQL.
 
-**VM Change:** dsb-db resized from 2 GB → 4 GB RAM before Sprint 1
-begins. Both database engines coexist on this VM during the migration
-window. This is a one-time resize; dsb-db remains at 4 GB for the
-remainder of the roadmap.
+**VM Change:** A new VM, dsb-oracle, is provisioned before Sprint 1\nbegins (2 vCPU / 4 GB RAM / 60 GB disk, Oracle Linux 8). dsb-db\n(PostgreSQL) is not resized and not touched — the two database engines\nnever share a host.
 
 ---
 
 ### Sprint 1
-**Sprint Goal:** Resize dsb-db, install Oracle 21c XE, and create the
-DIGISTACK_CBS Pluggable Database.
+**Sprint Goal:** Provision dsb-oracle, install Oracle 21c XE, and create\nthe DIGISTACK_CBS Pluggable Database.
 **Learning Objective:** Oracle 21c XE CDB/PDB architecture — understanding
 the Container Database (CDB) / Pluggable Database (PDB) model that
 replaces PostgreSQL's flat database model; SESSIONS and PROCESSES
@@ -1410,11 +1401,7 @@ init parameters that replace PostgreSQL's max_connections.
 **Business Features:** None (pure infrastructure).
 **Application Development:** N/A this sprint.
 **WebSphere Administration:**
-- Power off dsb-db; resize VM from 2 GB → 4 GB RAM in VMware Workstation;
-  power on and confirm both vCPU and RAM visible to OS
-- Install Oracle 21c XE on dsb-db following Oracle's silent install
-  method (response file); confirm CDB (XEPDB1 default, we rename to
-  DIGISTACK_CBS) is created
+- Create VM dsb-oracle in VMware Workstation: 2 vCPU, 4 GB RAM, 60 GB\n  disk, Oracle Linux 8; static IP, same subnet as the WAS VMs; power on\n  and confirm vCPU/RAM visible to OS\n- Install Oracle 21c XE on dsb-oracle following Oracle's silent install\n  method (response file); confirm CDB (XEPDB1 default, we rename to\n  DIGISTACK_CBS) is created
 - Set Oracle init parameters:
   - SESSIONS: set to 100 (2 × PROCESSES + 5 formula; matches our
     connection pool headroom requirement)
@@ -1424,25 +1411,12 @@ init parameters that replace PostgreSQL's max_connections.
   - PGA_AGGREGATE_TARGET: 512 MB
 - Create PDB: DIGISTACK_CBS with schema owner DIGISTACK_APP
   (credentials externalized — never hardcoded, per STD Golden Rules)
-- Open Oracle listener on port 1521; confirm reachable from dsb-dmgr
-- Confirm PostgreSQL 16 still running on port 5432 — both engines live
-  simultaneously
+- Open Oracle listener on port 1521 on dsb-oracle only (firewall\n  restricts to the WAS subnet); confirm reachable from dsb-dmgr
+- Confirm PostgreSQL 16 still running independently on dsb-db, port\n  5432 — dsb-db is untouched by this sprint
 
-**Dependencies:** dsb-db VM, SOE01 §1a (VM resize).
-**Deliverables:** Oracle 21c XE installed; DIGISTACK_CBS PDB created and
-open; listener on 1521; dsb-db confirmed stable at 4 GB running both
-engines.
+**Dependencies:** New dsb-oracle VM provisioned per SOE01.\n**Deliverables:** Oracle 21c XE installed on dsb-oracle; DIGISTACK_CBS\nPDB created and open; listener on 1521; dsb-db (PostgreSQL) confirmed\nunaffected and still running independently.
 **Acceptance Criteria:**
-- `sqlplus DIGISTACK_APP/<pwd>@DIGISTACK_CBS` connects successfully
-  from dsb-db locally
-- `sqlplus DIGISTACK_APP/<pwd>@dsb-db:1521/DIGISTACK_CBS` connects
-  successfully from dsb-dmgr (cross-VM)
-- PostgreSQL still accepts connections on 5432 — existing application
-  unaffected
-- Free memory on dsb-db confirmed positive after both engines start
-  (no OOM condition)
-**Enterprise Outcome:** Oracle 21c XE operational alongside PostgreSQL —
-dual-engine coexistence proven before any migration work begins.
+- - \sqlplus DIGISTACK_APP/<pwd>@DIGISTACK_CBS` connects successfully\n from dsb-oracle locally\n- `sqlplus DIGISTACK_APP/<pwd>@dsb-oracle:1521/DIGISTACK_CBS` connects\n successfully from dsb-dmgr (cross-VM)\n- PostgreSQL on dsb-db still accepts connections on 5432 — existing\n application unaffected, dsb-db untouched\n- dsb-oracle confirmed stable with expected free memory after Oracle\n starts (no OOM condition)\nEnterprise Outcome: Oracle 21c XE operational on its own dedicated\nVM — separate-host design proven before any migration work begins.`
 
 ---
 
@@ -1475,7 +1449,7 @@ format (thin driver, service name) vs. PostgreSQL's URL format.
   - Name: OracleDS
   - JNDI: jdbc/OracleDS
   - Provider: Oracle JDBC Provider
-  - URL: jdbc:oracle:thin:@dsb-db:1521/DIGISTACK_CBS
+  - URL: jdbc:oracle:thin:@dsb-oracle:1521/DIGISTACK_CBS
   - Auth Alias: OracleAlias
   - Connection pool: min 1, max 20 per member
     (2 members × 20 = 40 peak vs. PROCESSES=50 — confirmed headroom)
@@ -1513,7 +1487,7 @@ AdminTask.createDatasource(
      '-componentManagedAuthenticationAlias', 'OracleAlias',
      '-configureResourceProperties',
      [['URL', 'java.lang.String',
-       'jdbc:oracle:thin:@dsb-db:1521/DIGISTACK_CBS'],
+       'jdbc:oracle:thin:@dsb-oracle:1521/DIGISTACK_CBS'],
       ['connectionSharedPool', 'java.lang.Integer', '20']]]
 )
 AdminConfig.save()
@@ -1586,7 +1560,7 @@ created_at TIMESTAMP DEFAULT SYSTIMESTAMP
 ```
 
 **WebSphere Administration:**
-- Run all DDL scripts against DIGISTACK_CBS via sqlplus from dsb-db
+- Run all DDL scripts against DIGISTACK_CBS via sqlplus from dsb-oracle
 - Confirm all tables created with correct constraints
 - Confirm DIGISTACK_APP schema owner has SELECT/INSERT/UPDATE/DELETE
   on all tables
@@ -1808,7 +1782,7 @@ correctly (deploy → run → decommission).
 
 ### Sprint 5
 **Sprint Goal:** Verify the existing application against the Oracle
-DataSource; capture expdp backup; confirm dsb-db stability.
+DataSource; capture expdp backup; confirm dsb-oracle stability.
 **Learning Objective:** Application validation after a DataSource
 change; Oracle Data Pump (expdp) backup discipline replacing pg_dump;
 confirming Oracle SESSIONS/PROCESSES headroom under real connection
@@ -1823,7 +1797,7 @@ pool load.
   sqlplus SELECT)
 - Monitor Oracle V$SESSION during load — confirm active session
   count stays below PROCESSES=50
-- Run expdp backup from dsb-db:
+- Run expdp backup from dsb-oracle:
 
 ```bash
 expdp SYSTEM/<pwd>@DIGISTACK_CBS \
@@ -1853,13 +1827,13 @@ print AdminControl.getAttribute(poolMBean,
 
 **Dependencies:** Sprint 4 migration complete.
 **Deliverables:** Application validated against Oracle; expdp backup
-captured and restore-tested; dsb-db stability confirmed.
+captured and restore-tested; dsb-oracle stability confirmed..
 **Acceptance Criteria:**
 - Fund Transfer, Deposit/Withdraw, Login all function correctly
   with data landing in DIGISTACK_CBS Oracle tables
 - V$SESSION confirms session count within PROCESSES=50 ceiling
 - expdp dump file exists, non-zero, restore-tested successfully
-- dsb-db free memory confirmed positive after 30 minutes of
+- dsb-oracle free memory confirmed positive after 30 minutes of
   both engines running under load
 **Enterprise Outcome:** Oracle DIGISTACK_CBS is the confirmed,
 backup-protected target database — ready for P03 v23 to adopt
@@ -1919,7 +1893,7 @@ per STDGAP01 §3.8).
 
 **Deliverables:** `SetupDoc-v22.5.md` — must include:
 - §1 Overview
-- §2 VM Setup (dsb-db resize from 2 GB → 4 GB)
+- §2 VM Setup (dsb-oracle new VM: 2 vCPU / 4 GB / 60 GB))
 - §3 Pre-Deployment Checklist (01_Architecture diagram check
   per standing rule)
 - §4 Step-by-Step Configuration (Oracle XE install, PDB creation,
@@ -1950,7 +1924,7 @@ pool administration.
 
 **Phase 1 — Fault Injection (exact steps, per NDS01 Rules 1 and 2):**
 
-Step 1. Connect to Oracle on dsb-db as SYSDBA:
+Step 1. Connect to Oracle on dsb-oracle as SYSDBA:
 ```bash
 sqlplus / as sysdba
 ```
@@ -2026,9 +2000,8 @@ STARTING EVIDENCE:
 2. WAS SystemOut.log: DataStoreAdapterException on pool
    jdbc/OracleDS
 3. Oracle listener port 1521 reachable from dsb-dmgr:
-   telnet dsb-db 1521 → connected
-4. sqlplus DIGISTACK_APP/<pwd>@dsb-db:1521/DIGISTACK_CBS
-   from dsb-db: [observe and report result]
+   telnet dsb-oracle 1521 → connected
+4. sqlplus DIGISTACK_APP/<pwd>@dsb-oracle:1521/DIGISTACK_CBS from dsb-oracle: [observe and report result]
 
 STOP HERE.
 ```
@@ -2041,7 +2014,7 @@ request. RCA on explicit request only.
 
 **Environment restoration (after RCA):**
 ```sql
--- Connect as SYSDBA on dsb-db
+-- Connect as SYSDBA on dsb-oracle
 sqlplus / as sysdba
 ALTER SYSTEM SET PROCESSES=50 SCOPE=SPFILE;
 SHUTDOWN IMMEDIATE;
@@ -2071,14 +2044,14 @@ Non-gating — does not block sign-off.
 - backupConfig of WAS cell (dual-DataSource configuration)
 
 ## Version 22.5 Exit Criteria
-- ✅ Oracle 21c XE installed on dsb-db; DIGISTACK_CBS PDB created
+- ✅ Oracle 21c XE installed on dsb-oracle; DIGISTACK_CBS PDB created
 - ✅ jdbc/OracleDS DataSource live alongside jdbc/BankDS in WAS cell
 - ✅ All 7 tables migrated — row-count verification PASS for every table
 - ✅ Migration utility EAR undeployed from Admin Console
 - ✅ Application functional against Oracle (Login, Deposit/Withdraw,
   Fund Transfer, Transaction History all confirmed)
 - ✅ expdp backup captured and restore-tested
-- ✅ dsb-db stable at 4 GB running both engines
+- ✅ dsb-oracle stable, dedicated single-engine host
 - ✅ PostgreSQL still live (not yet decommissioned — P03 v23 Sprint 4)
 - ✅ Ready for P03 v23 (CBS split, Oracle as sole CBS datastore)
 
@@ -2092,10 +2065,10 @@ Non-gating — does not block sign-off.
   math (per CAP01 §4) is the same exercise with different
   parameter names.
 - **Known issues:** None expected if Sprint 1's dual-engine
-  coexistence on dsb-db is verified stable before Sprint 3's DDL
+  provisioning on dsb-oracle is verified stable before Sprint 3's DDL
   work begins.
 - **Technical debt:** PostgreSQL digistack_bank remains live on
-  dsb-db until P03 v23 Sprint 4 — documented open debt, tracked
+  dsb-db (unchanged, PostgreSQL-only) until P03 v23 Sprint 4 —\n  documented open debt, tracked
   explicitly in P03 v23's Migration & Ownership Transfer section.
 
 ---

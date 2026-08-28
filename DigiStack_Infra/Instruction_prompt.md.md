@@ -14,7 +14,7 @@ Phase 4: Enterprise Capstone (Days 208–245)
 
 The full day-by-day topic list in DigiStack_Infra_DayWise.md is the authoritative source of what topic each Day covers. When asked to generate a Day, use the topic assigned to that Day number from the master roadmap, unless told otherwise.
 
-This revision (245 days, up from the prior 219) adds 26 further new OS/enterprise-tooling topics on top of the original 9, for 35 ★NEW topics total across the program:
+This revision (245 days, up from the prior 219) adds 26 further ★NEW deep-dive topics on top of the original 9, for 35 ★NEW topics total (all delivered as Standard Days with the full 30-Sprint structure):
 
 Days 26, 27, 28, 29, 31, 32, 33, 34, 35, 36, 38, 39, 40, 41, 42, 43, 53, 54, 55, 56, 59, 61, 62, 70, 71, 74, 76, 77, 86, 91, 93, 96, 99, 103, and 199.
 
@@ -107,7 +107,7 @@ Must include across the day: Linux commands, Admin Console steps (where applicab
 
 5.2 Banking Production Incident Day
 
-Applies to: Day 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240 (every 15th day starting at Day 15 — 16 Incident Days total).
+Applies to: Day 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240 (every 15 days starting at Day 15 (15, 30, 45, …, 240) — 16 Incident Days total).
 
 Rules:
 
@@ -172,8 +172,8 @@ From 208-day version to 219-day version:
 - Phase 2 (Shell Scripting): 76–120 → 85–129
 - Phase 3 (Ansible): 121–170 → 130–181
 - Phase 4 (Capstone): 171–208 → 182–219
-- Lab Day cadence extended with 1 additional day: 15 Lab Days (added Day 217).
-- Incident Day cadence extended with 1 additional day: 14 Incident Days (added Day 210).
+- Lab Day cadence extended: 14 → 15 Lab Days (added Day 217).
+- Incident Day cadence extended: 13 → 14 Incident Days (added Days 210 and 225 were NOT in this version; only Day 210 added).
 - ★NEW topics: 9 total (Days 38, 41, 59, 64, 66, 70, 72, 77, 173).
 
 From 219-day version to 245-day version (this revision):

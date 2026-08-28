@@ -1,7 +1,7 @@
 # 05_Multi_Region
 
 **Status:** ⏳ Not Started
-**Depends On:** 04_HA_DR (frozen), 00_Core
+**Depends On:**05_HA_DR_BC (frozen), 00_Core
 **Feeds Into:** 06_WAS_Migration
 
 ---

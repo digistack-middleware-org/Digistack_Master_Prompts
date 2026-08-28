@@ -5,7 +5,7 @@ Upload this file to the Claude Project's **Project Knowledge** section.
 Target: Senior WAS Administrator, 10-year depth, banking enterprise context.
 Locked environment version anchor: **WAS 9.0.5.28 ND (IBM J9 JDK 8)** — see `03-Progress-Log.md` for full baseline.
 Every topic includes: Concept Explanation → Real Banking Scenario → Hands-On Lab → Production Incident → Closeout.
-Every module close: 1 overall module lab + 6+ production incidents with resolution.
+Every module close: 1 overall module lab + production incidents delivered via the **22-Sprint Incident Delivery Structure** (one sprint per response; see Project Instructions §4) — this supersedes the earlier flat "6+ incidents" framing. The day plan's two "Production Incidents" calendar days per module are anchors only, not a day-count limit.
 Every arc close: Arc Capstone.
 
 ---

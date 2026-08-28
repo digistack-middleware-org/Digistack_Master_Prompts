@@ -101,9 +101,7 @@ explicitly rather than silently skipping the check.
                  SERVERS
                        |
                  02_VM_Layout.md
-                 (extended: v31 digistack-monitoring-01,
-                  v32 digistack-elk-01, v33
-                  digistack-tracing-01 all power on)
+                 (extended: v31 dsb-monitor, v32 dsb-elk, v33 dsb-tracing all power on)
 
 No dedicated 01_Architecture/ file exists for the observability stack
 itself (Prometheus/Grafana/OpenSearch/Jaeger/Alertmanager topology) —
@@ -135,7 +133,7 @@ WebSphere Cluster
 CBS MQ Notification
 │
 ▼
-PostgreSQL
+Oracle 21c XE (digistack_cbs)
 
 ============================
 
@@ -326,13 +324,13 @@ Monitoring Coverage
 - WebSphere: JVM heap, GC, thread pools, JDBC connection pools, session
   count, cluster health, Node Agent health, DMgr health
 - Application: Internet Banking health, CBS health, ATM Service health,
-  Card Service health, Payment Hub health, Database health
+  Card Service health, Payment Hub health, Database health (Oracle 21c XE — digistack_cbs)
 
 Request Flow
 
-Linux Servers ──► Node Exporter ─┐
-WebSphere JVM ──► JMX Exporter ──┼──► Prometheus ──► Grafana ──► Ops Dashboard
-PostgreSQL ──► PG Exporter ───┘
+Linux Servers  ──► Node Exporter         ─┐
+WebSphere JVM  ──► JMX Exporter         ──┼──► Prometheus ──► Grafana ──► Ops Dashboard
+Oracle 21c XE  ──► Oracle DB Exporter ───┘
 ▲
 IBM WebSphere ND Cell (DMgr / Node Agent / Cluster Members)
 + Mobile/ATM Tomcat instances (lightweight exporter)
@@ -350,7 +348,7 @@ Monitoring (intro — formalized in v35), Middleware Operations.
 Sprint Deliverable: Every one of the 9 P03 applications exposes a working
 /health endpoint and metrics endpoint (with auth bypass for monitoring
 service account, per the /health Endpoint Authentication Note above);
-Prometheus scrapes Node/JMX/PostgreSQL exporters across the full WAS +
+Prometheus scrapes Node/JMX/Oracle exporters across the full WAS +
 Tomcat topology; a bare Grafana instance renders live JVM heap, session
 count, and cluster health with no manual polling; P02 v18's custom
 Operations Dashboard is confirmed retired, with its former data sources
@@ -519,7 +517,7 @@ recorded load.
 
 Request Flow
 
-Customer Request → IHS → WAS Cluster → {Banking Portal, CBS, IBM MQ} → PostgreSQL
+Customer Request → IHS → WAS Cluster → {Banking Portal, CBS, IBM MQ} → Oracle 21c XE (digistack_cbs)
 │
 OpenTelemetry SDK
 │
@@ -686,8 +684,7 @@ one:
 - Saturate a JDBC connection pool deliberately → confirm the v34 alert
   fires before the incident is manually noticed, and the resulting
   runbook-driven response is the one written above
-- Kill one monitoring VM process (Prometheus on digistack-monitoring-01,
-  or OpenSearch on digistack-elk-01) → confirm the observability
+- Kill one monitoring VM process (Prometheus on dsb-monitor, or OpenSearch on dsb-elk) → confirm the observability
   platform's own resilience (monitoring the monitors)
 
 Chaos Scenario 4 — Single-VM Monitoring Resilience Note (added 2026-08-25)
@@ -695,8 +692,7 @@ Chaos Scenario 4 — Single-VM Monitoring Resilience Note (added 2026-08-25)
 The original draft described chaos scenario 4 as "Kill one
 OpenSearch/Prometheus/Jaeger node" — implying a multi-node cluster where
 killing one node tests failover. This project's VM setup (v31/v32) uses
-single-instance deployments: one digistack-monitoring-01 for Prometheus,
-one digistack-elk-01 for OpenSearch. There is no second node to fail over
+single-instance deployments: one dsb-monitor for Prometheus, one dsb-elk for OpenSearch. There is no second node to fail over
 to. Scenario 4 is therefore restated as: kill the Prometheus process
 (not the VM) on dsb-monitor, confirm Alertmanager fires a
 "monitoring system degraded" alert and Grafana shows data gaps, then
@@ -805,11 +801,10 @@ duplicate or supersede them.
 
 Minimum App Needed: Zero new banking functionality. The portal itself is
 a new small internal WAS application (digistack-monitoring-portal.ear)
-deployed to a dedicated monitoring server (not a member of the banking
-cluster — it must remain reachable even if the banking cluster is fully
+deployed to dsb-monitor, co-located with the monitoring stack (not a member of the banking cluster, not a new VM — it must remain reachable even if the banking cluster is fully
 down). This is the 10th deployable in the project (the 8th WAS EAR) but
 is NOT counted among the 9 banking deployables — it is infrastructure,
-not a banking application, the same way digistack-monitoring-01 is a VM
+not a banking application, the same way dsb-monitor is a VM
 in the topology but not a banking server. SetupDoc-v35.5.md must document
 its deployment target server (dsb-monitor, co-located — not a new VM),
 context root (/monitoring), and that it is excluded from the 9-app banking
@@ -823,7 +818,7 @@ describes "Automatic Ticket Creation" with a specific API call timeline.
 These are reconciled as follows:
 - No live ServiceNow instance is required. The Alertmanager webhook calls
   a local ServiceNow simulator — a lightweight stub server
-  (digistack-servicenow-stub, running on digistack-monitoring-01) that
+  (digistack-servicenow-stub, running on dsb-monitor) that
   accepts the same REST API calls as a real ServiceNow instance and
   returns realistic INC-number responses. It does not require a
   ServiceNow licence or cloud account.
@@ -887,7 +882,7 @@ V35.5 Architecture
 Portal V1 — Monitor (built on v31)
 Purpose: WebSphere/infrastructure health at a glance.
 Sources: WAS JMX/PMI → JMX Exporter → Prometheus → Grafana; Linux → Node
-Exporter → Prometheus; PostgreSQL → PostgreSQL Exporter → Prometheus.
+Exporter → Prometheus; Oracle 21c XE (digistack_cbs) → Oracle DB Exporter → Prometheus.
 Screens: WAS Cell / Cluster / Database summary tiles, Node Agent status,
 per-application status table (all 9 deployables), JVM health (heap/GC/
 threads), JDBC connection pool gauges per server, recent events feed.
@@ -1113,8 +1108,8 @@ Completion Checklist
   /health Endpoint Authentication Note (v31)
 □ PII masking confirmed on Portal's SOAP fetch path (P02 v16.5),
   negative test in TestCases-v31.md (v31)
-□ Prometheus/Grafana operational across Linux, WAS/JVM, and PostgreSQL
-  layers (v31)
+□ Prometheus/Grafana operational across Linux, WAS/JVM, and Oracle 21c XE (digistack_cbs) layers (v31)
+
 □ P02 v18's custom Operations Dashboard confirmed retired, with its data
   sources migrated into this Part's Prometheus/Grafana stack (v31)
 □ Correlation ID standard documented in SetupDoc-v32.md, retrofit
@@ -1146,15 +1141,13 @@ Completion Checklist
   (v35)
 □ At least one of each Production Reporting artifact generated from real
   data (v35)
-□ digistack-monitoring-portal.ear deployed to dedicated monitoring server,
-  context root /monitoring, deployment documented in SetupDoc-v35.5.md (v35.5)
+□ digistack-monitoring-portal.ear deployed to dsb-monitor (co-located), context root /monitoring, deployment documented in SetupDoc-v35.5.md (v35.5)
 □ ServiceNow stub (digistack-servicenow-stub) set up and documented with
   API contract in SetupDoc-v35.5.md (v35.5)
 □ All six versions' TestCases-v31.md–v35.5.md signed off per Test Case
   Standards
 □ VM inventory (STD §VM Hostnames / SOE01 §1a) updated with dsb-monitor,
-  dsb-elk, dsb-tracing (per STD naming convention — already added per
-  FIX 6a/6b); monitoring portal server noted as WAS application deployment
+  dsb-elk, dsb-tracing (per STD §VM Hostnames naming convention); monitoring portal server noted as WAS application deployment
   target on dsb-monitor (co-located, not a new VM)
 □ Promoted Dev → UAT → Prod per Environment Promotion Standards,
   part4-release tag applied
@@ -1171,15 +1164,14 @@ New WAS Application (infrastructure, not counted in the 9 banking deployables)
   outside the banking cluster (v35.5)
 
 New VMs
-- dsb-monitor — Prometheus, Grafana, Alertmanager, exporters,
-  ServiceNow stub (v31/v35.5) — per STD §VM Hostnames
+- dsb-monitor — Prometheus, Grafana, Alertmanager, exporters (v31)
 - dsb-elk — Filebeat/Logstash/OpenSearch/OpenSearch Dashboards
   (v32) — per STD §VM Hostnames
 - dsb-tracing — Jaeger (v33, may co-locate on dsb-monitor per SOE01 §1a
   RAM budget) — per STD §VM Hostnames
 
 Observability Infrastructure Added
-- Prometheus + Node/JMX/PostgreSQL exporters (v31) — supersedes and
+- Prometheus + Node/JMX/Oracle exporters (v31) — supersedes and
   retires P02 v18's custom PMI/JMX Operations Dashboard
 - /health and /metrics endpoints on all 9 apps, with monitoring-service-
   account auth bypass (v31)
@@ -1198,7 +1190,7 @@ Observability Infrastructure Added
 - Synthetic monitoring jobs (v34)
 - Production runbooks, chaos/resilience testing (single-VM restatement for
   scenario 4), capacity forecasting, availability/SLA reporting (v35)
-- ServiceNow stub (digistack-servicenow-stub) on digistack-monitoring-01
+- ServiceNow stub (digistack-servicenow-stub) on dsb-monitor
   (v35.5)
 - Unified Monitoring & Incident Management Portal at
   monitoring.digistack.cloud (digistack-monitoring-portal.ear), four views:

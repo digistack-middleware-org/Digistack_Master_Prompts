@@ -599,7 +599,7 @@ Build
 Migrate
 - DMGR, Nodes (v46)
 - Applications (v45)
-- Databases (PostgreSQL version/compatibility check, if the DB engine
+- Databases (Oracle 21c XE version/compatibility check, if the DB engine
   itself is also being upgraded — otherwise confirm no forced DB
   migration was silently assumed)
 - MQ (v46)

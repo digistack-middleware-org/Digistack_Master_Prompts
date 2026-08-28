@@ -9,7 +9,7 @@
 ## Contents
 | File | Purpose |
 |---|---|
-| P04_Observability.md | P04 roadmap (Versions 31–35) |
+| P04_Observability.md | P04 roadmap (Versions 31–35.5) |
 
 ---
 
