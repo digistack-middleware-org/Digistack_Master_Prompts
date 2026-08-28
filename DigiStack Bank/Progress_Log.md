@@ -138,6 +138,16 @@ Note: these are reference standards, not versioned Parts — they don't
 carry a v<N> in the P01-P78 sequence and aren't subject to the Version
 Numbering Freeze. Updated in place (with a version bump + change note,
 per STD's Metadata Block Standard) when their content changes.
+
+Sprint Plan Files (not reference standards — no ID/version block):
+  P01_Sprint_Plan.md — all 8 sprints for v1–v14 (P01)
+  P02_Sprint_Plan.md — all 8 sprints for v15–v22 (P02)
+  P03_Sprint_Plan.md — all 8 sprints for v23–v30 (P03)
+SESSION_STATE.md's Load Instructions refer to "CURRENT_SPRINT.md"
+as a manually uploaded file each session. In practice, the relevant
+Part's Sprint Plan file (above) is the source — copy the active
+version's 8 sprints from it into CURRENT_SPRINT.md before each session,
+or upload the full Sprint Plan file directly.
 ---
 
 ## Detailed Version Log
@@ -206,12 +216,45 @@ version is actually rebuilt and signed off again.
 
 - **WAS ND version installed:** Not yet installed — target/placeholder pin only (9.0.5.28), per STD. Lab VM lost in second reset (2026-08-25), rebuild required.
 - **Profile(s) created so far:** None.
-- **Database:** Not yet installed — PostgreSQL 16 target/placeholder pin only. Rebuild required.
+- **Database (PostgreSQL):** Not yet installed — PostgreSQL 16 target/placeholder pin only. Rebuild required. Runs on dsb-db (192.168.10.30). Active P01 v1 through P02 v22 only; decommissioned at P03 v23 Sprint 4.
+- **Database (Oracle):** Not yet provisioned — dsb-oracle VM not built. Oracle 21c XE target/placeholder pin (v22.5 sign-off confirms). IP: 192.168.10.32. Powers on at P02 v22.5. NEVER co-hosted with PostgreSQL on dsb-db.
 - **IBM HTTP Server installed:** No — planned v8.
-- **Any deviations from the roadmap so far:** Full reset 2026-08-11 (VM + chat lost), then a second full reset 2026-08-25 (VM + chat lost again) — see Open Questions for details.
+- **Any deviations from the roadmap so far:** OS confirmed as RHEL 8.x on dsb-dmgr (P01 v1 Sprint 2) — 
+SOE01/CONTEXT_PACK referenced Rocky Linux 8.x as the expected OS; 
+RHEL 8.x is fully compatible, no technical change, 
+documentation corrected to reflect actual installed OS.
 ---
 
 ## Open Questions / Decisions Pending
+
+Resolved — Database engine change: PostgreSQL → Oracle 21c XE
+from v22.5 onward, 2026-08-28.
+
+digistack_bank (PostgreSQL 16) remains the database engine for
+P01 through v22. Version 22.5 (new, inserted between v22 and v23)
+migrates all existing data to Oracle 21c XE DIGISTACK_CBS PDB via
+a JDBC-based Java migration utility deployed inside WAS. From P03
+v23 onward, Oracle 21c XE is the sole database engine. PostgreSQL
+is decommissioned at P03 v23 Sprint 4 (final pg_dump archived, VM
+shut down, snapshotted once, deleted). Oracle 21c XE runs on a NEW
+dedicated VM dsb-oracle (2 vCPU / 4 GB RAM / 60 GB disk, Oracle
+Linux 8) — it is NEVER installed on dsb-db. dsb-db retains its
+original 2 GB RAM sizing throughout its life. No existing version
+numbers changed — v22.5 follows the established suffix-slot
+convention.
+
+Files updated: CONTEXT_PACK.md, ARCH01, ARCH02, P02_Middleware.md,
+P02_Sprint_Plan.md, 01_Network_Diagram.md, 02_VM_Layout.md,
+02_VM_Layout.md (dsb-oracle row added), SESSION_STATE.md,
+P03_Banking_Systems.md.
+
+Resolved — NDS01 Rule 7 formalised, 2026-08-27.
+Standing requirement that every WebSphere configuration task must
+include both Admin Console (GUI) steps AND wsadmin (Jython) steps
+was previously implicit in SetupDoc §4.1/§4.2 structure. Promoted
+to an explicit named rule (NDS01 Rule 7) at project owner's request
+during P01 v1 Sprint 4. Effective from Sprint 5 onward — all
+remaining sprints in P01–P10 must deliver both paths.
 
 **Resolved — STD v1.9 PIS01/FIS01 Sprint-Count Retroactivity Correction, 2026-08-27.**
 

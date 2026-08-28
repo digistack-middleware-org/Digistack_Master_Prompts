@@ -6,11 +6,10 @@ Title: Enterprise Banking Systems (CBS, Payments, Channel Simulators, Loans)
 
 Imports:
 IDX
-STD
 ARCH01
 ARCH02
-STDGAP01
 RACI01
+CONTEXT_PACK
 
 
 Exports:
@@ -34,8 +33,18 @@ P06
 P07
 P08
 
-Next:
-P03.1
+Next: P03.2
+
+Sub-Parts Note (added 2026-08-25)
+----------------------------------
+This Part is followed by two sub-Parts, P03.2 (Enterprise Interview
+Book — reference material) and P03.1 (Interview Preparation — drill
+layer), which build on P03's nine-application topology (7 WAS EARs +
+2 Tomcat apps) before P04 begins observability work. Reading order:
+P03 → P03.2 → P03.1 → P04. Their scope is defined in their own Part
+files; P03 imposes no additional prerequisites beyond its own Completion
+Checklist.
+
 
 ---
 
@@ -114,15 +123,15 @@ the tree gets touched than in P02.
    APPLICATION
        |
        v
-   PostgreSQL
-       |
-       v
+   Oracle 21c XE (DIGISTACK_CBS PDB)   ← migrated at P02 v22.5; lives on
+       |                                  its dedicated VM dsb-oracle.
+       v                                  PostgreSQL VM (dsb-db) fully
+                                          deleted at v23 Sprint 4
  06_Database_ER_Diagram.md
  (extended: v23 digistack_cbs
-  split from shared DB, migration
-  applied; v24 cif table; v28
-  card table; v29 bod_eod_log;
-  v30 loan tables)
+  dedicated DataSource cutover;
+  v24 cif table; v28 card table;
+  v29 bod_eod_log; v30 loan tables)
 
    SECURITY
        |
@@ -216,9 +225,9 @@ Reset, Card Replacement, Card Status, and Hotlisting. These are commonly
 hosted on enterprise middleware (WebSphere) rather than a lighter-weight
 servlet container, reflecting how real banks segregate card-management
 systems from consumer-facing channel apps. Accordingly, Card Portal is
-deployed as its own WebSphere EAR (digistack-cardportal-vN.ear) on the same
-ND cluster as Internet Banking Portal, CBS, Payment Hub, Notification
-Service, Reporting Service, and Branch Portal — not on Tomcat.
+deployed as its own WebSphere EAR (digistack-cardportal-vN.ear) on the same ND cluster as Internet Banking Portal, CBS, Payment Hub,
+Notification Service, and Reporting Service (Branch Portal joins at v29) — not on Tomcat.
+
 
 This raises the WAS EAR count to seven by end of this Part, giving practice
 across: multiple EAR deployments, context roots, virtual hosts, classloader
@@ -499,13 +508,20 @@ Customer
 
 
 Database Architecture (New in This Version)
-CBS gets its own dedicated PostgreSQL database: digistack_cbs, separate
-from the shared database used by the Portal in P01/P02. A new JDBC
-Provider and DataSource (jdbc/CBSDataSource) is configured in WAS
-specifically for this — separate connection pool sizing, separate JAAS
-auth alias from P01's pool. This mirrors real banking architecture, where
-the core banking database is isolated from channel-layer databases for
-security, blast-radius, and performance-tuning reasons.
+CBS uses the Oracle 21c XE DIGISTACK_CBS PDB migrated at v22.5 —
+already populated with all existing data from the PostgreSQL
+digistack_bank database. A new DataSource (jdbc/CBSDataSource) is configured in WAS pointing at
+Oracle (jdbc:oracle:thin:@dsb-oracle:1521/DIGISTACK_CBS), using the Oracle
+JDBC Provider and ojdbc8.jar shared library already placed at v22.5 —
+no provider reinstallation required. jdbc/CBSDataSource gets its own
+connection pool sizing and JAAS Auth Alias (CBSAlias) separate from the
+P01/P02 PostgreSQL pool. The v22.5-era jdbc/OracleDS (migration
+utility's DataSource) is retired at this version's cutover — its role
+is assumed by jdbc/CBSDataSource; removal of jdbc/OracleDS is captured
+in SetupDoc-v23.md alongside the jdbc/BankDS decommission. This mirrors real banking
+architecture where the core banking database is isolated
+from channel-layer databases for security, blast-radius,
+and performance-tuning reasons.
 
 Migration & Relocation Notes
 
@@ -525,12 +541,23 @@ Switch DataSource (jdbc/CBSDataSource)
 ▼
 CBS Live
 
-A one-time migration script, following the standard
-V<N>__<description>.sql convention (per DB Deployment Standards), copies
-existing Customer, Account, Beneficiary, Fund Transfer, and Transaction
-History data from the shared P01/P02 database into digistack_cbs. Once
-verified, the Portal's DataSource is decommissioned entirely — the Portal
-retains no database connectivity of its own from this point forward.
+Data migration from PostgreSQL to Oracle was completed at v22.5
+using a JDBC-based Java migration utility, with row-count
+verification for all tables. The DIGISTACK_CBS Oracle PDB already
+contains all migrated data at the start of this version. Version
+23's migration script (V23__migrate_existing_data_to_cbs.sql) is
+therefore an Oracle-dialect DDL extension script — adding any CBS-
+specific new columns or tables to the already-populated Oracle
+schema — rather than a full data migration. The Portal's PostgreSQL
+DataSource (jdbc/BankDS) is decommissioned in Sprint 4 of this
+version. In the same Sprint, the PostgreSQL VM (dsb-db) is fully
+decommissioned: one final pg_dump archived to the backup location,
+the VM shut down, a single retention snapshot taken, and the VM
+deleted — PostgreSQL ceases to exist in the estate from this point
+forward (matches the P02 v22.5 separate-VM design: Oracle never
+shared a host with PostgreSQL). Once verified, the Portal's DataSource is
+decommissioned entirely — the Portal retains no database connectivity of
+its own from this point forward.
 
 2. Service Relocation
 The REST and SOAP services introduced in Version 16 relocate from the
@@ -725,6 +752,10 @@ EAR, not as one monolithic class.
 Note: "Enterprise Validation" appeared as a heading with no listed content
 in the source material — folded into Enterprise Learning above (Aadhaar/PAN
 verification is the validation being exercised in this version).
+
+- The customer data migrated in P02 v22.5 lived as columns on `account`/`users`
+  (no standalone `customer` table existed at v15). This migration creates the
+  standalone CIF model and backfills `customer` rows from those columns.
 
 ---
 
@@ -987,9 +1018,9 @@ DigiStack CBS (Card Service)
 digistack_cbs Database
 
 
-Topics Covered: Deploying and administering a seventh independent WAS EAR
-alongside Portal, CBS, Payment Hub, Notification Service, Reporting
-Service, and Branch Portal; Virtual host routing distinguishing Card
+Topics Covered: Deploying and administering a sixth independent WAS EAR
+alongside Portal, CBS, Payment Hub, Notification Service, and Reporting
+Service (Branch Portal follows at v29, becoming the seventh); Virtual host routing distinguishing Card
 Portal's plugin-routed traffic from Mobile/ATM's Tomcat-routed traffic, on
 the same IHS instance; Service-to-service call from Card Portal into CBS's
 Card Service specifically (as opposed to CBS's core Account/Transaction
@@ -1274,9 +1305,11 @@ Completion Checklist
   direct DB access
 □ CBS running on its own dedicated digistack_cbs database via a separate
   DataSource/connection pool
-□ Version 23 data migration completed and verified (row-count
-  reconciliation between old shared DB and digistack_cbs), old Portal
-  DataSource decommissioned
+□ v22.5 data migration verified (row-count reconciliation between old
+  shared DB and digistack_cbs); v23 Oracle-dialect DDL extension script
+  (V23__migrate_existing_data_to_cbs.sql) applied; old Portal DataSource
+  (jdbc/BankDS) decommissioned; final pg_dump archived; dsb-db VM shut
+  down, snapshotted once, and deleted — no PostgreSQL anywhere in the estate
 □ REST/SOAP endpoints (v16) confirmed relocated to CBS with unchanged
   contracts; SIBus/MDB/MQ (v15, v19) confirmed relocated to CBS
 □ Notification Service and Reporting Service live as independent EARs,

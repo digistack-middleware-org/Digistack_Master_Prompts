@@ -6,14 +6,13 @@ Title: WebSphere / Enterprise Middleware Integration
 
 Imports:
 IDX
-STD
+CONTEXT_PACK
 ARCH02
-STDGAP01
 RACI01
 
 
 Exports:
-Versions 15-22
+Versions 15-22 (incl. suffix-slot v16.5 Transaction History Pagination and v22.5 Database Migration)
 JMS / SIBus / MDB / DLQ
 Web Services (REST/SOAP)
 Security Hardening
@@ -107,8 +106,10 @@ materially extended this Part.
        |
        v
  06_Database_ER_Diagram.md
- (extended: v15 Customer/Account/
-  Beneficiary/Fund Transfer,
+ (extended: v15 Account/Beneficiary/
+  Fund Transfer — Customer added as
+  columns on users/account, not a
+  separate table until P03 v24 CIF,
   v17 OTP/lockout/audit fields,
   v19 external-flag on Beneficiary)
 
@@ -180,7 +181,7 @@ failing transfer lands in the DLQ and is inspected.
 
 Dashboard UI Note (added 2026-08-24)
 --------------------------------------
-The "Payments and Transfers" tile on the Dashboard (placeholder since
+The "Payments/Transfers" tile on the Dashboard (placeholder since
 P01 v3, shown as "Coming soon — v15" per P01 v2's UI convention) goes
 live here — Fund Transfer (to a registered Beneficiary) is reachable
 directly from the Dashboard's tile, not just a standalone form. The
@@ -496,6 +497,210 @@ built anywhere in P01 or P02 — including them here would repeat the same
 continuity gap this rewrite just fixed. They stay out of scope; Loan
 Management is picked up explicitly in P03, Version 30, and Fixed/Recurring
 Deposits remain unscoped (tracked as an open item in the Progress Log).
+
+---
+
+---
+
+Version 22.5 — Database Migration (PostgreSQL → Oracle 21c XE)
+-----------------------------------------------------------------
+Objective: Migrate the existing digistack_bank PostgreSQL database to
+Oracle 21c XE as a dedicated Pluggable Database (DIGISTACK_CBS), making
+it ready for P03 v23's CBS split. This version is a pure infrastructure
+migration — zero new banking features, zero application code changes
+visible to end users. The two databases never share a host: Oracle runs on its own dedicated VM
+(dsb-oracle) while PostgreSQL remains untouched on dsb-db during the
+migration window; dsb-db is fully decommissioned and deleted at
+P03 v23 Sprint 4.
+
+This version follows the established suffix-slot convention (v4.5, v16.5,
+v35.5) — it does not shift any existing version number.
+
+Deployment Model (revised 2026-08-25 — separate-VM design)
+Oracle 21c XE is installed on a NEW, dedicated VM: dsb-oracle. It is NEVER
+installed on dsb-db (the PostgreSQL VM) — the two database engines never
+share a host, matching real enterprise estates where OLTP databases get
+dedicated servers. dsb-oracle is provisioned with 4 GB RAM / 2 vCPU / 60 GB
+disk (sized for Oracle XE + OS headroom). PostgreSQL remains untouched on
+dsb-db during the migration window. Once P03 v23 Sprint 4 decommissions
+the Portal's PostgreSQL DataSource, the entire dsb-db VM is shut down,
+snapshotted once, and deleted — Oracle on dsb-oracle becomes the sole
+database for the remainder of the roadmap.
+
+Oracle 21c XE Installation & Setup Guide (dsb-oracle — for Oracle beginners)
+-----------------------------------------------------------------------------
+Step 1 — Provision the VM
+  - Create VM dsb-oracle: 2 vCPU, 4 GB RAM, 60 GB disk, Oracle Linux 8
+    (or RHEL/Rocky 8 — free, closest to what Oracle runs on in real banks).
+  - Network: same subnet as the WAS VMs; static IP; hostname dsb-oracle.
+  - Open firewall port 1521 only:
+      sudo firewall-cmd --permanent --add-port=1521/tcp
+      sudo firewall-cmd --reload
+
+Step 2 — Download & Install Oracle 21c XE (free, no license needed)
+  - Download oracle-database-xe-21c-1.0-1.ol8.x86_64.rpm from Oracle's
+    website (free Oracle account required).
+  - Transfer to dsb-oracle (scp) and install:
+      sudo dnf localinstall oracle-database-xe-21c-1.0-1.ol8.x86_64.rpm
+  - This installs the binaries under /opt/oracle/product/21c/dbhomeXE.
+
+Step 3 — Configure the Database (one command; creates CDB + XEPDB1 PDB)
+      sudo /etc/init.d/oracle-xe-21c configure
+  - It prompts for: SYS/SYSTEM/SYSMAN passwords (record in the vault per
+    STD Golden Rules — never in docs) and the listener port (accept 1521).
+  - This takes 10–20 minutes. Verify afterwards:
+      sudo systemctl status oracle-xe-21c
+
+Step 4 — Environment Setup (so sqlplus works in your shell)
+  Add to /home/oracle/.bashrc (as the oracle OS user):
+      export ORACLE_BASE=/opt/oracle
+      export ORACLE_HOME=$ORACLE_BASE/product/21c/dbhomeXE
+      export ORACLE_SID=XE
+      export PATH=ORACLEHOME/bin:ORACLE_HOME/bin:ORACLEH​OME/bin:PATH
+      export LD_LIBRARY_PATH=$ORACLE_HOME/lib
+
+Step 5 — Create the DIGISTACK_CBS Pluggable Database
+  Connect as SYS:
+      sqlplus sys/<password>@localhost:1521/XE as sysdba
+  Then:
+      CREATE PLUGGABLE DATABASE DIGISTACK_CBS
+        ADMIN USER cbsadmin IDENTIFIED BY "<vault password>"
+        FILE_NAME_CONVERT=('/opt/oracle/oradata/XE/pdbseed/',
+                           '/opt/oracle/oradata/XE/DIGISTACK_CBS/');
+      ALTER PLUGGABLE DATABASE DIGISTACK_CBS OPEN;
+      ALTER PLUGGABLE DATABASE DIGISTACK_CBS SAVE STATE;
+  (SAVE STATE = PDB auto-opens on VM reboot — do not skip this.)
+
+Step 6 — Create the Application Schema & Tablespace
+      ALTER SESSION SET CONTAINER=DIGISTACK_CBS;
+      CREATE TABLESPACE digistack_data
+        DATAFILE '/opt/oracle/oradata/XE/DIGISTACK_CBS/digistack_data01.dbf'
+        SIZE 500M AUTOEXTEND ON NEXT 100M MAXSIZE 12G;
+      CREATE USER DIGISTACK_APP IDENTIFIED BY "<vault password>"
+        DEFAULT TABLESPACE digistack_data QUOTA UNLIMITED ON digistack_data;
+      GRANT CREATE SESSION, CREATE TABLE, CREATE SEQUENCE, CREATE VIEW,
+            CREATE PROCEDURE, CREATE TRIGGER TO DIGISTACK_APP;
+  (DIGISTACK_APP is the schema owner the JAAS Auth Alias "OracleAlias"
+  points at — credentials only in the vault, never hardcoded.)
+
+Step 7 — Enable Remote Listener Access (required so WAS VMs can connect)
+      ALTER SYSTEM SET LOCAL_LISTENER='(ADDRESS=(PROTOCOL=TCP)
+        (HOST=0.0.0.0)(PORT=1521))' SCOPE=BOTH;
+      ALTER SYSTEM REGISTER;
+  Verify from a WAS VM:
+      sqlplus DIGISTACK_APP/<password>@dsb-oracle:1521/DIGISTACK_CBS
+
+Step 8 — Place the Oracle JDBC Driver (ojdbc8.jar)
+  - ojdbc8.jar ships inside $ORACLE_HOME/jdbc/lib/ojdbc8.jar on
+    dsb-oracle; copy it to the WAS VM and register it in a WAS shared
+    library per the WebSphere Topics Covered below (IBM Java 8 compatible).
+  - Confirm Java 8 compatibility: ojdbc8.jar supports JDK 8 through 11.
+
+Step 9 — First expdp Backup (verify the discipline before migration)
+      expdp system/<password>@localhost:1521/DIGISTACK_CBS \
+        full=y directory=DATA_PUMP_DIR dumpfile=digistack_pre.dmp logfile=digistack_pre.log
+  (Run as the oracle OS user; DATA_PUMP_DIR exists by default in XE.)
+
+Step 10 — Document everything in SetupDoc-v22.5.md: VM specs, install
+  steps executed, passwords location (vault reference only), listener
+  config, PDB name, schema user, ojdbc8.jar shared-library path, and the
+  pre-migration expdp verification result.
+
+Migration Approach
+A JDBC-based Java migration utility runs inside WAS as a temporary
+servlet, holding two simultaneous DataSource connections — one to
+PostgreSQL (jdbc/BankDS, existing) and one to Oracle (jdbc/OracleDS,
+new) — reading from PostgreSQL and writing to Oracle table by table,
+with row-count verification at each step. This dual-DataSource pattern
+is a genuine WAS administration exercise: two JDBC Providers, two
+DataSources, two JAAS Auth Aliases, coexisting in the same WAS cell
+during the migration window.
+
+Oracle 21c XE Limits (apply for the remainder of the roadmap)
+- CPU threads used by Oracle: 2 (matches ds-oracle vCPU allocation)
+- RAM used by Oracle: 2 GB maximum (dsb-oracle has 4 GB total, leaving
+  2 GB OS headroom — dedicated DB VM, no other engines present)- User data limit: 12 GB (more than sufficient for this lab)
+- Pluggable Databases: 3 maximum (we use 1 here: DIGISTACK_CBS; a second
+  PDB is never required in this roadmap)
+- No RAC support: P05's DR uses Oracle Data Guard, not RAC — compatible
+
+**Tables Migrated** (from PostgreSQL 16, schema `bank`, into Oracle DIGISTACK_CBS, via the JDBC-based migration utility — expdp is the backup discipline from this version onward, not the migration mechanism):
+- `users` (v2) — user identity + role
+- `account` (v3) — includes embedded customer/holder columns (v15 did NOT model a
+  separate customer table; customer data lives as columns on `account` and `users`
+  until P03 v24 introduces the CIF model — consistent with P03 v24's note)
+- `beneficiary` (v15)
+- `fund_transfer` (v15)
+- `transaction` (v3, Deposit/Withdraw ledger per P01 v3) — migrated with only its existing P01/P02-era rows; later Teller-channel entries (P03 v29) and REST-led entries accumulate in Oracle after migration
+
+
+DDL Dialect Changes (PostgreSQL → Oracle 21c XE)
+- SERIAL / BIGSERIAL → NUMBER GENERATED ALWAYS AS IDENTITY
+- VARCHAR → VARCHAR2
+- BOOLEAN → NUMBER(1) with CHECK constraint (0/1)
+- NOW() → SYSTIMESTAMP
+- TRUE / FALSE → 1 / 0
+- Sequences: Oracle uses implicit identity columns; no separate
+  CREATE SEQUENCE statements needed for these tables
+- Constraint naming: unchanged — pk=id, fk=<table>_id, idx=idx_<table>_
+  <col>, chk=chk_<table>_<rule>, uq=uq_<table>_<col> per STD
+
+JNDI Resources Introduced
+- JDBC Provider: Oracle JDBC Provider (ojdbc8.jar, IBM Java 8 compatible)
+- DataSource: jdbc/OracleDS (Oracle DIGISTACK_CBS PDB)
+- JAAS Auth Alias: OracleAlias (DIGISTACK_APP schema owner credentials,
+  never hardcoded per STD Golden Rules)
+- Existing: jdbc/BankDS (PostgreSQL) remains active until P03 v23 Sprint 4
+
+Port Change (revised 2026-08-25 — separate-VM design)
+- Oracle listener port: 1521 on dsb-oracle (new VM)
+- PostgreSQL port 5432 remains open on dsb-db during the migration window
+  (v22.5) only — the two engines are on different hosts, so no port
+  coexistence is needed on any single VM
+- At P03 v23 Sprint 4, dsb-db is fully decommissioned: DataSource removed,
+  final pg_dump archived, VM shut down, snapshotted once, then deleted
+- Firewall on dsb-oracle: only port 1521 open (restricted to the WAS
+  subnet); SSH 22 restricted to the admin bastion
+
+Backup Discipline Change
+- PostgreSQL: pg_dump (used through v22)
+- Oracle: expdp (Oracle Data Pump export) — effective from this version
+  onward. Weekly expdp full export, restore tested every 15 days, last
+  2 exports retained — same cadence as the prior pg_dump discipline
+
+WebSphere Topics Covered
+Dual JDBC Provider configuration, dual DataSource coexistence, JAAS Auth
+Alias per database, Oracle JDBC driver shared library placement, SESSIONS
+and PROCESSES init parameter sizing, connection pool math against Oracle's
+session model, migration utility deployment and decommission lifecycle.
+
+Enterprise Learning
+Enterprise database migration patterns, Oracle 21c XE architecture (CDB/
+PDB model), dual-DataSource WAS administration, Oracle session/process
+parameter model vs. PostgreSQL max_connections, Data Pump (expdp) backup
+discipline, migration verification discipline (row-count reconciliation
+before cutover).
+
+Sprint Deliverable
+Oracle 21c XE installed on dsb-oracle; DIGISTACK_CBS PDB created;
+jdbc/OracleDS DataSource live in WAS alongside jdbc/BankDS; all tables
+migrated with row-count verification passing for every table; JDBC-based
+migration utility deployed, executed, and then undeployed from WAS;
+expdp backup of DIGISTACK_CBS captured and verified restorable;
+dsb-oracle confirmed stable (PDB auto-opens after reboot via SAVE STATE,
+remote connection from WAS VMs verified); dsb-db (PostgreSQL VM)
+untouched and running independently; existing
+application (digistack-bank-v22.ear) confirmed fully functional against
+both DataSources before PostgreSQL handoff to v23.
+
+Technical Debt Introduced
+- PostgreSQL digistack_bank remains live on its dedicated VM (dsb-db)
+  until P03 v23 Sprint 4 decommissions the Portal's DataSource and
+  deletes the dsb-db VM entirely (final pg_dump archived first) —
+  documented open debt, not a silent gap
+- ojdbc8.jar placed in WAS shared library — must be retained for the
+  remainder of the roadmap; never removed without a documented version
+  referencing its removal
 
 ---
 

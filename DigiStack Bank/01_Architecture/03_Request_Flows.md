@@ -47,4 +47,8 @@ physically running right now — the lab VM (dsb-dmgr, dsb-db) was lost
 the same day this was drawn. Treat as a rebuild target, not a live
 system, until P01 v1 is actually redeployed and re-verified.
 Extend at P01 v2 (Login flow added), v7 (JNDI pool replaces direct
-JDBC), v8 (IHS hop added), v12 (mTLS hops).
+JDBC), v8 (IHS hop added), v12 (mTLS hops), P02 v15 (JMS/SIBus
+producer→MDB async path added), P02 v19 (IBM MQ external payment leg),
+P03 v23 (architectural pivot — Portal→CBS REST/SOAP replaces Portal→DB
+direct; all prior flows redraw through CBS), P03 v26/v27 (Tomcat channel
+paths: mobile.digistack.cloud and atm.digistack.cloud → Tomcat → CBS).

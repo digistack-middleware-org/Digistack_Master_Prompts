@@ -131,11 +131,7 @@ No exception without an explicit, documented architectural decision.
 
 3. Data Architecture
 ----------------------
-- Two engines, phased: PostgreSQL 16 (P01–P02, digistack_bank
-  early-build shared DB) migrated to Oracle 21c XE at v22.5
-  (DIGISTACK_CBS PDB). From P03 v23 onward, Oracle 21c XE is
-  the sole database engine. No further engine change is introduced
-  anywhere in P01–P10.
+- Single engine: PostgreSQL end-to-end. No other engine ever introduced.
 - Database boundary shift: shared DB (early build) → dedicated digistack_cbs
   (from CBS-split version onward), one-time verified migration, legacy DB
   decommissioned.

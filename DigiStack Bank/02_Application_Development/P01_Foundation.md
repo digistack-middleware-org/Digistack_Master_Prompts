@@ -6,10 +6,8 @@ Title: Foundation
 
 Imports:
 IDX
-STD
-STDGAP01 
-SOE01
-CAP01
+CONTEXT_PACK
+ARCH01
 
 
 Exports:
@@ -178,8 +176,9 @@ security signal ("was this you?"), consistent with real banking UX.
 Login Page UI Note — Login Field Label (added 2026-08-25)
 -------------------------------------------------------------
 The Login.jsp field is labeled "Username" from this version through P03
-v23. At P03 v24 (CIF & Account Lifecycle), the users table gains a
-formal customer_id as part of the CIF model — from that version onward
+v23. At P03 v24 (CIF & Account Lifecycle), the customer_id already present
+on the users row since P02 v15 is formalized as a foreign key into the
+new CIF customer table — from that version onward
 the login field label changes to "Customer ID" on Login.jsp, matching
 the UI mockup. No backend auth change — just a label update on the JSP,
 noted in SetupDoc-v24.md.
@@ -295,6 +294,39 @@ Sprint Deliverable: v4 deployed; real rollback to v3 performed and verified
 (old label visible), then v4 redeployed — proving update/rollback workflow
 reused by every later version. 100% admin-practice sprint, no feature work.
 
+Version 4.5 — Basic IHS Standalone Era
+-----------------------------------------
+(Suffix-slot version per the project's convention — does not renumber
+v5-v14. Deliberately placed between v4 and v5: v5 stands up the DMgr +
+cluster, and IHS is practiced once against the standalone AppServer
+first, so the plugin's standalone-mode behavior is observed before
+cluster-mode routing replaces it.)
+
+WebSphere Topic: First IBM HTTP Server install against the standalone
+AppServer — web server definition on a single non-federated node,
+plugin-cfg.xml generation/propagation, basic reverse proxy. (The cluster-
+scoped plugin behavior, custom error pages, and virtual-host refinement
+are v8's territory; this is the standalone-era first pass.)
+
+Minimum App: Zero new functionality — same v4 app. One static asset and
+the existing Home page routed through IHS instead of hitting the
+AppServer directly.
+
+Topics Covered: IBM HTTP Server, Web Server Definition (standalone),
+Plugin Generation, Plugin Propagation, Reverse Proxy (basic).
+
+Sprint Deliverable: IHS installed and defined in the cell; plugin-cfg.xml
+generated and propagated for the standalone AppServer; Home page and one
+static asset confirmed served via IHS, with AppServer-direct access
+compared against IHS-proxied access in the SetupDoc.
+
+Continuity note: v8 supersedes this setup once the cluster exists — the
+web server definition is re-pointed at the cluster, and v8's deliverable
+(static asset proof + custom 404/500) builds on this foundation rather
+than replacing it silently. Documented in SetupDoc-v4.5.md and revisited
+in SetupDoc-v8.md.
+
+
 Version 5 — WAS Clustering
 ------------------------------
 Prerequisite Note: A cluster needs a DMgr + federated node(s) — cell-level
@@ -363,12 +395,23 @@ Connection Pool Sizing — Worked Example
 Rule: (cluster members × max pool size per member) + admin/replication
 headroom ≤ PostgreSQL max_connections.
 
-Example: 3 members × 50-connection pool each = 150 connections required at
-peak, against PostgreSQL default max_connections=100 — exhausts the DB
-connection limit before any app server's pool is full. Either shrink per-
-member pool size, size max_connections for the cluster, or both. Document
-actual numbers chosen in SetupDoc, revisit any time cluster membership
-changes.
+VM Note (added 2026-08-25): PostgreSQL 16 runs on its own dedicated VM
+(dsb-db) for the whole of P01. At P02 v22.5, Oracle 21c XE is installed on
+a SEPARATE VM (dsb-oracle) — never on dsb-db — so both database engines
+never share a host. dsb-db (PostgreSQL) is fully decommissioned and
+deleted at P03 v23 Sprint 4 (see P03).
+
+Generic enterprise example: 3 members × 50-connection pool each = 150
+connections required at peak, against PostgreSQL default
+max_connections=100 — exhausts the DB connection limit before any app
+server's pool is full.
+
+Lab-adjusted worked example (this project's actual topology, per
+CAP01 §4 and P01_Sprint_Plan v7 Sprint 3): 2 cluster members ×
+20-connection pool each = 40 connections at peak, comfortably under
+max_connections=100 on the 2 GB dsb-db VM. Revisit any time cluster
+membership changes; actual numbers recorded in SetupDoc-v7.md.
+
 
 Sprint Deliverable: All existing features (login, deposit/withdraw, freeze)
 read/write exclusively through a JNDI-looked-up, WAS-managed connection
@@ -426,10 +469,10 @@ Customer-role user, proving role enforcement (not just UI hiding).
 Roles Actually Built (clarification)
 -------------------------------------
 Only two roles are built in this roadmap: Customer and Administrator
-(this version). Branch Operator and Auditor are not built anywhere in
-P01–P10 — if ever needed, they should be added explicitly at the version
-that requires them (Branch Portal, P03 v29, is the natural candidate),
-not assumed to already exist.
+(this version). Auditor is not built anywhere in P01–P10. Branch Operator is not built
+in P01–P02 — P03 v29's Branch Portal (Teller Login) introduces a Teller
+role there. Until that version, only Customer and Administrator exist;
+no role is assumed to already exist.
 
 Version 11 — SSL (HTTPS at the Web Tier)
 -----------------------------------------------

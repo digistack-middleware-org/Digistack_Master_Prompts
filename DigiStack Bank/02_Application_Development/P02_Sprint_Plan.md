@@ -1358,6 +1358,747 @@
 - **Technical debt:** None new. Explicitly deferred, not a defect: Fixed Deposits, Recurring Deposits, and Loan Management were referenced in earlier planning as things this Capstone "combines," but were never actually built in P01/P02 — they remain correctly out of scope here (Loan Management is picked up in P03 v30; Fixed/Recurring Deposits remain unscoped project-wide).
 
 ---
+---
+---
+
+# Version 22.5 — Database Migration (PostgreSQL → Oracle 21c XE)
+
+## Version Overview
+
+**Version Objective:** Migrate the existing digistack_bank PostgreSQL
+database to Oracle 21c XE as the DIGISTACK_CBS Pluggable Database —
+making it ready for P03 v23's CBS application split. Zero new banking
+features. Zero visible application change. Pure infrastructure migration
+with dual-DataSource WAS administration as the core WebSphere topic.
+
+**Business Scope:** No new banking functionality. All existing features
+(Login, Deposit/Withdraw, Freeze/Unfreeze, Fund Transfer, Transaction
+History, Notifications, Reports, MFA/OTP, MQ integration, IHS, LB)
+continue operating identically against the migrated Oracle database.
+
+**WebSphere Focus:** Dual JDBC Provider configuration, dual DataSource
+coexistence, JAAS Auth Alias per database engine, Oracle JDBC driver
+shared library placement, Oracle SESSIONS/PROCESSES parameter sizing,
+connection pool math against Oracle's session model, migration utility
+deployment and lifecycle management.
+
+**Expected Outcome:** Oracle 21c XE installed on dsb-db alongside
+PostgreSQL; DIGISTACK_CBS PDB created and populated; jdbc/OracleDS
+DataSource live in WAS; all tables migrated with row-count verification;
+migration utility deployed, run, and decommissioned; expdp backup
+captured; existing application confirmed functional; dsb-db stable
+within 4 GB RAM running both engines.
+
+**Prerequisites:** P02 Version 22 Completion Checkpoint satisfied —
+full middleware stack (LB, IHS, WAS Cluster, SIBus JMS, IBM MQ, Web
+Services, Security Hardening, Monitoring) operational on PostgreSQL.
+
+**VM Change:** dsb-db resized from 2 GB → 4 GB RAM before Sprint 1
+begins. Both database engines coexist on this VM during the migration
+window. This is a one-time resize; dsb-db remains at 4 GB for the
+remainder of the roadmap.
+
+---
+
+### Sprint 1
+**Sprint Goal:** Resize dsb-db, install Oracle 21c XE, and create the
+DIGISTACK_CBS Pluggable Database.
+**Learning Objective:** Oracle 21c XE CDB/PDB architecture — understanding
+the Container Database (CDB) / Pluggable Database (PDB) model that
+replaces PostgreSQL's flat database model; SESSIONS and PROCESSES
+init parameters that replace PostgreSQL's max_connections.
+**Business Features:** None (pure infrastructure).
+**Application Development:** N/A this sprint.
+**WebSphere Administration:**
+- Power off dsb-db; resize VM from 2 GB → 4 GB RAM in VMware Workstation;
+  power on and confirm both vCPU and RAM visible to OS
+- Install Oracle 21c XE on dsb-db following Oracle's silent install
+  method (response file); confirm CDB (XEPDB1 default, we rename to
+  DIGISTACK_CBS) is created
+- Set Oracle init parameters:
+  - SESSIONS: set to 100 (2 × PROCESSES + 5 formula; matches our
+    connection pool headroom requirement)
+  - PROCESSES: set to 50 (2 cluster members × 20 connections each =
+    40 peak; 50 gives admin headroom per CAP01 §4 lab-adjusted math)
+  - SGA_TARGET: 1 GB (within Oracle XE's 2 GB RAM ceiling)
+  - PGA_AGGREGATE_TARGET: 512 MB
+- Create PDB: DIGISTACK_CBS with schema owner DIGISTACK_APP
+  (credentials externalized — never hardcoded, per STD Golden Rules)
+- Open Oracle listener on port 1521; confirm reachable from dsb-dmgr
+- Confirm PostgreSQL 16 still running on port 5432 — both engines live
+  simultaneously
+
+**Dependencies:** dsb-db VM, SOE01 §1a (VM resize).
+**Deliverables:** Oracle 21c XE installed; DIGISTACK_CBS PDB created and
+open; listener on 1521; dsb-db confirmed stable at 4 GB running both
+engines.
+**Acceptance Criteria:**
+- `sqlplus DIGISTACK_APP/<pwd>@DIGISTACK_CBS` connects successfully
+  from dsb-db locally
+- `sqlplus DIGISTACK_APP/<pwd>@dsb-db:1521/DIGISTACK_CBS` connects
+  successfully from dsb-dmgr (cross-VM)
+- PostgreSQL still accepts connections on 5432 — existing application
+  unaffected
+- Free memory on dsb-db confirmed positive after both engines start
+  (no OOM condition)
+**Enterprise Outcome:** Oracle 21c XE operational alongside PostgreSQL —
+dual-engine coexistence proven before any migration work begins.
+
+---
+
+### Sprint 2
+**Sprint Goal:** Place ojdbc8.jar in WAS shared library; create Oracle
+JDBC Provider and jdbc/OracleDS DataSource with JAAS Auth Alias.
+**Learning Objective:** Dual JDBC Provider coexistence in one WAS cell —
+how WAS isolates two completely different database drivers via shared
+libraries and separate JDBC Provider definitions; Oracle's JDBC URL
+format (thin driver, service name) vs. PostgreSQL's URL format.
+**Business Features:** None (pure middleware).
+**Application Development:** N/A this sprint.
+**WebSphere Administration (GUI):**
+- Download ojdbc8.jar from Oracle or Maven Central; place at
+  `/apps/IBM/WebSphere/AppServer/lib/ext/ojdbc8.jar` on both cluster
+  nodes (or use a WAS shared library scoped to cell level)
+- Environment → Shared Libraries → New:
+  - Name: OracleJDBC
+  - Classpath: full path to ojdbc8.jar
+- Resources → JDBC → JDBC Providers → New:
+  - Provider type: User-defined
+  - Implementation class: oracle.jdbc.pool.OracleConnectionPoolDataSource
+  - Name: Oracle JDBC Provider
+  - Classpath: reference OracleJDBC shared library
+- Security → Global Security → JAAS Auth Aliases → New:
+  - Alias: OracleAlias
+  - User: DIGISTACK_APP
+  - Password: (externalized — never hardcoded)
+- Resources → JDBC → Data Sources → New:
+  - Name: OracleDS
+  - JNDI: jdbc/OracleDS
+  - Provider: Oracle JDBC Provider
+  - URL: jdbc:oracle:thin:@dsb-db:1521/DIGISTACK_CBS
+  - Auth Alias: OracleAlias
+  - Connection pool: min 1, max 20 per member
+    (2 members × 20 = 40 peak vs. PROCESSES=50 — confirmed headroom)
+- Test Connection → confirm green
+
+**WebSphere Administration (wsadmin Jython):**
+```python
+# Create Oracle JDBC Provider
+AdminTask.createJDBCProvider(
+    '-scope Cell=devdsbincell01',
+    ['-databaseType', 'USER_DEFINED',
+     '-providerType', 'USER_DEFINED',
+     '-implementationType', 'CONNECTION_POOL_DATA_SOURCE',
+     '-name', 'Oracle JDBC Provider',
+     '-classpath',
+     '/apps/IBM/WebSphere/AppServer/lib/ext/ojdbc8.jar',
+     '-implementationClassName',
+     'oracle.jdbc.pool.OracleConnectionPoolDataSource']
+)
+
+# Create JAAS Auth Alias
+AdminTask.createAuthDataEntry(
+    '-alias', 'OracleAlias',
+    '-user', 'DIGISTACK_APP',
+    '-password', '<externalized>'
+)
+
+# Create DataSource
+AdminTask.createDatasource(
+    'Oracle JDBC Provider',
+    ['-name', 'OracleDS',
+     '-jndiName', 'jdbc/OracleDS',
+     '-dataStoreHelperClassName',
+     'com.ibm.websphere.rsadapter.GenericDataStoreHelper',
+     '-componentManagedAuthenticationAlias', 'OracleAlias',
+     '-configureResourceProperties',
+     [['URL', 'java.lang.String',
+       'jdbc:oracle:thin:@dsb-db:1521/DIGISTACK_CBS'],
+      ['connectionSharedPool', 'java.lang.Integer', '20']]]
+)
+AdminConfig.save()
+print "Oracle DataSource created."
+```
+
+**Dependencies:** Sprint 1 Oracle XE install, ojdbc8.jar.
+**Deliverables:** OracleJDBC shared library, Oracle JDBC Provider,
+jdbc/OracleDS DataSource, OracleAlias JAAS Auth Alias — all live in
+WAS Admin Console alongside existing jdbc/BankDS.
+**Acceptance Criteria:**
+- Admin Console Test Connection on jdbc/OracleDS returns success
+- Admin Console Test Connection on jdbc/BankDS still returns success —
+  existing DataSource unaffected
+- wsadmin script completes without error; DataSource visible in
+  Admin Console after save
+**Enterprise Outcome:** Dual-DataSource WAS configuration proven —
+both JDBC Providers, both DataSources, both JAAS Auth Aliases coexist
+in the same cell without conflict.
+
+---
+
+### Sprint 3
+**Sprint Goal:** Write Oracle DDL scripts for all tables; create schema
+in DIGISTACK_CBS PDB.
+**Learning Objective:** Oracle DDL dialect vs. PostgreSQL DDL —
+identity columns, VARCHAR2, NUMBER(1) for boolean, SYSTIMESTAMP,
+constraint naming conventions unchanged (per STD).
+**Business Features:** None.
+**Application Development:**
+- Write Oracle DDL migration scripts (one file per table, Oracle dialect):
+  - `V1__create_app_config_oracle.sql`
+  - `V2__create_users_oracle.sql`
+  - `V3__create_accounts_oracle.sql`
+  - `V4__add_frozen_flag_oracle.sql`
+  - `V15__create_customer_account_beneficiary_fundtransfer_oracle.sql`
+  - `V17__add_otp_lockout_fields_and_security_audit_log_oracle.sql`
+
+**Oracle DDL dialect rules applied in every script:**
+
+```sql
+-- PostgreSQL SERIAL → Oracle IDENTITY
+-- PostgreSQL:
+id SERIAL PRIMARY KEY
+
+-- Oracle:
+id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY
+
+-- PostgreSQL VARCHAR → Oracle VARCHAR2
+-- PostgreSQL:
+username VARCHAR(50) NOT NULL
+
+-- Oracle:
+username VARCHAR2(50) NOT NULL
+
+-- PostgreSQL BOOLEAN → Oracle NUMBER(1) with CHECK
+-- PostgreSQL:
+is_frozen BOOLEAN DEFAULT FALSE
+
+-- Oracle:
+is_frozen NUMBER(1) DEFAULT 0
+  CONSTRAINT chk_accounts_is_frozen CHECK (is_frozen IN (0,1))
+
+-- PostgreSQL NOW() → Oracle SYSTIMESTAMP
+-- PostgreSQL:
+created_at TIMESTAMP DEFAULT NOW()
+
+-- Oracle:
+created_at TIMESTAMP DEFAULT SYSTIMESTAMP
+```
+
+**WebSphere Administration:**
+- Run all DDL scripts against DIGISTACK_CBS via sqlplus from dsb-db
+- Confirm all tables created with correct constraints
+- Confirm DIGISTACK_APP schema owner has SELECT/INSERT/UPDATE/DELETE
+  on all tables
+
+**Dependencies:** Sprint 1 PDB, Sprint 2 DataSource.
+**Deliverables:** All Oracle DDL scripts; all tables created in
+DIGISTACK_CBS.
+**Acceptance Criteria:**
+- All tables present in DIGISTACK_CBS: app_config, users, accounts,
+  customer, beneficiary, fund_transfer, security_audit_log
+- All constraints verified (PK, FK, CHECK, NOT NULL) via
+  `SELECT * FROM USER_CONSTRAINTS WHERE TABLE_NAME = '<TABLE>'`
+- DIGISTACK_APP schema owner confirmed with correct grants
+**Enterprise Outcome:** Oracle schema ready to receive migrated data —
+structurally equivalent to the PostgreSQL source, Oracle-dialect correct.
+
+---
+
+### Sprint 4
+**Sprint Goal:** Build, deploy, and execute the JDBC-based Java migration
+utility inside WAS.
+**Learning Objective:** Dual-DataSource application pattern in WAS —
+a servlet that holds two simultaneous JNDI-looked-up connections
+(one PostgreSQL, one Oracle) and migrates data table by table with
+row-count verification; migration utility deployment and lifecycle
+management as a WAS admin concern.
+**Business Features:** None.
+**Application Development:**
+
+Full migration utility servlet (complete, runnable file per NDS01):
+
+```java
+package com.digistack.migration;
+
+import javax.naming.InitialContext;
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.sql.DataSource;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.sql.*;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+@WebServlet("/migrate")
+public class MigrationServlet extends HttpServlet {
+
+    private static final Map<String, String> TABLE_MAP =
+        new LinkedHashMap<>();
+
+    static {
+        TABLE_MAP.put("app_config",
+            "INSERT INTO app_config (id, config_key, config_value, " +
+            "created_at) VALUES (?, ?, ?, ?)");
+        TABLE_MAP.put("users",
+            "INSERT INTO users (id, username, password_hash, " +
+            "last_login, otp_secret, login_attempts, locked, " +
+            "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        TABLE_MAP.put("accounts",
+            "INSERT INTO accounts (id, user_id, balance, " +
+            "is_frozen, created_at) VALUES (?, ?, ?, ?, ?)");
+        TABLE_MAP.put("customer",
+            "INSERT INTO customer (id, user_id, customer_id, " +
+            "name, created_at) VALUES (?, ?, ?, ?, ?)");
+        TABLE_MAP.put("beneficiary",
+            "INSERT INTO beneficiary (id, customer_id, " +
+            "account_number, name, is_external, created_at) " +
+            "VALUES (?, ?, ?, ?, ?, ?)");
+        TABLE_MAP.put("fund_transfer",
+            "INSERT INTO fund_transfer (id, from_account_id, " +
+            "to_account_id, amount, status, created_at) " +
+            "VALUES (?, ?, ?, ?, ?, ?)");
+        TABLE_MAP.put("security_audit_log",
+            "INSERT INTO security_audit_log (id, user_id, " +
+            "event_type, event_time, details) " +
+            "VALUES (?, ?, ?, ?, ?)");
+    }
+
+    @Override
+    protected void doGet(HttpServletRequest req,
+                         HttpServletResponse res)
+            throws ServletException, IOException {
+
+        res.setContentType("text/plain");
+        PrintWriter out = res.getWriter();
+
+        Connection pgConn = null;
+        Connection orConn = null;
+
+        try {
+            InitialContext ctx = new InitialContext();
+            DataSource pgDs =
+                (DataSource) ctx.lookup("java:comp/env/jdbc/BankDS");
+            DataSource orDs =
+                (DataSource) ctx.lookup("java:comp/env/jdbc/OracleDS");
+
+            pgConn = pgDs.getConnection();
+            orConn = orDs.getConnection();
+            orConn.setAutoCommit(false);
+
+            out.println("=== DigiStack Migration Utility v22.5 ===");
+            out.println();
+
+            for (Map.Entry<String, String> entry :
+                    TABLE_MAP.entrySet()) {
+                String table = entry.getKey();
+                String insertSql = entry.getValue();
+                migrateTable(pgConn, orConn, table,
+                             insertSql, out);
+            }
+
+            orConn.commit();
+            out.println();
+            out.println("=== Migration Complete. Commit successful. ===");
+
+        } catch (Exception e) {
+            out.println("ERROR: " + e.getMessage());
+            if (orConn != null) {
+                try {
+                    orConn.rollback();
+                    out.println("Oracle transaction rolled back.");
+                } catch (SQLException ex) {
+                    out.println("Rollback failed: " + ex.getMessage());
+                }
+            }
+        } finally {
+            closeQuietly(pgConn);
+            closeQuietly(orConn);
+        }
+    }
+
+    private void migrateTable(Connection src, Connection tgt,
+                               String table, String insertSql,
+                               PrintWriter out) throws SQLException {
+        long srcCount = count(src, table);
+        out.println("Table: " + table +
+                    " | PostgreSQL rows: " + srcCount);
+
+        Statement stmt = src.createStatement();
+        ResultSet rs = stmt.executeQuery(
+            "SELECT * FROM " + table);
+        ResultSetMetaData meta = rs.getMetaData();
+        int cols = meta.getColumnCount();
+
+        PreparedStatement ps = tgt.prepareStatement(insertSql);
+        long inserted = 0;
+
+        while (rs.next()) {
+            for (int i = 1; i <= cols; i++) {
+                ps.setObject(i, rs.getObject(i));
+            }
+            ps.addBatch();
+            inserted++;
+            if (inserted % 500 == 0) {
+                ps.executeBatch();
+            }
+        }
+        ps.executeBatch();
+        rs.close();
+        stmt.close();
+        ps.close();
+
+        long tgtCount = count(tgt, table);
+        String result = (srcCount == tgtCount) ? "PASS" : "FAIL";
+        out.println("  Oracle rows after insert: " + tgtCount +
+                    " | Verification: " + result);
+        if (!result.equals("PASS")) {
+            throw new SQLException(
+                "Row count mismatch on table: " + table);
+        }
+    }
+
+    private long count(Connection conn,
+                       String table) throws SQLException {
+        Statement s = conn.createStatement();
+        ResultSet r = s.executeQuery("SELECT COUNT(*) FROM " + table);
+        r.next();
+        long c = r.getLong(1);
+        r.close();
+        s.close();
+        return c;
+    }
+
+    private void closeQuietly(Connection c) {
+        if (c != null) {
+            try { c.close(); } catch (SQLException ignored) {}
+        }
+    }
+}
+```
+
+**WebSphere Administration:**
+- Package migration utility as `digistack-migration-v22.5.ear`
+- Deploy to WAS cluster via Admin Console
+- Navigate to `http://dsb-dmgr:9080/digistack-migration/migrate`
+  to execute migration
+- Confirm output shows PASS for every table
+- Undeploy migration utility immediately after successful run —
+  this EAR has zero production use; decommission is mandatory
+
+**Dependencies:** Sprints 2 and 3.
+**Deliverables:** Migration utility EAR; migration executed with
+all-PASS row-count verification; utility undeployed post-run.
+**Acceptance Criteria:**
+- Browser output shows PASS for all 7 tables
+- Zero rows show FAIL in the verification output
+- Migration utility EAR undeployed from Admin Console immediately
+  after successful run — confirmed absent from Applications list
+- Oracle transaction committed (no partial state)
+**Enterprise Outcome:** All digistack_bank data lives in
+DIGISTACK_CBS Oracle PDB, verified row-for-row. Dual-DataSource
+WAS pattern exercised and migration utility lifecycle managed
+correctly (deploy → run → decommission).
+
+---
+
+### Sprint 5
+**Sprint Goal:** Verify the existing application against the Oracle
+DataSource; capture expdp backup; confirm dsb-db stability.
+**Learning Objective:** Application validation after a DataSource
+change; Oracle Data Pump (expdp) backup discipline replacing pg_dump;
+confirming Oracle SESSIONS/PROCESSES headroom under real connection
+pool load.
+**Business Features:** None (validation and backup sprint).
+**Application Development:** N/A this sprint.
+**WebSphere Administration (GUI):**
+- Admin Console → Resources → JDBC → Data Sources → jdbc/OracleDS
+  → Test Connection → confirm green under simulated load
+- Run a manual Fund Transfer and a Deposit/Withdraw end-to-end,
+  confirm data lands in Oracle DIGISTACK_CBS tables (verify via
+  sqlplus SELECT)
+- Monitor Oracle V$SESSION during load — confirm active session
+  count stays below PROCESSES=50
+- Run expdp backup from dsb-db:
+
+```bash
+expdp SYSTEM/<pwd>@DIGISTACK_CBS \
+  directory=DATA_PUMP_DIR \
+  dumpfile=digistack_cbs_v22.5_%DATE%.dmp \
+  logfile=digistack_cbs_v22.5_%DATE%.log \
+  schemas=DIGISTACK_APP \
+  compression=ALL
+```
+
+- Verify dump file exists and is non-zero
+- Restore-test: import into a scratch schema to confirm the dump
+  is genuinely restorable (impdp with REMAP_SCHEMA)
+
+**WebSphere Administration (wsadmin Jython):**
+```python
+# Verify DataSource connection pool status
+import AdminControl
+poolMBean = AdminControl.queryNames(
+    'type=DataSource,name=OracleDS,*')
+print AdminControl.getAttribute(poolMBean, 'pool.size')
+print AdminControl.getAttribute(poolMBean,
+                                'pool.connections.inUse')
+print AdminControl.getAttribute(poolMBean,
+                                'pool.freeConnections')
+```
+
+**Dependencies:** Sprint 4 migration complete.
+**Deliverables:** Application validated against Oracle; expdp backup
+captured and restore-tested; dsb-db stability confirmed.
+**Acceptance Criteria:**
+- Fund Transfer, Deposit/Withdraw, Login all function correctly
+  with data landing in DIGISTACK_CBS Oracle tables
+- V$SESSION confirms session count within PROCESSES=50 ceiling
+- expdp dump file exists, non-zero, restore-tested successfully
+- dsb-db free memory confirmed positive after 30 minutes of
+  both engines running under load
+**Enterprise Outcome:** Oracle DIGISTACK_CBS is the confirmed,
+backup-protected target database — ready for P03 v23 to adopt
+as CBS's sole datastore.
+
+---
+
+### Sprint 6
+**Sprint Goal:** Write and execute test cases for Version 22.5.
+**Learning Objective:** Test Case discipline (TCS01/TCS02) applied
+to a migration version — includes both functional regression tests
+(existing features still work) and migration-specific tests (data
+integrity, row counts, constraint verification).
+**Business Features:** None (validation sprint).
+**Application Development:** Bug-fix only, no new work.
+**WebSphere Administration:**
+- Confirm both DataSources green in Admin Console
+- Confirm existing digistack-bank-v22.ear application status = Started
+- Re-run smoke test (Login, Deposit/Withdraw, Fund Transfer,
+  Transaction History) confirming all pass against Oracle data
+
+**Deliverables:** `TestCases-v22.5.md`
+**Acceptance Criteria:** All Critical and High test cases pass per
+TCS01 §2.7. Migration-specific test cases include:
+- TC-v22.5-01 (Critical): Row count match — all 7 tables PostgreSQL
+  vs. Oracle counts identical
+- TC-v22.5-02 (Critical): Fund Transfer end-to-end — data persists
+  in Oracle DIGISTACK_CBS
+- TC-v22.5-03 (Critical): expdp backup restorable — impdp completes
+  without error on restore-test
+- TC-v22.5-04 (High): Oracle SESSIONS ceiling — V$SESSION count
+  stays below PROCESSES=50 under simulated load
+- TC-v22.5-05 (High): PostgreSQL still live — jdbc/BankDS Test
+  Connection still green (not yet decommissioned)
+- TC-v22.5-06 (High): Migration utility absent — confirm EAR
+  undeployed from Admin Console
+- TC-v22.5-07 (Medium): Constraint verification — all Oracle
+  constraints confirmed via USER_CONSTRAINTS query
+**Enterprise Outcome:** Version 22.5 test coverage complete.
+
+---
+
+### Sprint 7
+**Sprint Goal:** Sign off Version 22.5.
+**Learning Objective:** SetupDoc discipline (SDD01) for a migration
+version — requires a dedicated Migration Verification section
+(same precedent as v23's Migration & Ownership Transfer section,
+per STDGAP01 §3.8).
+**WebSphere Administration:**
+- Capture backupConfig for current WAS cell configuration
+  (includes both JDBC Providers, both DataSources, both JAAS
+  Auth Aliases)
+- Final smoke test: Login → Deposit → Withdraw → Fund Transfer →
+  Transaction History — all against Oracle DIGISTACK_CBS
+- Confirm expdp backup exists and restore-test result is documented
+  in SetupDoc
+
+**Deliverables:** `SetupDoc-v22.5.md` — must include:
+- §1 Overview
+- §2 VM Setup (dsb-db resize from 2 GB → 4 GB)
+- §3 Pre-Deployment Checklist (01_Architecture diagram check
+  per standing rule)
+- §4 Step-by-Step Configuration (Oracle XE install, PDB creation,
+  JDBC Provider, DataSource, JAAS Alias — both GUI and wsadmin
+  per NDS01 Rule 7)
+- §5 Verification (cross-references TestCases-v22.5.md)
+- §6 Rollback Procedure (restore from expdp if Oracle migration
+  fails — PostgreSQL remains live as rollback target)
+- §7 Migration Verification section (row-count reconciliation
+  table, expdp restore-test result, V$SESSION ceiling confirmation)
+- §8 Sign-off table
+
+**Acceptance Criteria:** SetupDoc complete and followed
+start-to-finish; backupConfig captured; smoke test passes;
+Migration Verification section fully populated.
+**Enterprise Outcome:** Version 22.5 signed off.
+
+---
+
+### Sprint 8
+**Sprint Goal:** Fault Injection + Incident Simulation for
+Version 22.5.
+**Learning Objective:** Real fault diagnosis on Oracle's
+SESSIONS/PROCESSES exhaustion — an Oracle-specific failure mode
+with no PostgreSQL equivalent, directly tied to WAS connection
+pool administration.
+**WebSphere Administration:**
+
+**Phase 1 — Fault Injection (exact steps, per NDS01 Rules 1 and 2):**
+
+Step 1. Connect to Oracle on dsb-db as SYSDBA:
+```bash
+sqlplus / as sysdba
+```
+
+Step 2. Reduce PROCESSES parameter to force exhaustion under
+normal connection pool load:
+```sql
+ALTER SYSTEM SET PROCESSES=5 SCOPE=SPFILE;
+SHUTDOWN IMMEDIATE;
+STARTUP;
+```
+
+Step 3. Confirm Oracle has restarted with the new parameter:
+```sql
+SHOW PARAMETER PROCESSES;
+-- Expected output: processes  integer  5
+```
+
+Step 4. In WAS Admin Console, confirm jdbc/OracleDS DataSource
+Test Connection now shows an error (connection refused or
+ORA-00018: maximum number of sessions exceeded).
+
+Step 5. Leave the fault in place. Do not state the effect,
+symptom, or cause to the trainee.
+
+**Phase 2 — Incident Ticket (on "continue sprint" trigger):**
+
+```
+INCIDENT ID:      INC-DSB-022.5-001
+SEVERITY:         P2
+TIME:             [current timestamp]
+APPLICATION:      DigiStack Banking Platform
+SERVICE:          Oracle Database — DIGISTACK_CBS PDB
+
+BUSINESS IMPACT:
+All banking transactions requiring database access are failing.
+Customers cannot login, deposit, withdraw, or transfer funds.
+The platform appears operational at the WAS and IHS layers.
+
+CUSTOMER/BUSINESS SYMPTOM:
+Customers attempting to login receive a generic error page.
+Fund Transfers submitted via the REST API return HTTP 500.
+The IHS access log shows requests reaching WAS successfully.
+
+INITIAL ALERT/TICKET:
+Automated alert: jdbc/OracleDS DataSource Test Connection
+failure detected at [timestamp]. Raised by monitoring.
+
+OBSERVED ERROR:
+WAS SystemOut.log contains repeated entries of the form:
+  com.ibm.ws.rsadapter.exceptions.DataStoreAdapterException
+  ...Caused by: java.sql.SQLException
+  The application requested a connection from pool
+  jdbc/OracleDS but none was available.
+
+SCOPE:
+All applications using jdbc/OracleDS DataSource.
+Affects: Login, Deposit, Withdraw, Fund Transfer,
+         Transaction History, Freeze/Unfreeze.
+
+NOT AFFECTED:
+IHS, WAS cluster members, Node Agents, DMgr — all show
+Started/Running status in Admin Console.
+Network connectivity between VMs — confirmed reachable.
+
+RECENT CHANGE:
+Oracle 21c XE database migrated from PostgreSQL at Version
+22.5. Oracle SESSIONS/PROCESSES parameters configured during
+Sprint 1.
+
+STARTING EVIDENCE:
+1. WAS Admin Console → jdbc/OracleDS → Test Connection: FAIL
+2. WAS SystemOut.log: DataStoreAdapterException on pool
+   jdbc/OracleDS
+3. Oracle listener port 1521 reachable from dsb-dmgr:
+   telnet dsb-db 1521 → connected
+4. sqlplus DIGISTACK_APP/<pwd>@dsb-db:1521/DIGISTACK_CBS
+   from dsb-db: [observe and report result]
+
+STOP HERE.
+```
+
+**Phase 3 — Investigation (trainee-driven):**
+Trainee investigates using real tools (sqlplus, WAS Admin Console,
+SystemOut.log, V$SESSION, SHOW PARAMETER). Claude confirms or
+denies specific hypotheses only. Proportional hints on explicit
+request. RCA on explicit request only.
+
+**Environment restoration (after RCA):**
+```sql
+-- Connect as SYSDBA on dsb-db
+sqlplus / as sysdba
+ALTER SYSTEM SET PROCESSES=50 SCOPE=SPFILE;
+SHUTDOWN IMMEDIATE;
+STARTUP;
+-- Verify
+SHOW PARAMETER PROCESSES;
+-- Confirm jdbc/OracleDS Test Connection green in Admin Console
+```
+
+**Deliverables:** `FaultDrill-v22.5.md`
+**Acceptance Criteria:** Fault injected per exact steps above;
+incident ticket raised; RCA completed; Oracle PROCESSES parameter
+restored to 50; jdbc/OracleDS Test Connection confirmed green;
+environment returned to known-good state.
+**Enterprise Outcome:** Version 22.5 fault drill complete.
+Non-gating — does not block sign-off.
+
+---
+
+## Version 22.5 Deliverables
+- `digistack-migration-v22.5.ear` (deployed, run, and undeployed)
+- Oracle DDL scripts (7 files, Oracle dialect)
+- `SetupDoc-v22.5.md` (with Migration Verification section)
+- `TestCases-v22.5.md`
+- `FaultDrill-v22.5.md`
+- expdp backup artifact: `digistack_cbs_v22.5_<date>.dmp`
+- backupConfig of WAS cell (dual-DataSource configuration)
+
+## Version 22.5 Exit Criteria
+- ✅ Oracle 21c XE installed on dsb-db; DIGISTACK_CBS PDB created
+- ✅ jdbc/OracleDS DataSource live alongside jdbc/BankDS in WAS cell
+- ✅ All 7 tables migrated — row-count verification PASS for every table
+- ✅ Migration utility EAR undeployed from Admin Console
+- ✅ Application functional against Oracle (Login, Deposit/Withdraw,
+  Fund Transfer, Transaction History all confirmed)
+- ✅ expdp backup captured and restore-tested
+- ✅ dsb-db stable at 4 GB running both engines
+- ✅ PostgreSQL still live (not yet decommissioned — P03 v23 Sprint 4)
+- ✅ Ready for P03 v23 (CBS split, Oracle as sole CBS datastore)
+
+## Lessons Learned
+- **Key learnings:** Oracle's CDB/PDB model is architecturally
+  distinct from PostgreSQL's flat database model — understanding
+  the Container Database wrapper is the first conceptual shift a
+  DBA or WAS admin makes when moving between the two platforms.
+  SESSIONS/PROCESSES replaces max_connections as the concurrency
+  ceiling, and sizing it correctly against the WAS connection pool
+  math (per CAP01 §4) is the same exercise with different
+  parameter names.
+- **Known issues:** None expected if Sprint 1's dual-engine
+  coexistence on dsb-db is verified stable before Sprint 3's DDL
+  work begins.
+- **Technical debt:** PostgreSQL digistack_bank remains live on
+  dsb-db until P03 v23 Sprint 4 — documented open debt, tracked
+  explicitly in P03 v23's Migration & Ownership Transfer section.
+
+---
 
 # P02 — Overall Completion Summary
 

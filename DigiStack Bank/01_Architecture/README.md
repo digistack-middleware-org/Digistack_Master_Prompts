@@ -50,7 +50,7 @@ depicts — never drawn ahead of the build as a guess. Each file's own
 | File | Depicts | Populate At |
 |---|---|---|
 | `01_Network_Diagram.md` | Subnet/VLAN layout, IP scheme, firewall zones | P01 v1 (basic), extended at P01 v8 (IHS), P01 v11/v12 (SSL) |
-| `02_VM_Layout.md` | Which VMs exist, roles, power state | P01 v1 (dsb-dmgr), extended every version that powers on a new VM |
+| `02_VM_Layout.md` | Which VMs exist, roles, power state | P01 v1 (dsb-dmgr), extended every version that powers on a new VM; dsb-oracle added at P02 v22.5; dsb-db decommissioned at P03 v23 Sprint 4 |
 | `03_Request_Flows.md` | End-to-end request path (browser → IHS → plugin → AppServer → DB) | P01 v1 (basic path), extended at v7 (JNDI), v8 (IHS), v12 (mTLS) |
 | `04_Cluster_Architecture.md` | DMgr/Node/Cluster/Member topology | P01 v5 (cluster stood up), deepened at v6 |
 | `05_MQ_Architecture.md` | Queue Manager, channels, queues, DLQ | P02 v19 |
@@ -79,7 +79,9 @@ uses for its Version Pins ("target" → "CONFIRMED").
    NETWORK           SERVERS        DEPLOYMENT
        |               |               |
    Network.md      VM_Layout.md   Deployment.md
-       |
+   (incl.          (dsb-dmgr,     (v1 single EAR →
+    dsb-oracle)     dsb-oracle,    9 EARs/WARs by P03)
+       |             dsb-tomcat)
        +-------------------------------+
                                        |
                                        v
@@ -91,26 +93,33 @@ uses for its Version Pins ("target" → "CONFIRMED").
                    REQUESTS                         CLUSTER
                        |                               |
                  Request_Flows.md              Cluster_Architecture.md
+                 (Portal→DB direct              (2-member AppCluster,
+                  until v23; then               devdsbinappcluster01)
+                  Portal→CBS REST/SOAP)
                        |
                        v
                  APPLICATION
                        |
-             +---------+---------+
-             |                   |
-             v                   v
-         PostgreSQL            IBM MQ
-             |                   |
-             v                   v
-          DB ER.md            MQ.md
+             +---------+---------+---------+
+             |         |         |         |
+             v         v         v         v
+         PostgreSQL  Oracle    IBM MQ   Tomcat
+         (P01–v22)  (v22.5+)  (P02 v19) (P03 v26/v27)
+             |         |         |
+             v         v         v
+          DB ER.md  DB ER.md  MQ.md
+          (P01 era) (P03 era)
 
 
         SECURITY
            |
            v
      Security.md
+     (v10 roles, v12 mTLS,
+      v17 LTPA/MFA, v23 auth boundary)
 
 
         FUTURE
            |
            v
-       DR.md
+       DR.md (P05)

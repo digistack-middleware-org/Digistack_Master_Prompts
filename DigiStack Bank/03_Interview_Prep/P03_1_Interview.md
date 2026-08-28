@@ -88,9 +88,9 @@ incomplete set.
 
 Forward Reference Note (added 2026-08-25)
 ------------------------------------------
-Interview-3 and Interview-4 reference versions from P04–P08 (e.g., P04
-v31, v33, v34, v35; P05 v36, v38; P07 v44, v46; P08 v52) that are not
-yet built. These are forward citations only — they point at where the
+Interview-3, Interview-4, and Interview-5 reference versions from
+P04–P09 (e.g., P04 v31, v33, v34, v35; P05 v36, v37, v38; P06 v39, v41;
+P07 v44, v46, v48; P08 v52; P09 v64) that are not yet built. These are forward citations only — they point at where the
 relevant feature/capability will land in the roadmap, not at content
 already available. Candidates working this Part immediately after P03
 should note these as "not yet built — revisit after the relevant Part" and
@@ -590,7 +590,7 @@ Completion Checklist
 □ Interview-4: all 12 scenarios worked through the full Symptoms→
   Prevention shape at least once; 3 random scenarios defended live
   within 5 minutes each
-□ Interview-5: 10 domain questions answered with business-level framing,
+□ Interview-5: 10+ domain questions answered with business-level framing,
   not infra jargon substituted for a business answer
 □ Interview-6: at least one full mock interview run completed, scored,
   with Feedback/Score/Areas-to-Improve produced — repeated until every

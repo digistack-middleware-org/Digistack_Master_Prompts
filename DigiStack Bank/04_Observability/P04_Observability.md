@@ -317,8 +317,7 @@ Portal EAR's structured logger, and a negative test (deliberately log the
 raw SOAP fetch, confirm the account number is masked in the output) is
 required in TestCases-v31.md.
 
-Enterprise Tools: Prometheus, Node Exporter, JMX Exporter, PostgreSQL
-Exporter, Grafana (dashboard shell only — dashboard design is Version 34).
+Enterprise Tools: Prometheus, Node Exporter, JMX Exporter, Oracle DB Exporter (for digistack_cbs on Oracle 21c XE), Grafana (dashboard shell only — dashboard design is Version 34).
 
 WebSphere Native Monitoring: PMI, JMX, Tivoli Performance Viewer (TPV).
 

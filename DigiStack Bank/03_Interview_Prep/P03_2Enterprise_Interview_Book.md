@@ -1,6 +1,7 @@
 ID: P03.2
 Version: 1.0
-Status: Draft
+Status: Active (content complete; individual chapters marked Draft inside
+each Chapter's sprint plan until their Deliverable lines are signed off)
 
 Title: DigiStack Enterprise Interview Book (Project-Based Reference)
 
@@ -54,6 +55,14 @@ Suffix Part, same mechanism as P03.1. Sits between P03 and P03.1 in
 reading order (P03 → P03.2 → P03.1 → P04). No version numbers (v1–v78)
 are touched.
 
+Forward Reference Note (added 2026-08-25)
+------------------------------------------
+Although this book is derived from P01-P03, some entries cite P04-P09
+capabilities (e.g., P04 v31 monitoring, P05 v36-v38 HA/DR, P06 v39
+multi-region, P09 v64 read replica). These are forward citations only —
+mark "not yet built — revisit after the relevant Part," same rule as
+P03.1's Forward Reference Note.
+
 Reading Order Alignment Note (added 2026-08-25)
 -------------------------------------------------
 P03.1's Next: field points to P04 (the next build Part), not P03.2 —
@@ -97,8 +106,10 @@ Sprint 6 — Monitoring, Migration & Multi-Region (capstone)
 (Operations Dashboard → Prometheus/Grafana retirement, WebSphere version
 migration, multi-region data residency, DR/RPO-RTO)
 
-Deliverable: Full Chapter 1 question bank, ~30-40 questions across 6
-sprints, each in the agreed short-answer format.
+Deliverable: Full Chapter 1 question bank, 300 questions across 6
+sprints (seed sets expanded per topic: define → configure → troubleshoot →
+failure mode), each in the agreed short-answer format. Count matches
+P03.1 Interview-2's stated target.
 
 ---
 

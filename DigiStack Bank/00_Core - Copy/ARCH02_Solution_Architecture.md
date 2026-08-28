@@ -64,9 +64,7 @@ Web Server        | IBM HTTP Server (IHS)
 Secondary Server  | Apache Tomcat — Mobile/ATM only
 Load Balancer     | NGINX/HAProxy (on-prem), AWS ALB (cloud phase)
 Messaging         | SIBus, IBM MQ, Amazon SQS/SNS (selective, cloud phase)
-Database          | PostgreSQL 16 (P01–P02) → Oracle 21c XE (P03
-                  | onward, on-prem) → Amazon RDS for Oracle BYOL
-                  | (P09 cloud phase, concept-level)
+Database          | PostgreSQL → Amazon RDS for PostgreSQL (cloud phase)
 
 Infrastructure Tier
 Layer             | Technology

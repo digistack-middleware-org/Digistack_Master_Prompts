@@ -143,7 +143,7 @@
 **Acceptance Criteria:** Clean redeploy, zero manual profile changes; startup logs captured.
 
 ### Sprint 6
-**Goal:** Write and execute test cases for Version 1.
+**Goal:** Write and execute test cases for Version 2.
 **Learning Objective:** Test Case discipline (TCS01/TCS02).
 **WebSphere Admin:** Confirm app status for test execution.
 **Deliverables:** TestCases-v2.md.
@@ -151,10 +151,7 @@
 **Enterprise Outcome:** Version 1 test coverage complete.
 
 ### Sprint 7
-**Goal:** Sign off Version 1.
-**Learning Objective:** SetupDoc discipline (SDD01).
-**WebSphere Admin:** Capture backupConfig baseline; final smoke test.
-**Deliverables:** SetupDoc-v2.md.
+**Goal:** Sign off Version 2.
 **Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
 **Enterprise Outcome:** Version 1 signed off.
 
@@ -214,7 +211,7 @@
 **Acceptance Criteria:** Clean redeploy; ClassLoader policy documented with concrete example.
 
 ### Sprint 6
-**Goal:** Write and execute test cases for Version 1.
+**Goal:** Write and execute test cases for Version 3.
 **Learning Objective:** Test Case discipline (TCS01/TCS02).
 **WebSphere Admin:** Confirm app status for test execution.
 **Deliverables:** TestCases-v3.md.
@@ -593,8 +590,8 @@ changes (standalone → cluster).
 ### Sprint 5
 **Goal:** Prove session replication and failover.
 **Version 5 Deliverables:** `digistack-bank-v5.ear`, SetupDoc-v5.md, TestCases-v5.md (no schema change).
-**Acceptance Criteria:** Session attribute intact after failover; no duplicate/lost transaction.
-**Enterprise Outcome:** Core HA guarantee proven for the first time.
+**Acceptance Criteria:** Session attribute intact after failover; no duplicate/lost transaction; Deposit/Withdraw mid-failover survives (per P01_Foundation.md v5 Sprint Deliverable).
+**Enterprise Outcome:** Core HA guarantee proven for the first time — kill one member mid-session, login state and a completed Deposit both survive via replication/failover.
 
 ### Sprint 6
 **Goal:** Write and execute test cases for Version 5.
@@ -621,7 +618,7 @@ changes (standalone → cluster).
 **Enterprise Outcome:** Version 5 fault drill complete. Non-gating — does not block sign-off.
 
 **Version 5 Deliverables:** `digistack-bank-v5.ear`, SetupDoc-v5.md, TestCases-v5.md, FaultDrill-v5.md (no schema change).
-**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed; Fault drill complete (Sprint 8, non-gating).
+**Exit Criteria (target, not yet verified):** 2-member cluster runs v5; session replication + failover proven; Home + DB read functional as regression; Smoke passed; Fault drill complete (Sprint 8, non-gating).
 **Lessons Learned:** DMgr/federation is a clustering prerequisite; session replication protects in-flight state.
 **Technical Debt:** Federation/wsadmin at "bare operational" depth — full deep dive deferred to v6.
 
@@ -644,7 +641,7 @@ changes (standalone → cluster).
 
 ### Sprint 2
 **Goal:** Add the `is_frozen` flag to `accounts`.
-**App Dev:** DB: `accounts.is_frozen` column (`V4__add_frozen_flag.sql`).
+**App Dev:** DB: `accounts.is_frozen` column (`V4__add_frozen_flag.sql`) — V4 in migration numbering because Version 4 introduced no schema change (see v4 "no schema change" deliverables).
 **Acceptance Criteria:** Column added; defaults unfrozen.
 
 ### Sprint 3
@@ -689,7 +686,7 @@ changes (standalone → cluster).
 **Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
 **Enterprise Outcome:** Version 6 fault drill complete. Non-gating — does not block sign-off.
 
-**Version 6 Deliverables:** `digistack-bank-v6.ear`, `V4__add_frozen_flag.sql`, SetupDoc-v6.md, TestCases-v6.md, FaultDrill-v6.md wsadmin script.
+**Version 6 Deliverables:** `digistack-bank-v6.ear`, `V4__add_frozen_flag.sql`, SetupDoc-v6.md, TestCases-v6.md, FaultDrill-v6.md, wsadmin script.
 **Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed; Fault drill complete (Sprint 8, non-gating).
 **Lessons Learned:** Node Sync vs. Full Resync; wsadmin as a genuine operational path; admin features layer cleanly onto Service-layer code.
 **Technical Debt:** Freeze/Unfreeze open to any logged-in user — deferred to Version 10 (role gating).
@@ -845,9 +842,17 @@ confirms this is a fresh generation, not the v4.5 file.
 topology — foundation for all subsequent sprints in this version.
 
 ### Sprint 2
-**Goal:** Define the Web Server in WAS Admin Console; generate plugin-cfg.xml.
-**WebSphere Admin:** Define `dsb-ihs` as Web Server object; generate plugin-cfg.xml against cluster topology.
-**Acceptance Criteria:** Plugin file lists both cluster members' endpoints.
+**Goal:** Update the existing `webserver1` Web Server Definition (created
+at v4.5) for the cluster era — not a new definition.
+**Learning Objective:** Web Server Definition update — how the WAS-side
+object is re-pointed at the cluster topology (server weight/routing
+metadata) so plugin regeneration reflects the cluster.
+**WebSphere Admin (GUI):** Verify `webserver1` (from v4.5) still listed;
+update host/port metadata if cluster ports changed; confirm the
+definition references the cluster, not standalone server1.
+**Dependencies:** Sprint 1.
+**Acceptance Criteria:** `webserver1` definition updated (not duplicated);
+plugin generation from Sprint 1 confirmed against both cluster members.
 
 ### Sprint 3
 **Goal:** Propagate plugin-cfg.xml to IHS; confirm reverse-proxy routing.
@@ -958,7 +963,7 @@ topology — foundation for all subsequent sprints in this version.
 **Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
 **Enterprise Outcome:** Version 9 fault drill complete. Non-gating — does not block sign-off.
 
-**Version 9 Deliverables:** `digistack-bank-v9.ear`, SetupDoc-v9.md, TestCases-v9.md, FaultDrill-v4.md, replication domain/session timeout config.
+**Version 9 Deliverables:** `digistack-bank-v9.ear`, SetupDoc-v9.md, TestCases-v9.md, FaultDrill-v9.md, replication domain/session timeout config.
 **Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed; Fault drill complete (Sprint 8, non-gating).
 **Lessons Learned:** Sticky sessions (routing) and replication (data protection) are distinct mechanisms.
 **Technical Debt:** None introduced.
@@ -1175,6 +1180,7 @@ topology — foundation for all subsequent sprints in this version.
 
 ### Sprint 1
 **Goal:** Configure an SMTP resource and JNDI Mail Session.
+**Learning Objective:** JNDI Mail Session as external-resource configuration (mirrors v7's DataSource pattern).
 **WebSphere Admin:** Configure Mail Provider/SMTP host; create `mail/BankMailSession`. SMTP credentials externalized the same way as v7's JAAS Auth Alias — never hardcoded in config or code, per STD's Golden Rule and DBS01 §4.2's Connection & Credentials Standard.
 **Acceptance Criteria:** Test Connection confirms SMTP reachability; no plaintext SMTP credential found anywhere in config (grep-verified, same discipline as v7's negative test).
 
