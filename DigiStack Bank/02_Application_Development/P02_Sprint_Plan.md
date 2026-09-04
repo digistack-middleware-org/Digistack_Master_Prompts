@@ -6,7 +6,9 @@
 **Status:** ⏳ Not Started — planning document only, no versions built or signed off
 **Prerequisite:** P01 Completion Checkpoint satisfied (`digistack-bank-v14.ear`, 2-member cluster, IHS, SSL end-to-end, JNDI DataSource, Customer/Administrator roles, JNDI Mail Session)
 **Next:** P03 — Enterprise Banking Systems (CBS, Payments, Channel Simulators, Loans)
-**Sprint Structure:** 8 sprints per version — Sprint 1–4 Build, Sprint 5 Package and Deploy, Sprint 6 Test Cases, Sprint 7 Sign-off, Sprint 8 Fault Injection + Incident.
+**Sprint Structure:** 8 sprints per version — Sprint 1–4 Build, Sprint 5 Package and Deploy, Sprint 6 Test Cases (executes the full TP01 5-stage pipeline per TP01_Test_Pipeline.md), Sprint 7 Sign-off, Sprint 8 Fault Injection + Incident.
+**Test Pipeline:** TP01 (mandatory from v8 onward) — every version's Sprint 6 runs DEV → SIT → UAT → PRE-PROD → PROD stages; results recorded in each TestCases-v<N>.md under "## TP01 Pipeline Results — v<N>".
+
 
 ---
 
@@ -144,7 +146,8 @@
 
 **Dependencies:** Sprint 5's MDB.
 **Deliverables:** DLQ configured and proven; `SetupDoc-v15.md`, `TestCases-v15.md` drafted.
-**Acceptance Criteria:** A deliberately failing transfer retries the configured number of times, then is found sitting in the DLQ, inspectable via Admin Console.
+**TP01 Pipeline (mandatory, per TP01_Test_Pipeline.md):** Sprint 6 executes the full 5-stage test pipeline — DEV (Unit/Component, Developer, Code Quality/Security) → SIT (API, Integration, Database, Middleware, End-to-End, Negative, Regression Pack v1–v<N-1>) → UAT (Business Process, Customer Journey, Financial/Accounting Validation, Business Acceptance) → PRE-PROD (Production-like Smoke, Performance, Security, DR/Recovery, Operational Readiness, Deployment/Rollback) → PROD (Smoke, Sanity, Monitoring Verification, Business Validation). Results recorded in `TestCases-v<N>.md` under "## TP01 Pipeline Results — v<N>" using the TP01 stage table. All Critical/High rows must Pass before Sprint 7 sign-off (TP01 R1–R3).
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7; all TP01 pipeline stages Pass (Critical/High) per TP01 R3.
 **Enterprise Outcome:** Full asynchronous processing lifecycle — including failure — demonstrated end-to-end.
 
 ---
@@ -178,6 +181,7 @@
 - ✅ Application functionality complete (Customer/Account/Beneficiary/Fund Transfer async)
 - ✅ Database validated (V15 migration applied and verified)
 - ✅ WebSphere deployment successful (SIBus, MDB, DLQ all operational)
+- ✅ TP01 pipeline passed (all 5 stages, all Critical/High rows Pass in TP01 Pipeline Results table)
 - ✅ Smoke testing passed (successful transfer + deliberate DLQ failure both proven)
 - ✅ Ready for Version 16
 
@@ -322,7 +326,8 @@
 
 **Dependencies:** Sprints 1–5 complete.
 **Deliverables:** `TestCases-v16.md`.
-**Acceptance Criteria:** A single Postman/SoapUI test pass calls all three endpoints successfully, with logs captured for each request/response. All Critical/High test cases pass per TCS01 §2.7.
+**TP01 Pipeline (mandatory, per TP01_Test_Pipeline.md):** Sprint 6 executes the full 5-stage test pipeline — DEV (Unit/Component, Developer, Code Quality/Security) → SIT (API, Integration, Database, Middleware, End-to-End, Negative, Regression Pack v1–v<N-1>) → UAT (Business Process, Customer Journey, Financial/Accounting Validation, Business Acceptance) → PRE-PROD (Production-like Smoke, Performance, Security, DR/Recovery, Operational Readiness, Deployment/Rollback) → PROD (Smoke, Sanity, Monitoring Verification, Business Validation). Results recorded in `TestCases-v<N>.md` under "## TP01 Pipeline Results — v<N>" using the TP01 stage table. All Critical/High rows must Pass before Sprint 7 sign-off (TP01 R1–R3).
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7; all TP01 pipeline stages Pass (Critical/High) per TP01 R3.
 **Enterprise Outcome:** Version 16 test coverage complete.
 
 ---
@@ -356,6 +361,7 @@
 - ✅ Application functionality complete (2 REST + 1 SOAP endpoint live)
 - ✅ Database validated (no schema change; existing tables confirmed serving both bindings correctly)
 - ✅ WebSphere deployment successful (JAX-RS + JAX-WS engines both operational)
+- ✅ TP01 pipeline passed (all 5 stages, all Critical/High rows Pass in TP01 Pipeline Results table)
 - ✅ Smoke testing passed (Postman + SoapUI calls succeed with logged request/response)
 - ✅ Ready for Version 17
 
@@ -363,6 +369,171 @@
 - **Key learnings:** REST and SOAP coexist cleanly on the same EAR without conflict; WSDL publishing is mostly an Admin Console configuration exercise once the JAX-WS service class is correct.
 - **Known issues:** None expected if Sprint 3's WSDL generation is verified before Sprint 4's binding work begins.
 - **Technical debt:** None new — these endpoints are deliberately unauthenticated at this version; MFA/token auth is intentionally deferred to Version 17 (Security Hardening), not an oversight.
+
+---
+---
+
+# Version 16.5 — Transaction History Pagination (UI-only)
+
+## Version Overview
+
+**Version Objective:** Add client-side pagination to the Transaction History screen built at v16, with zero new WebSphere administration work — a pure UI/servlet-layer sprint.
+
+**Business Scope:** No new banking feature — the SOAP Account Statement/Transaction History service (v16) already returns full result sets; this version paginates that existing response in the servlet layer for usability.
+
+**WebSphere Focus:** None. Filed as a suffix-slot version specifically because it carries no WebSphere admin topic — kept separate from v16 (to keep that a clean single-topic SOAP/REST sprint) and before v17 (so the UI is complete before security hardening locks down the endpoints).
+
+**Expected Outcome:** Transaction History screen displays results 10 per page with working ← / → navigation; navigating pages does not trigger a new SOAP call per page (result fetched once, paged in servlet memory); the WSDL and SOAP endpoint are confirmed unchanged after this sprint.
+
+**Prerequisites:** P02 Version 16 Completion Checkpoint satisfied — SOAP Account Statement/Transaction History service live and traceable.
+
+---
+
+### Sprint 1
+**Sprint Goal:** Add `page`/`pageSize` request parameters to the Transaction History servlet.
+**Learning Objective:** Passing pagination parameters through an existing servlet without touching the underlying SOAP contract.
+**Business Features:** None (infra for this sprint's feature).
+**Application Development:**
+- UI: N/A this sprint
+- Backend: `TransactionHistoryServlet` updated to accept `page`/`pageSize` params (default page=1, pageSize=10)
+- Database: N/A
+- API: N/A (no WSDL/endpoint change)
+
+**WebSphere Administration:** N/A this sprint.
+**Dependencies:** P02 v16 SOAP Account Statement service.
+**Deliverables:** Servlet accepts and validates `page`/`pageSize` params.
+**Acceptance Criteria:** A request with `page=2` returns without error; invalid/out-of-range page values are handled gracefully (clamped, not a 500).
+**Enterprise Outcome:** Pagination groundwork laid without touching the published SOAP contract.
+
+---
+
+### Sprint 2
+**Sprint Goal:** Slice the full SOAP response into pages in the servlet layer.
+**Learning Objective:** Server-side (non-DB) pagination — the full result is fetched once, then paged in memory, not re-queried per page.
+**Business Features:** None (completes Sprint 1's plumbing).
+**Application Development:**
+- UI: N/A this sprint
+- Backend: Servlet calls the SOAP service once per session/filter-change, caches the full result, slices per `page`/`pageSize`
+- Database: N/A
+- API: N/A (WSDL/endpoint unchanged)
+
+**WebSphere Administration:** N/A this sprint.
+**Dependencies:** Sprint 1.
+**Deliverables:** Working in-memory slicing logic.
+**Acceptance Criteria:** Navigating between pages does not trigger a new SOAP call, confirmed via request/response logging (P02 v16 Sprint 5).
+**Enterprise Outcome:** Confirms pagination is a presentation-layer concern only — no load added to the SOAP endpoint per page view.
+
+---
+
+### Sprint 3
+**Sprint Goal:** Build the paged table UI (`TransactionHistory.jsp`).
+**Learning Objective:** Rendering a fixed-page-size table consistent with the Dashboard UI mockup.
+**Business Features:** Transaction History displayed 10 rows per page.
+**Application Development:**
+- UI: `TransactionHistory.jsp` renders the current page's 10 rows
+- Backend: N/A (reuses Sprint 2's sliced data)
+- Database: N/A
+- API: N/A
+
+**WebSphere Administration:** N/A this sprint.
+**Dependencies:** Sprint 2.
+**Deliverables:** Working paged table.
+**Acceptance Criteria:** Table shows exactly 10 rows (or fewer on the last page); row content matches the corresponding slice of the full result set.
+**Enterprise Outcome:** First visible pagination UI, ready for navigation controls.
+
+---
+
+### Sprint 4
+**Sprint Goal:** Add ← / → navigation controls below the table.
+**Learning Objective:** Wiring navigation controls to the existing `page` parameter without a full page reload triggering a new SOAP call.
+**Business Features:** Working page navigation.
+**Application Development:**
+- UI: `[ ← 1  2  3  4 → ]` navigation controls per the Dashboard UI mockup
+- Backend: N/A (reuses Sprint 1–2 logic)
+- Database: N/A
+- API: N/A
+
+**WebSphere Administration:** N/A this sprint.
+**Dependencies:** Sprint 3.
+**Deliverables:** Working navigation controls.
+**Acceptance Criteria:** Clicking a page number or arrow navigates correctly; current page is visually indicated; boundary pages disable the inapplicable arrow.
+**Enterprise Outcome:** Completes the Sprint Deliverable's core UI requirement.
+
+---
+
+### Sprint 5
+**Sprint Goal:** Confirm date/type filter controls (live since v16) interact correctly with pagination.
+**Learning Objective:** Ensuring two independently-built features (filtering, pagination) compose correctly rather than conflicting.
+**Business Features:** Filtering + pagination working together.
+**Application Development:**
+- UI: Confirm filter changes reset pagination to page 1
+- Backend: Confirm filter change triggers a fresh SOAP call (not a stale cached result)
+- Database: N/A
+- API: N/A
+
+**WebSphere Administration:** N/A this sprint.
+**Dependencies:** Sprint 4, P02 v16's existing filter controls.
+**Deliverables:** Verified filter+pagination interaction.
+**Acceptance Criteria:** Changing a filter resets to page 1 and re-fetches; paging within an active filter does not re-fetch.
+**Enterprise Outcome:** Confirms the scope boundary — pagination handles page-to-page navigation, filters remain the primary tool for narrowing large result sets.
+
+---
+
+### Sprint 6
+**Sprint Goal:** Write and execute test cases for Version 16.5.
+**Learning Objective:** Test Case discipline (TCS01/TCS02) applied to a UI-only version.
+**Business Features:** None (validation sprint).
+**Application Development:** Bug-fix only, no new work.
+**WebSphere Administration:**
+- Redeploy final EAR for this version, `digistack-bank-v16.5.ear`
+- Confirm WSDL and SOAP endpoint remain byte-identical to v16 (no contract drift)
+
+**Dependencies:** Sprints 1–5 complete.
+**Deliverables:** `TestCases-v16.5.md`.
+**TP01 Pipeline (mandatory, per TP01_Test_Pipeline.md):** Sprint 6 executes the full 5-stage test pipeline — DEV (Unit/Component, Developer, Code Quality/Security) → SIT (API, Integration, Database, Middleware, End-to-End, Negative, Regression Pack v1–v16) → UAT (Business Process, Customer Journey, Financial/Accounting Validation, Business Acceptance) → PRE-PROD (Production-like Smoke, Performance, Security, DR/Recovery, Operational Readiness, Deployment/Rollback) → PROD (Smoke, Sanity, Monitoring Verification, Business Validation). Results recorded in `TestCases-v16.5.md` under "## TP01 Pipeline Results — v16.5" using the TP01 stage table. All Critical/High rows must Pass before Sprint 7 sign-off (TP01 R1–R3).
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7; all TP01 pipeline stages Pass (Critical/High) per TP01 R3; WSDL/endpoint contract confirmed unchanged.
+**Enterprise Outcome:** Version 16.5 test coverage complete.
+
+---
+
+### Sprint 7
+**Sprint Goal:** Sign off Version 16.5.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Administration:** Capture backupConfig baseline; final smoke test.
+**Deliverables:** SetupDoc-v16.5.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
+**Enterprise Outcome:** Version 16.5 signed off.
+
+---
+
+### Sprint 8
+**Sprint Goal:** Fault Injection + Incident Simulation for Version 16.5.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Administration:** Phase 1 — inject a realistic fault tied to this version's topic (e.g., corrupt the servlet's cached-result key so page 2+ silently returns page 1's data). Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v16.5.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 16.5 fault drill complete. Non-gating — does not block sign-off.
+
+---
+
+## Version 16.5 Deliverables
+- `digistack-bank-v16.5.ear` (paginated Transaction History screen)
+- No new SQL migrations this version
+- No WSDL/endpoint changes (confirmed byte-identical to v16)
+- SetupDoc-v16.5.md, TestCases-v16.5.md
+
+## Version 16.5 Exit Criteria
+- ✅ Application functionality complete (10-per-page pagination with working ← / → navigation)
+- ✅ Database validated (N/A — no schema change)
+- ✅ WebSphere deployment successful (redeploy confirmed, no WSDL/endpoint drift)
+- ✅ TP01 pipeline passed (all 5 stages, all Critical/High rows Pass in TP01 Pipeline Results table)
+- ✅ Smoke testing passed (pagination + existing filters both verified together)
+- ✅ Ready for Version 17
+
+## Lessons Learned
+- **Key learnings:** Pagination belongs entirely in the presentation layer when the backend already returns a complete result set — no new backend service or WSDL change was needed.
+- **Known issues:** None expected if Sprint 2's single-fetch-per-filter-change behavior is verified before Sprint 4's navigation controls are wired.
+- **Technical debt:** None new — a user-configurable page-size selector was considered and deliberately deferred (fixed at 10 rows for now).
 
 ---
 ---
@@ -379,7 +550,7 @@
 
 **Expected Outcome:** MFA/OTP enforced on login; account locks after N failed attempts; LTPA token validated across the cluster; v16's REST/SOAP endpoints reject unauthenticated calls; a rapid-repeated-transfer test triggers a security audit log entry.
 
-**Prerequisites:** P02 Version 16 Completion Checkpoint satisfied — Balance Inquiry/Fund Transfer (REST) and Account Statement (SOAP) live and traceable.
+**Prerequisites:** P02 Version 16.5 Completion Checkpoint satisfied — Balance Inquiry/Fund Transfer (REST), Account Statement (SOAP), and paginated Transaction History all live and traceable.
 
 ---
 
@@ -498,7 +669,8 @@
 
 **Dependencies:** P02 v15 Fund Transfer, Sprint 4's authenticated endpoints.
 **Deliverables:** Security Event Detection working; `TestCases-v17.md`.
-**Acceptance Criteria:** A rapid-repeated-transfer test produces exactly one security audit log entry. All Critical/High test cases pass per TCS01 §2.7.
+**TP01 Pipeline (mandatory, per TP01_Test_Pipeline.md):** Sprint 6 executes the full 5-stage test pipeline — DEV (Unit/Component, Developer, Code Quality/Security) → SIT (API, Integration, Database, Middleware, End-to-End, Negative, Regression Pack v1–v<N-1>) → UAT (Business Process, Customer Journey, Financial/Accounting Validation, Business Acceptance) → PRE-PROD (Production-like Smoke, Performance, Security, DR/Recovery, Operational Readiness, Deployment/Rollback) → PROD (Smoke, Sanity, Monitoring Verification, Business Validation). Results recorded in `TestCases-v<N>.md` under "## TP01 Pipeline Results — v<N>" using the TP01 stage table. All Critical/High rows must Pass before Sprint 7 sign-off (TP01 R1–R3).
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7; all TP01 pipeline stages Pass (Critical/High) per TP01 R3.
 **Enterprise Outcome:** Version 17 test coverage complete — MFA/lockout/LTPA/endpoint auth/CSRF-XSS/audit detection all proven.
 
 ---
@@ -533,6 +705,7 @@
 - ✅ Application functionality complete (MFA/lockout/endpoint auth/CSRF-XSS/audit detection)
 - ✅ Database validated (V17 migration applied and verified)
 - ✅ WebSphere deployment successful (Global/Application Security, LTPA/SSO confirmed cluster-wide)
+- ✅ TP01 pipeline passed (all 5 stages, all Critical/High rows Pass in TP01 Pipeline Results table)
 - ✅ Smoke testing passed (unauthenticated endpoint calls rejected, MFA/lockout/CSRF all proven)
 - ✅ Ready for Version 18
 
@@ -664,7 +837,8 @@
 
 **Dependencies:** Sprints 1–5 complete.
 **Deliverables:** `TestCases-v18.md`.
-**Acceptance Criteria:** Log rotation confirmed working (new log file created at rotation threshold); all four dashboard panels verified live in one final pass. All Critical/High test cases pass per TCS01 §2.7.
+**TP01 Pipeline (mandatory, per TP01_Test_Pipeline.md):** Sprint 6 executes the full 5-stage test pipeline — DEV (Unit/Component, Developer, Code Quality/Security) → SIT (API, Integration, Database, Middleware, End-to-End, Negative, Regression Pack v1–v<N-1>) → UAT (Business Process, Customer Journey, Financial/Accounting Validation, Business Acceptance) → PRE-PROD (Production-like Smoke, Performance, Security, DR/Recovery, Operational Readiness, Deployment/Rollback) → PROD (Smoke, Sanity, Monitoring Verification, Business Validation). Results recorded in `TestCases-v<N>.md` under "## TP01 Pipeline Results — v<N>" using the TP01 stage table. All Critical/High rows must Pass before Sprint 7 sign-off (TP01 R1–R3).
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7; all TP01 pipeline stages Pass (Critical/High) per TP01 R3.
 **Enterprise Outcome:** Version 18 test coverage complete.
 
 ---
@@ -699,6 +873,7 @@
 - ✅ Application functionality complete (4-panel Operations Dashboard live)
 - ✅ Database validated (no schema change; DB pool panel confirmed reading live pool metrics)
 - ✅ WebSphere deployment successful (PMI/JMX enabled and confirmed cluster-wide)
+- ✅ TP01 pipeline passed (all 5 stages, all Critical/High rows Pass in TP01 Pipeline Results table)
 - ✅ Smoke testing passed (all four panels verified live; thread/heap dump captured and reviewed; log rotation confirmed)
 - ✅ Ready for Version 19
 
@@ -828,7 +1003,8 @@
 
 **Dependencies:** Sprint 5's end-to-end flow, P01 v11/v12 SSL, P02 v17 security hardening.
 **Deliverables:** MQ DLQ + CHLAUTH/SSL configured; CI01 §5.2 updated (`digistack-mq-chlauth.crt`); `TestCases-v19.md`.
-**Acceptance Criteria:** A deliberately malformed/unroutable message lands in the MQ DLQ; a channel connection attempt without valid CHLAUTH/SSL credentials is rejected. All Critical/High test cases pass per TCS01 §2.7.
+**TP01 Pipeline (mandatory, per TP01_Test_Pipeline.md):** Sprint 6 executes the full 5-stage test pipeline — DEV (Unit/Component, Developer, Code Quality/Security) → SIT (API, Integration, Database, Middleware, End-to-End, Negative, Regression Pack v1–v<N-1>) → UAT (Business Process, Customer Journey, Financial/Accounting Validation, Business Acceptance) → PRE-PROD (Production-like Smoke, Performance, Security, DR/Recovery, Operational Readiness, Deployment/Rollback) → PROD (Smoke, Sanity, Monitoring Verification, Business Validation). Results recorded in `TestCases-v<N>.md` under "## TP01 Pipeline Results — v<N>" using the TP01 stage table. All Critical/High rows must Pass before Sprint 7 sign-off (TP01 R1–R3).
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7; all TP01 pipeline stages Pass (Critical/High) per TP01 R3.
 **Enterprise Outcome:** Version 19 test coverage complete — external payment integration functional and secured.
 
 ---
@@ -863,6 +1039,7 @@
 - ✅ Application functionality complete (internal → SIBus, external → MQ routing both proven)
 - ✅ Database validated (V21 migration applied and verified)
 - ✅ WebSphere deployment successful (MQ Queue Manager, channels, JNDI bindings all operational)
+- ✅ TP01 pipeline passed (all 5 stages, all Critical/High rows Pass in TP01 Pipeline Results table)
 - ✅ Smoke testing passed (end-to-end external transfer completes; DLQ and CHLAUTH/SSL both proven)
 - ✅ Ready for Version 20
 
@@ -990,7 +1167,8 @@
 
 **Dependencies:** Sprints 1–5 complete.
 **Deliverables:** `TestCases-v20.md`.
-**Acceptance Criteria:** All five IHS-layer features function correctly in a single combined validation pass with no regressions to existing routing. All Critical/High test cases pass per TCS01 §2.7.
+**TP01 Pipeline (mandatory, per TP01_Test_Pipeline.md):** Sprint 6 executes the full 5-stage test pipeline — DEV (Unit/Component, Developer, Code Quality/Security) → SIT (API, Integration, Database, Middleware, End-to-End, Negative, Regression Pack v1–v<N-1>) → UAT (Business Process, Customer Journey, Financial/Accounting Validation, Business Acceptance) → PRE-PROD (Production-like Smoke, Performance, Security, DR/Recovery, Operational Readiness, Deployment/Rollback) → PROD (Smoke, Sanity, Monitoring Verification, Business Validation). Results recorded in `TestCases-v<N>.md` under "## TP01 Pipeline Results — v<N>" using the TP01 stage table. All Critical/High rows must Pass before Sprint 7 sign-off (TP01 R1–R3).
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7; all TP01 pipeline stages Pass (Critical/High) per TP01 R3.
 **Enterprise Outcome:** Version 20 test coverage complete.
 
 ---
@@ -1024,6 +1202,7 @@
 - ✅ Application functionality complete (no new banking functionality; all five IHS features proven)
 - ✅ Database validated (no schema change this version)
 - ✅ WebSphere deployment successful (plugin-cfg.xml confirmed accurate post-change)
+- ✅ TP01 pipeline passed (all 5 stages, all Critical/High rows Pass in TP01 Pipeline Results table)
 - ✅ Smoke testing passed (rewrite, maintenance toggle, health check, SSL termination, compression/KeepAlive all verified together)
 - ✅ Ready for Version 21
 
@@ -1147,7 +1326,8 @@
 
 **Dependencies:** Sprints 1–5 complete, P01 v4 rollback discipline.
 **Deliverables:** Proven blue-green deployment; `TestCases-v21.md`.
-**Acceptance Criteria:** The version-label change is live on green with zero dropped requests during cutover; a rollback to blue is demonstrated successfully. All Critical/High test cases pass per TCS01 §2.7.
+**TP01 Pipeline (mandatory, per TP01_Test_Pipeline.md):** Sprint 6 executes the full 5-stage test pipeline — DEV (Unit/Component, Developer, Code Quality/Security) → SIT (API, Integration, Database, Middleware, End-to-End, Negative, Regression Pack v1–v<N-1>) → UAT (Business Process, Customer Journey, Financial/Accounting Validation, Business Acceptance) → PRE-PROD (Production-like Smoke, Performance, Security, DR/Recovery, Operational Readiness, Deployment/Rollback) → PROD (Smoke, Sanity, Monitoring Verification, Business Validation). Results recorded in `TestCases-v<N>.md` under "## TP01 Pipeline Results — v<N>" using the TP01 stage table. All Critical/High rows must Pass before Sprint 7 sign-off (TP01 R1–R3).
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7; all TP01 pipeline stages Pass (Critical/High) per TP01 R3.
 **Enterprise Outcome:** Version 21 test coverage complete — full enterprise LB tier proven.
 
 ---
@@ -1181,6 +1361,7 @@
 - ✅ Application functionality complete (no new banking functionality; blue-green deployment proven on a trivial change)
 - ✅ Database validated (no schema change this version)
 - ✅ WebSphere deployment successful (two-IHS-instance topology confirmed load-balanced)
+- ✅ TP01 pipeline passed (all 5 stages, all Critical/High rows Pass in TP01 Pipeline Results table)
 - ✅ Smoke testing passed (health-check failover, sticky sessions, SSL offloading, blue-green cutover all verified)
 - ✅ Ready for Version 22
 
@@ -1315,7 +1496,8 @@
 
 **Dependencies:** Sprints 1–5 complete, all of P02 v15–v21.
 **Deliverables:** `TestCases-v22.md`; full P02 Completion Checklist signed off.
-**Acceptance Criteria:** Every item in P02's Completion Checklist passes in one combined validation pass; no open Critical/High defects. All Critical/High test cases pass per TCS01 §2.7.
+**TP01 Pipeline (mandatory, per TP01_Test_Pipeline.md):** Sprint 6 executes the full 5-stage test pipeline — DEV (Unit/Component, Developer, Code Quality/Security) → SIT (API, Integration, Database, Middleware, End-to-End, Negative, Regression Pack v1–v<N-1>) → UAT (Business Process, Customer Journey, Financial/Accounting Validation, Business Acceptance) → PRE-PROD (Production-like Smoke, Performance, Security, DR/Recovery, Operational Readiness, Deployment/Rollback) → PROD (Smoke, Sanity, Monitoring Verification, Business Validation). Results recorded in `TestCases-v<N>.md` under "## TP01 Pipeline Results — v<N>" using the TP01 stage table. All Critical/High rows must Pass before Sprint 7 sign-off (TP01 R1–R3).
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7; all TP01 pipeline stages Pass (Critical/High) per TP01 R3.
 **Enterprise Outcome:** Version 22 test coverage complete — P02 capstone validated.
 
 ---
@@ -1349,6 +1531,7 @@
 - ✅ Application functionality complete (all P01+P02 features validated together, no new functionality added)
 - ✅ Database validated (JDBC pool behavior confirmed under load, pg_dump backup verified restorable)
 - ✅ WebSphere deployment successful (full stack — DMgr, cluster, JDBC, JMS, MQ, IHS, LB, security, monitoring — validated as one integrated platform)
+- ✅ TP01 pipeline passed (all 5 stages, all Critical/High rows Pass in TP01 Pipeline Results table)
 - ✅ Smoke testing passed (end-to-end internal + external Fund Transfer, mock incident, backup/recovery all proven)
 - ✅ Ready for P03 (Enterprise Banking Systems — CBS, Payments, Channel Simulators, Loans)
 
@@ -1382,13 +1565,11 @@ shared library placement, Oracle SESSIONS/PROCESSES parameter sizing,
 connection pool math against Oracle's session model, migration utility
 deployment and lifecycle management.
 
-**Expected Outcome:** Oracle 21c XE installed on the new dedicated VM\ndsb-oracle; DIGISTACK_CBS PDB created and populated; jdbc/OracleDS\nDataSource live in WAS; all tables migrated with row-count verification;\nmigration utility deployed, run, and decommissioned; expdp backup\ncaptured; existing application confirmed functional; dsb-db (PostgreSQL)\nuntouched and running independently throughout.
+**Expected Outcome:** Oracle 21c XE installed on the new dedicated VM dsb-oracle; DIGISTACK_CBS PDB created and populated; jdbc/OracleDS DataSource live in WAS; all tables migrated with row-count verification; migration utility deployed, run, and decommissioned; expdp backup captured; existing application confirmed functional; dsb-db (PostgreSQL) untouched and running independently throughout.
 
-**Prerequisites:** P02 Version 22 Completion Checkpoint satisfied —
-full middleware stack (LB, IHS, WAS Cluster, SIBus JMS, IBM MQ, Web
-Services, Security Hardening, Monitoring) operational on PostgreSQL.
+**Prerequisites:** P02 Version 22 Completion Checkpoint satisfied — full middleware stack (LB, IHS, WAS Cluster, SIBus JMS, IBM MQ, Web Services, Security Hardening, Monitoring) operational on PostgreSQL.
 
-**VM Change:** A new VM, dsb-oracle, is provisioned before Sprint 1\nbegins (2 vCPU / 4 GB RAM / 60 GB disk, Oracle Linux 8). dsb-db\n(PostgreSQL) is not resized and not touched — the two database engines\nnever share a host.
+**VM Change:** A new VM, dsb-oracle, is provisioned before Sprint 1 begins (2 vCPU / 4 GB RAM / 60 GB disk, Oracle Linux 8). dsb-db (PostgreSQL) is not resized and not touched — the two database engines never share a host.
 
 ---
 
@@ -1414,9 +1595,15 @@ init parameters that replace PostgreSQL's max_connections.
 - Open Oracle listener on port 1521 on dsb-oracle only (firewall\n  restricts to the WAS subnet); confirm reachable from dsb-dmgr
 - Confirm PostgreSQL 16 still running independently on dsb-db, port\n  5432 — dsb-db is untouched by this sprint
 
-**Dependencies:** New dsb-oracle VM provisioned per SOE01.\n**Deliverables:** Oracle 21c XE installed on dsb-oracle; DIGISTACK_CBS\nPDB created and open; listener on 1521; dsb-db (PostgreSQL) confirmed\nunaffected and still running independently.
+**Dependencies:** New dsb-oracle VM provisioned per SOE01.
+**Deliverables:** Oracle 21c XE installed on dsb-oracle; DIGISTACK_CBS PDB created and open; listener on 1521; dsb-db (PostgreSQL) confirmed unaffected and still running independently.
 **Acceptance Criteria:**
-- - \sqlplus DIGISTACK_APP/<pwd>@DIGISTACK_CBS` connects successfully\n from dsb-oracle locally\n- `sqlplus DIGISTACK_APP/<pwd>@dsb-oracle:1521/DIGISTACK_CBS` connects\n successfully from dsb-dmgr (cross-VM)\n- PostgreSQL on dsb-db still accepts connections on 5432 — existing\n application unaffected, dsb-db untouched\n- dsb-oracle confirmed stable with expected free memory after Oracle\n starts (no OOM condition)\nEnterprise Outcome: Oracle 21c XE operational on its own dedicated\nVM — separate-host design proven before any migration work begins.`
+- `sqlplus DIGISTACK_APP/<pwd>@DIGISTACK_CBS` connects successfully from dsb-oracle locally
+- `sqlplus DIGISTACK_APP/<pwd>@dsb-oracle:1521/DIGISTACK_CBS` connects successfully from dsb-dmgr (cross-VM)
+- PostgreSQL on dsb-db still accepts connections on 5432 — existing application unaffected, dsb-db untouched
+- dsb-oracle confirmed stable with expected free memory after Oracle starts (no OOM condition)
+
+**Enterprise Outcome:** Oracle 21c XE operational on its own dedicated VM — separate-host design proven before any migration work begins.
 
 ---
 
@@ -1856,6 +2043,7 @@ integrity, row counts, constraint verification).
   Transaction History) confirming all pass against Oracle data
 
 **Deliverables:** `TestCases-v22.5.md`
+**TP01 Pipeline (mandatory, per TP01_Test_Pipeline.md):** Sprint 6 executes the full 5-stage test pipeline — DEV (Unit/Component, Developer, Code Quality/Security) → SIT (API, Integration, Database, Middleware, End-to-End, Negative, Regression Pack v1–v<N-1>) → UAT (Business Process, Customer Journey, Financial/Accounting Validation, Business Acceptance) → PRE-PROD (Production-like Smoke, Performance, Security, DR/Recovery, Operational Readiness, Deployment/Rollback) → PROD (Smoke, Sanity, Monitoring Verification, Business Validation). Results recorded in `TestCases-v<N>.md` under "## TP01 Pipeline Results — v<N>" using the TP01 stage table. All Critical/High rows must Pass before Sprint 7 sign-off (TP01 R1–R3).
 **Acceptance Criteria:** All Critical and High test cases pass per
 TCS01 §2.7. Migration-specific test cases include:
 - TC-v22.5-01 (Critical): Row count match — all 7 tables PostgreSQL
@@ -2075,7 +2263,7 @@ Non-gating — does not block sign-off.
 
 # P02 — Overall Completion Summary
 
-**All 8 versions (15–22), 64 sprints total, complete.**
+**All 10 versions (15–22, plus suffix-slot versions v16.5 and v22.5), 80 sprints total, complete.**
 
 ## P02 Final Application State
 - Modules: Customer (multi-account), Account, Beneficiary, Fund Transfer (internal via SIBus/MDB, external via IBM MQ), Transaction History/Account Statement (REST + SOAP), MFA/OTP, account lockout, Security Event Detection, Operations Dashboard (JVM/Session/Queue/DB Pool)

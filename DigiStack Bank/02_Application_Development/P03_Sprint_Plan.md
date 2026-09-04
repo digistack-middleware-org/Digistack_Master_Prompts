@@ -6,7 +6,9 @@
 **Status:** ⏳ Not Started — planning document only, no versions built or signed off
 **Prerequisite:** P02 Completion Checkpoint satisfied (`digistack-bank-v22.ear`, full middleware stack — LB, IHS, WAS Cluster, SIBus JMS, IBM MQ, Web Services, Security Hardening, Monitoring — all operational)
 **Next:** P03.2 — Enterprise Interview Book (then P03.1 — Interview Preparation, per P03's Sub-Parts reading order)
-**Sprint Structure:** 8 sprints per version — Sprint 1–4 Build, Sprint 5 Package and Deploy, Sprint 6 Test Cases, Sprint 7 Sign-off, Sprint 8 Fault Injection + Incident.
+**Sprint Structure:** 8 sprints per version — Sprint 1–4 Build, Sprint 5 Package and Deploy, Sprint 6 Test Cases (executes the full TP01 5-stage pipeline per TP01_Test_Pipeline.md), Sprint 7 Sign-off, Sprint 8 Fault Injection + Incident.
+**Test Pipeline:** TP01 (mandatory from v8 onward) — every version's Sprint 6 runs DEV → SIT → UAT → PRE-PROD → PROD stages; results recorded in each TestCases-v<N>.md under "## TP01 Pipeline Results — v<N>".
+
 
 ---
 
@@ -44,7 +46,7 @@
 - Performance: N/A
 
 **Dependencies:** P01 v7 JNDI/DataSource pattern, STD §Database.
-**Deliverables:** jdbc/CBSDataSource+CBSAliasbound and tested against the existingdigistack_cbs PDB.
+**Deliverables:** jdbc/CBSDataSource + CBSAlias bound and tested against the existing digistack_cbs PDB.
 **Acceptance Criteria:** A JNDI lookup of `jdbc/CBSDataSource` from a test servlet returns a live connection to `digistack_cbs`, distinct from the P01/P02 shared DB.
 **Enterprise Outcome:** Core banking data isolated from channel-layer data before a single row moves — mirrors real banking blast-radius separation.
 
@@ -107,13 +109,13 @@
 - API: N/A (consumes CBS's existing contracts)
 
 **WebSphere Administration:**
-- Configuration: Remove Portal's JDBC Provider/DataSource JNDI binding entirely; retire the v22.5-era jdbc/OracleDS(its role is assumed byjdbc/CBSDataSource); decommission the PostgreSQL VM (dsb-db): final pg_dump archived, VM shut down, single retention snapshot, VM deleted
+- Configuration: Remove Portal's JDBC Provider/DataSource JNDI binding entirely; retire the v22.5-era jdbc/OracleDS (its role is assumed by jdbc/CBSDataSource); decommission the PostgreSQL VM (dsb-db): final pg_dump archived, VM shut down, single retention snapshot, VM deleted
 - Deployment: Redeploy Portal EAR with DB access removed
 - JDBC / JMS / JNDI: Negative test — confirm Portal's old DataSource JNDI lookup now fails
 - Security: N/A this sprint
 
 **Dependencies:** Sprint 3's relocated endpoints, ARCH01 P-5 (presentation-only channels).
-**Deliverables:** Portal redeployed with zero direct DB access; negative test proving old DataSource lookup fails; jdbc/BankDSandjdbc/OracleDSretired; final pg_dump archived;dsb-db VM deleted (no PostgreSQL left in the estate).
+**Deliverables:** Portal redeployed with zero direct DB access; negative test proving old DataSource lookup fails; jdbc/BankDS and jdbc/OracleDS retired; final pg_dump archived; dsb-db VM deleted (no PostgreSQL left in the estate).
 **Acceptance Criteria:** Every existing Portal transaction still works end-to-end via CBS; a deliberate JNDI lookup of Portal's old DataSource throws a NameNotFoundException.
 **Enterprise Outcome:** The Governing Rule ("only CBS writes to digistack_cbs") becomes enforced, not aspirational — the architectural pivot point of the whole project.
 
@@ -155,6 +157,7 @@
 
 **Dependencies:** Sprints 1–5 complete.
 **Deliverables:** `SetupDoc-v23.md` (with required "Migration & Ownership Transfer" section per STDGAP01 §3.8), `TestCases-v23.md` (including negative tests), old Portal DB decommission **verified** (decommission executed in Sprint 4 per the roadmap).
+**TP01 Pipeline (mandatory, per TP01_Test_Pipeline.md):** Sprint 6 executes the full 5-stage test pipeline — DEV (Unit/Component, Developer, Code Quality/Security) → SIT (API, Integration, Database, Middleware, End-to-End, Negative, Regression Pack v1–v<N-1>) → UAT (Business Process, Customer Journey, Financial/Accounting Validation, Business Acceptance) → PRE-PROD (Production-like Smoke, Performance, Security, DR/Recovery, Operational Readiness, Deployment/Rollback) → PROD (Smoke, Sanity, Monitoring Verification, Business Validation). Results recorded in `TestCases-v<N>.md` under "## TP01 Pipeline Results — v<N>" using the TP01 stage table. All Critical/High rows must Pass before Sprint 7 sign-off (TP01 R1–R3).
 **Acceptance Criteria:** Every item in the Ownership Matrix confirmed correct; full regression pack (all prior TestCases-v1–v22) passes against the new topology; no open Critical/High defects.
 **Enterprise Outcome:** Version 23 signed off — the architectural pivot is complete and verified, not just deployed. CBS is now the single system of record for the rest of the roadmap.
 
@@ -190,6 +193,7 @@
 - ✅ Application functionality complete (CBS is sole writer; Portal, Notification, Reporting all confirmed presentation/consumption-only)
 - ✅ Database validated (row-count-verified migration; old shared DB decommissioned)
 - ✅ WebSphere deployment successful (4 independent EARs operational on existing cluster)
+- ✅ TP01 pipeline passed (all 5 stages, all Critical/High rows Pass in TP01 Pipeline Results table)
 - ✅ Smoke testing passed (full regression + all negative ownership tests)
 - ✅ Ready for Version 24
 
@@ -345,6 +349,7 @@
 
 **Dependencies:** Sprints 1–5 complete, all of v23.
 **Deliverables:** SetupDoc-v24.md, TestCases-v24.md.
+**TP01 Pipeline (mandatory, per TP01_Test_Pipeline.md):** Sprint 6 executes the full 5-stage test pipeline — DEV (Unit/Component, Developer, Code Quality/Security) → SIT (API, Integration, Database, Middleware, End-to-End, Negative, Regression Pack v1–v<N-1>) → UAT (Business Process, Customer Journey, Financial/Accounting Validation, Business Acceptance) → PRE-PROD (Production-like Smoke, Performance, Security, DR/Recovery, Operational Readiness, Deployment/Rollback) → PROD (Smoke, Sanity, Monitoring Verification, Business Validation). Results recorded in `TestCases-v<N>.md` under "## TP01 Pipeline Results — v<N>" using the TP01 stage table. All Critical/High rows must Pass before Sprint 7 sign-off (TP01 R1–R3).
 **Acceptance Criteria:** CIF/Account/Verification/Search all pass together in one combined validation pass; full regression pack (v1–v23) passes; no open Critical/High defects.
 **Enterprise Outcome:** Version 24 signed off — CIF becomes the master customer repository every future channel and satellite service will reference going forward.
 
@@ -379,6 +384,7 @@
 - ✅ Application functionality complete (CIF create/modify/search, Aadhaar/PAN gating, multi-account linkage)
 - ✅ Database validated (V24–V25 migrations applied and verified, FK integrity confirmed)
 - ✅ WebSphere deployment successful (new module integrated into existing multi-module EAR, no regression)
+- ✅ TP01 pipeline passed (all 5 stages, all Critical/High rows Pass in TP01 Pipeline Results table)
 - ✅ Smoke testing passed (full regression against v1–v23 passes)
 - ✅ Ready for Version 25
 
@@ -534,6 +540,8 @@
 
 **Dependencies:** Sprints 1–5 complete.
 **Deliverables:** SetupDoc-v25.md, TestCases-v25.md (including the Payment-Hub-never-writes negative test).
+**TP01 Pipeline (mandatory, per TP01_Test_Pipeline.md):** Sprint 6 executes the full 5-stage test pipeline — DEV (Unit/Component, Developer, Code Quality/Security) → SIT (API, Integration, Database, Middleware, End-to-End, Negative, Regression Pack v1–v<N-1>) → UAT (Business Process, Customer Journey, Financial/Accounting Validation, Business Acceptance) → PRE-PROD (Production-like Smoke, Performance, Security, DR/Recovery, Operational Readiness, Deployment/Rollback) → PROD (Smoke, Sanity, Monitoring Verification, Business Validation). Results recorded in `TestCases-v<N>.md` under "## TP01 Pipeline Results — v<N>" using the TP01 stage table. All Critical/High rows must Pass before Sprint 7 sign-off (TP01 R1–R3).
+
 **Acceptance Criteria:** IMPS/NEFT/retry/failed-payment flows all pass together; negative test confirms zero direct write path from Payment Hub; full regression pack (v1–v24) passes.
 **Enterprise Outcome:** Version 25 signed off — Payment Hub proven as a genuine Saga-pattern coordinator, the deliberate architectural counterpoint to CBS's single-writer design.
 
@@ -568,6 +576,7 @@
 - ✅ Application functionality complete (Beneficiary CRUD, IMPS real-time, NEFT batch, retry/failed-payment handling)
 - ✅ Database validated (V26–V27 migrations applied and verified; confirmed Payment Hub holds no writable balance data)
 - ✅ WebSphere deployment successful (independent EAR, startup-order dependency on CBS proven)
+- ✅ TP01 pipeline passed (all 5 stages, all Critical/High rows Pass in TP01 Pipeline Results table)
 - ✅ Smoke testing passed (full regression + Payment-Hub-never-writes negative test)
 - ✅ Ready for Version 26
 
@@ -718,6 +727,8 @@
 
 **Dependencies:** Sprints 1–5 complete.
 **Deliverables:** SetupDoc-v26.md, TestCases-v26.md.
+**TP01 Pipeline (mandatory, per TP01_Test_Pipeline.md):** Sprint 6 executes the full 5-stage test pipeline — DEV (Unit/Component, Developer, Code Quality/Security) → SIT (API, Integration, Database, Middleware, End-to-End, Negative, Regression Pack v1–v<N-1>) → UAT (Business Process, Customer Journey, Financial/Accounting Validation, Business Acceptance) → PRE-PROD (Production-like Smoke, Performance, Security, DR/Recovery, Operational Readiness, Deployment/Rollback) → PROD (Smoke, Sanity, Monitoring Verification, Business Validation). Results recorded in `TestCases-v<N>.md` under "## TP01 Pipeline Results — v<N>" using the TP01 stage table. All Critical/High rows must Pass before Sprint 7 sign-off (TP01 R1–R3).
+
 **Acceptance Criteria:** Login, Balance, Mini Statement, and IMPS Quick Pay all pass together in one combined validation pass; negative DB-access test confirms zero direct connectivity; full regression pack (v1–v25) passes.
 **Enterprise Outcome:** Version 26 signed off — first Tomcat-based channel proven fully functional and architecturally clean, setting the pattern ATM Simulator (v27) reuses directly.
 
@@ -752,6 +763,7 @@
 - ✅ Application functionality complete (Login/MFA, Balance, Mini Statement, IMPS Quick Pay)
 - ✅ Database validated (N/A — confirmed zero direct DB access, by design)
 - ✅ WebSphere deployment successful (heterogeneous IHS routing to Tomcat proven, virtual host + SSL confirmed)
+- ✅ TP01 pipeline passed (all 5 stages, all Critical/High rows Pass in TP01 Pipeline Results table)
 - ✅ Smoke testing passed (full regression + zero-DB-access negative test)
 - ✅ Ready for Version 27
 
@@ -808,7 +820,7 @@
 **Business Features:** Card/PIN Entry.
 **Application Development:**
 - UI: Simulated card swipe screen (card number entry) → PIN entry screen
-- Backend: ATMAuthServletcalls CBS's authentication PIN-check endpoint (P02 v17 contract — the customer PIN, since thecard table doesn't exist until v28); at v28 Sprint 4 this call is re-pointed to CBS's new Card Service PIN-check endpoint backed by the card table, per SetupDoc-v28.md
+- Backend: ATMAuthServlet calls CBS's authentication PIN-check endpoint (P02 v17 contract — the customer PIN, since the card table doesn't exist until v28); at v28 Sprint 4 this call is re-pointed to CBS's new Card Service PIN-check endpoint backed by the card table, per SetupDoc-v28.md
 - Database: N/A
 - API: Consumes CBS Card Service authentication contract
 
@@ -907,6 +919,8 @@
 
 **Dependencies:** Sprints 1–5 complete, P03 v26.
 **Deliverables:** SetupDoc-v27.md, TestCases-v27.md (including the blocked/incorrect-PIN negative test).
+**TP01 Pipeline (mandatory, per TP01_Test_Pipeline.md):** Sprint 6 executes the full 5-stage test pipeline — DEV (Unit/Component, Developer, Code Quality/Security) → SIT (API, Integration, Database, Middleware, End-to-End, Negative, Regression Pack v1–v<N-1>) → UAT (Business Process, Customer Journey, Financial/Accounting Validation, Business Acceptance) → PRE-PROD (Production-like Smoke, Performance, Security, DR/Recovery, Operational Readiness, Deployment/Rollback) → PROD (Smoke, Sanity, Monitoring Verification, Business Validation). Results recorded in `TestCases-v<N>.md` under "## TP01 Pipeline Results — v<N>" using the TP01 stage table. All Critical/High rows must Pass before Sprint 7 sign-off (TP01 R1–R3).
+
 **Acceptance Criteria:** Card auth, Balance, Mini Statement, Withdrawal, and PIN Change all pass together in one combined pass; zero-DB-access confirmed; full regression pack (v1–v26) passes, including Mobile's continued correct operation.
 **Enterprise Outcome:** Version 27 signed off — two independent Tomcat-hosted channels (Mobile, ATM) now proven to coexist cleanly on shared infrastructure, ready for Card Portal (v28) to complete the card-lifecycle picture.
 
@@ -940,11 +954,12 @@
 - ✅ Application functionality complete (Card/PIN auth, Balance, Withdrawal, Mini Statement, PIN Change)
 - ✅ Database validated (N/A — confirmed zero direct DB access, by design)
 - ✅ WebSphere deployment successful (second Tomcat subdomain routed cleanly alongside Mobile's)
+- ✅ TP01 pipeline passed (all 5 stages, all Critical/High rows Pass in TP01 Pipeline Results table)
 - ✅ Smoke testing passed (full regression + blocked/incorrect-PIN negative test)
 - ✅ Ready for Version 28
 
 ## Lessons Learned
-- **Key learnings:** The ATM's PIN-check intentionally rode CBS's P02 v17 customer-PIN contract at v27 and was re-pointed to the Card Service contract at v28 Sprint 4 — channel simulators and the services they integrate against aren't fully even when architecturally decoupled — a useful reminder that channel simulators and the services they'll eventually integrate against aren't fully independent even when architecturally decoupled.
+- **Key learnings:** The ATM's PIN-check intentionally rode CBS's P02 v17 customer-PIN contract at v27 and was re-pointed to the Card Service contract at v28 Sprint 4 — a useful reminder that channel simulators and the services they'll eventually integrate against aren't fully independent even when architecturally decoupled.
 - **Known issues:** None expected if Sprint 4's withdrawal sequence (PIN re-check → balance check → debit) is verified before Sprint 5's PIN Change/lockout work begins.
 - **Technical debt:** None new — full ISO 8583 switch implementation and POS-as-a-separate-app are explicitly out of scope per the roadmap's scope note, not oversights.
 
@@ -1095,6 +1110,8 @@
 
 **Dependencies:** Sprints 1–5 complete, P03 v27.
 **Deliverables:** SetupDoc-v28.md, TestCases-v28.md (including the Card Portal-never-writes and Block-Card-blocks-ATM negative/integration tests).
+**TP01 Pipeline (mandatory, per TP01_Test_Pipeline.md):** Sprint 6 executes the full 5-stage test pipeline — DEV (Unit/Component, Developer, Code Quality/Security) → SIT (API, Integration, Database, Middleware, End-to-End, Negative, Regression Pack v1–v<N-1>) → UAT (Business Process, Customer Journey, Financial/Accounting Validation, Business Acceptance) → PRE-PROD (Production-like Smoke, Performance, Security, DR/Recovery, Operational Readiness, Deployment/Rollback) → PROD (Smoke, Sanity, Monitoring Verification, Business Validation). Results recorded in `TestCases-v<N>.md` under "## TP01 Pipeline Results — v<N>" using the TP01 stage table. All Critical/High rows must Pass before Sprint 7 sign-off (TP01 R1–R3).
+
 **Acceptance Criteria:** Issue/Activate/Generate PIN/Block/Hotlist/Reset PIN/Status Lookup all pass together in one combined pass; zero-DB-access confirmed; cross-app Block Card integration re-verified; full regression pack (v1–v27) passes.
 **Enterprise Outcome:** Version 28 signed off — six independent WAS EARs plus two Tomcat apps now coexist and cross-integrate correctly, the fullest heterogeneous topology proof point so far in the roadmap.
 
@@ -1130,6 +1147,7 @@
 - ✅ Application functionality complete (Issue/Activate/Generate PIN/Block/Hotlist/Reset PIN/Status Lookup)
 - ✅ Database validated (V28 migration applied and verified; Card Portal confirmed zero direct DB access)
 - ✅ WebSphere deployment successful (sixth independent WAS EAR live, plugin-routed subdomain confirmed distinct from Tomcat subdomains)
+- ✅ TP01 pipeline passed (all 5 stages, all Critical/High rows Pass in TP01 Pipeline Results table)
 - ✅ Smoke testing passed (full regression + Card Portal negative test + Block-Card/ATM integration re-verification)
 - ✅ Ready for Version 29
 
@@ -1176,7 +1194,7 @@
 **Dependencies:** P02 v17 MFA/auth, P01 v10 role model, P03 v23's CBS relocation.
 **Deliverables:** Branch Portal EAR skeleton deployed, Teller Login working.
 **Acceptance Criteria:** A Teller logs in successfully against CBS's shared auth; no local user store exists in Branch Portal.
-**Enterprise Outcome:** `Seventh independent WAS EAR proven functional from day oneA9. v29 Sprint 6 Learning Objective — reinforces the shared-identity pattern first established at Mobile (v26).
+**Enterprise Outcome:** Seventh independent WAS EAR proven functional from day one — reinforces the shared-identity pattern first established at Mobile (v26).
 
 ---
 
@@ -1255,7 +1273,7 @@
 **Business Features:** EOD Reconciliation Report.
 **Application Development:**
 - UI: Reconciliation Report view (internal ops), flags any mismatch
-- Backend: ReconciliationService (within Reporting Service,03 v23) — reads CBS's ledger directly (read-only) and Payment Hub's settled NEFT/IMPS records via Payment Hub's REST query endpoint (Payment Hub holds no database of its own per v25), ties them out, flags discrepancies
+- Backend: ReconciliationService (within Reporting Service, P03 v23) — reads CBS's ledger directly (read-only) and Payment Hub's settled NEFT/IMPS records via Payment Hub's REST query endpoint (Payment Hub holds no database of its own per v25), ties them out, flags discrepancies
 - Database: N/A (read-only, per Reporting Service's accepted OLTP-read tradeoff)
 - API: REST endpoint to retrieve the reconciliation report
 
@@ -1285,6 +1303,7 @@
 
 **Dependencies:** Sprints 1–5 complete, P03 v25 (NEFT), P03 v23 (Reporting Service).
 **Deliverables:** SetupDoc-v29.md, TestCases-v29.md (including the Branch-Portal-never-writes negative test).
+**TP01 Pipeline (mandatory, per TP01_Test_Pipeline.md):** Sprint 6 executes the full 5-stage test pipeline — DEV (Unit/Component, Developer, Code Quality/Security) → SIT (API, Integration, Database, Middleware, End-to-End, Negative, Regression Pack v1–v<N-1>) → UAT (Business Process, Customer Journey, Financial/Accounting Validation, Business Acceptance) → PRE-PROD (Production-like Smoke, Performance, Security, DR/Recovery, Operational Readiness, Deployment/Rollback) → PROD (Smoke, Sanity, Monitoring Verification, Business Validation). Results recorded in `TestCases-v<N>.md` under "## TP01 Pipeline Results — v<N>" using the TP01 stage table. All Critical/High rows must Pass before Sprint 7 sign-off (TP01 R1–R3).
 **Acceptance Criteria:** Teller Login, Cash Deposit/Withdrawal, BOD, EOD, and Reconciliation Report all pass together in one combined pass; zero-DB-access confirmed; full regression pack (v1–v28) passes.
 **Enterprise Outcome:** Version 29 signed off — seven independent WAS EARs plus two Tomcat apps now operate together, with a genuine scheduled operational day-cycle proven end-to-end; only Loan Management (v30) remains before Part-3 closes.
 
@@ -1320,6 +1339,7 @@
 - ✅ Application functionality complete (Teller Login, Cash Deposit/Withdrawal, BOD, EOD, Reconciliation Report)
 - ✅ Database validated (V29 migration applied and verified; Branch Portal confirmed zero direct DB access)
 - ✅ WebSphere deployment successful (seventh independent WAS EAR live, BOD/EOD scheduled jobs confirmed running automatically)
+- ✅ TP01 pipeline passed (all 5 stages, all Critical/High rows Pass in TP01 Pipeline Results table)
 - ✅ Smoke testing passed (full regression + Branch Portal negative test)
 - ✅ Ready for Version 30
 
@@ -1475,6 +1495,7 @@
 
 **Dependencies:** Sprints 1–5 complete, all of P03 v23–v29.
 **Deliverables:** SetupDoc-v30.md, TestCases-v30.md; full P03 Completion Checklist signed off.
+**TP01 Pipeline (mandatory, per TP01_Test_Pipeline.md):** Sprint 6 executes the full 5-stage test pipeline — DEV (Unit/Component, Developer, Code Quality/Security) → SIT (API, Integration, Database, Middleware, End-to-End, Negative, Regression Pack v1–v<N-1>) → UAT (Business Process, Customer Journey, Financial/Accounting Validation, Business Acceptance) → PRE-PROD (Production-like Smoke, Performance, Security, DR/Recovery, Operational Readiness, Deployment/Rollback) → PROD (Smoke, Sanity, Monitoring Verification, Business Validation). Results recorded in `TestCases-v<N>.md` under "## TP01 Pipeline Results — v<N>" using the TP01 stage table. All Critical/High rows must Pass before Sprint 7 sign-off (TP01 R1–R3).
 **Acceptance Criteria:** Application → Eligibility → Approval → Disbursement → EMI Schedule → Auto-Debit → Statement/Foreclosure/NPA all pass together in one combined pass; every item in P03's Completion Checklist passes; no open Critical/High defects; full regression pack (v1–v29) passes.
 **Enterprise Outcome:** Version 30 signed off — Part-3 complete. Nine distinct deployable applications (7 WAS EARs + 2 Tomcat apps) now operate together under CBS's single-writer governing rule, with lending closing the last referenced-but-unbuilt gap from P02's Capstone.
 
@@ -1510,6 +1531,7 @@
 - ✅ Application functionality complete (Application, Eligibility, Approval, Disbursement, EMI Schedule, Auto-Debit, Statement, Foreclosure, NPA Flagging)
 - ✅ Database validated (V30 migration applied and verified)
 - ✅ WebSphere deployment successful (sixth CBS internal module live, per-loan EJB Timer scheduling confirmed alongside existing fixed-window timers)
+- ✅ TP01 pipeline passed (all 5 stages, all Critical/High rows Pass in TP01 Pipeline Results table)
 - ✅ Smoke testing passed (full regression across all P03 versions, v23–v30, passes)
 - ✅ Ready for P03.2 (Enterprise Interview Book) — Part-3 application-development scope now complete (P03.1 follows P03.2 per the reading order)
 

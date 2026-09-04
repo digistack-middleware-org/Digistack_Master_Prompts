@@ -434,6 +434,14 @@ generated/propagated; static asset confirmed served by IHS; broken URL
 returns custom 404, forced server error returns custom 500 — both served by
 IHS, not WAS default output.
 
+Test Pipeline Note (added 2026-08-25)
+---------------------------------------
+From this version (v8) onward, every version's Sprint 6 additionally
+executes the TP01_Test_Pipeline.md multi-environment pipeline
+(DEV → SIT → UAT → PRE-PROD → PROD) and records results in the
+"TP01 Pipeline Results" section of TestCases-v<N>.md. Versions v1–v7
+are unaffected (pipeline applies from v8 onward).
+
 Version 9 — Session Management
 -----------------------------------
 WebSphere Topic: Sticky sessions, session persistence/failover across the

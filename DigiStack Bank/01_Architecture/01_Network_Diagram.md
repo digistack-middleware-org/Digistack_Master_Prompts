@@ -24,13 +24,13 @@ Domain: digistack.cloud | Subnet: 192.168.10.0/24 | Default-deny, explicit-allow
 ```
                          Internet / Browser
                                  │
-                          (not yet fronted by IHS — v8)
+                          (not yet fronted by IHS — v4.5)
                                  │
         ┌────────────────────────────────────────────────┐
         │  DMZ  (VLAN10)                                  │
         │   dsb-ihs      .10.20   1vCPU/1GB   [NOT BUILT] │
         └────────────────────────────────────────────────┘
-                                 │  80/443 (planned, v8+)
+                                 │  80/443 (planned, v4.5+)
         ┌────────────────────────────────────────────────┐
         │  App  (VLAN20)                                  │
         │   dsb-dmgr (+Node1)  .10.10  2vCPU/3GB  [NOT BUILT — RESET 2026-08-25]  │
@@ -69,7 +69,7 @@ Live firewall-relevant ports at v1 (SOE01 §8, default-deny elsewhere):
 - 1521 Oracle 21c XE — inbound, app-tier subnet only (v22.5 onward)
 
 Note: browser hits dsb-dmgr's AppServer port directly right now (9080)
-since IHS/reverse-proxy doesn't exist until v8 — the "from LB/IHS tier
+since IHS/reverse-proxy doesn't exist until v4.5 — the "from LB/IHS tier
 only" restriction on 9080/9443 is a target-state rule, not yet enforced.
 
 Ports added at later versions (per STD port matrix — add to this diagram

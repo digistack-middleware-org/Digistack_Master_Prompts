@@ -1,6 +1,8 @@
 # DigiStack Bank — Context Pack v1.0
 # Replaces: STD, STDGAP01, SOE01, CAP01 per-session uploads
-# Authority: IDX → STD → STDGAP01 → Part files (higher wins on conflict)
+# Authority: IDX → STD → STDGAP01 → TP01 (Test Pipeline, v8+) → Part files (higher wins on conflict)
+# TP01 file: TP01_Test_Pipeline.md — mandatory multi-environment test
+# pipeline inside Sprint 6 of every version from v8 onward.
 
 ---
 
@@ -196,6 +198,7 @@ VM hostnames (unchanged, separate from WAS naming):
 
 IP addresses:
   dsb-dmgr  192.168.10.10   dsb-node02  192.168.10.11
+            (Node1/devdsbinnode01 is co-located on the dsb-dmgr VM — no separate IP)
   dsb-ihs   192.168.10.20   dsb-db      192.168.10.30
   dsb-mq    192.168.10.31   dsb-monitor 192.168.10.40
   dsb-elk   192.168.10.41   dsb-tracing 192.168.10.42
@@ -232,8 +235,11 @@ All reverted 2026-08-25. Promote to CONFIRMED only once that version's
 SetupDoc-v<N>.md §4.1 records the actual installed version.
 
   WebSphere ND          9.0.5.28   (confirms at P01 v1 sign-off)
-  IBM HTTP Server       9.0.5.28   (confirms at P01 v8)
-  Web Server Plug-ins   9.0.5.28   (confirms at P01 v8)
+    Install path: /apps/IBM/WebSphere/AppServer/  (LOCKED — NOT /opt/IBM/WebSphere/AppServer/; corrected per STD §12)
+    wsadmin:      /apps/IBM/WebSphere/AppServer/bin/wsadmin.sh
+    Profiles:     /apps/IBM/WebSphere/AppServer/profiles/<profile-name>/  (devdsbinappserver01, devdsbindmgr01 at v5+)
+  IBM HTTP Server       9.0.5.28   (confirms at P01 v4.5)
+  Web Server Plug-ins   9.0.5.28   (confirms at P01 v4.5)
   IBM Install Manager   1.9.x      (confirms at P01 v1)
   Java SDK              IBM Java 8 (SDK 8.0), bundled with WAS ND
   PostgreSQL            16         (confirms at P01 v1 sign-off;
@@ -317,6 +323,12 @@ Zones: DMZ (VLAN10) → App (VLAN20) → Data (VLAN30); Mgmt separate.
   digistack_bank    Early-build shared DB (P01–v22)
                     Engine: PostgreSQL 16
                     Host: dsb-db, port 5432
+                    digistack_app password:
+                      v1–v4:     D!g!St@ck2026#
+                      v5 onward: Wasadmin@951951
+                      (v5 rotation delivered via ALTER USER + JAAS Auth Alias
+                       update in that version's SetupDoc §4.3; old value kept
+                       for restoring pre-v5 snapshots only)
                     Decommissioned at P03 v23 Sprint 4
 
   digistack_cbs     CBS-dedicated DB from v22.5 onward
@@ -467,3 +479,8 @@ Follow naming standards
 Maintain audit trails
 Keep environments consistent
 Document every change
+
+---
+## Context Pack Corrections Log
+2026-xx-xx | WAS install path locked to /apps/IBM/WebSphere/AppServer/ (was /opt/IBM/WebSphere/AppServer/)
+2026-xx-xx | digistack_app password history added (v5 rotation: Wasadmin@951951)

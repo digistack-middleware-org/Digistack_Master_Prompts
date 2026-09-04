@@ -556,7 +556,7 @@ Step 4 — Environment Setup (so sqlplus works in your shell)
       export ORACLE_BASE=/opt/oracle
       export ORACLE_HOME=$ORACLE_BASE/product/21c/dbhomeXE
       export ORACLE_SID=XE
-      export PATH=ORACLEHOME/bin:ORACLE_HOME/bin:ORACLEH​OME/bin:PATH
+      export PATH=$ORACLE_HOME/bin:$PATH
       export LD_LIBRARY_PATH=$ORACLE_HOME/lib
 
 Step 5 — Create the DIGISTACK_CBS Pluggable Database
@@ -617,7 +617,7 @@ DataSources, two JAAS Auth Aliases, coexisting in the same WAS cell
 during the migration window.
 
 Oracle 21c XE Limits (apply for the remainder of the roadmap)
-- CPU threads used by Oracle: 2 (matches ds-oracle vCPU allocation)
+- CPU threads used by Oracle: 2 (matches dsb-oracle vCPU allocation)
 - RAM used by Oracle: 2 GB maximum (dsb-oracle has 4 GB total, leaving
   2 GB OS headroom — dedicated DB VM, no other engines present)- User data limit: 12 GB (more than sufficient for this lab)
 - Pluggable Databases: 3 maximum (we use 1 here: DIGISTACK_CBS; a second

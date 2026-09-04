@@ -20,7 +20,7 @@
 | # | Folder | Status | Last Completed Version | Next Version | Current Focus (AI Resume one-liner) |
 |---|---|---|---|---|---|
 | 00 | Core | 🔒 Frozen | — | — | — |
-| 02 | Application_Development | ⏳ Not Started | — | v1 (P01) | Full reset #2 (2026-08-25) — VM + chat lost again; P01 v1 Sprint 1 not yet started. Mirrors Multi-Part Folder Detail row below. |
+| 02 | Application_Development | 🔓 In Progress | v5 (P01) | v6 (P01) | v5 (WAS Clustering) signed off 2026-09-01 — 80/80 tests pass. Next: v6 Sprint 1 (Application Administration). dsb-dmgr, dsb-node02, dsb-ihs, dsb-db all ON. Mirrors Multi-Part Folder Detail row below. |
 | 03 | Interview_Prep | ⏳ Not Started | — | Interview-1 (P03.1) | Not started — depends on P03 completion |
 | 04 | Observability | ⏳ Not Started | — | v31 (P04) | Not started — depends on P03 completion |
 | 05 | HA_DR | ⏳ Not Started | — | v36 (P05) | Not started — depends on P04 completion |
@@ -58,7 +58,7 @@ Once frozen, a folder is only reopened for a documented correction — never sil
 
 | Part | Status | Last Approved Version | Next Version |
 |---|---|---|---|
-| P01 — Foundation | ⏳ Not Started | — | v1 |
+| P01 — Foundation | 🔓 In Progress | v5 | v6 |
 | P02 — Middleware | ⏳ Not Started | — | v15 |
 | P03 — Banking Systems | ⏳ Not Started | — | v23 |
 
@@ -156,6 +156,7 @@ or upload the full Sprint Plan file directly.
 
 | Date | Part | Version | Feature | Status (Started / Dev Done / Deployed to WAS / Tested / Approved) | Notes / Issues |
 |---|---|---|---|---|---|
+
 | ~~2026-07-30~~ | ~~P01~~ | ~~v1~~ | ~~Project Setup & Enterprise Architecture~~ | **RESET 2026-08-04** | Entry reset per project owner request — P01 v1 is not started. Original row (Approved 2026-07-30) struck through rather than deleted, per this project's "never silently edit" discipline. See Open Questions section below for the full reset decision log. |
 | 2026-08-07 | P01 | v1 | Project Setup & Enterprise Architecture | Approved | Signed off per TCS01 §2.7 — 13/13 test cases pass. WAS ND 9.0.5.28 confirmed on dsb-dmgr; PostgreSQL 16 confirmed on dsb-db (digistack_bank DB, digistack_app user). SetupDoc-v1.md is the source record. |
 | 2026-08-08 | P01 | v2 | Login & Session | Approved | Signed off per TCS01 §2.7 — 14/14 test cases pass. users table created (SHA-256+salt hashing), Login/Logout with HttpSession working, digistack-bank-v2.ear redeployed over v1. SetupDoc-v2.md is the source record. |
@@ -167,6 +168,8 @@ or upload the full Sprint Plan file directly.
 | ~~2026-08-11~~ | ~~P01~~ | ~~v2~~ | ~~Login & Session~~ | **RESET 2026-08-25** | Entry reset per full project reset #2 — lab VM + chat context lost again, confirmed with project owner 2026-08-25. Struck through rather than deleted, per this project's "never silently edit" discipline. |
 
 | ~~2026-08-11~~ | ~~P01~~ | ~~v3~~ | ~~Basic Transaction (Deposit & Withdraw)~~ | **RESET 2026-08-25** | Entry reset per full project reset #2 — same event as the v2 reset row above. |
+| 2026-09-01 | P01 | v5 | WAS Clustering | Approved | 80/80 test cases pass. 2-member cluster (devdsbinappcluster01), DMgr devdsbindmgr01, both nodes federated/synchronized, memory-to-memory session replication, live failover test passed. digistack-bank-v5.ear deployed to cluster target. Environment corrections applied from this version: WAS path /apps/IBM/WebSphere/AppServer/, DB password Wasadmin@951951. SetupDoc-v5.md + FaultDrill-v5.md complete. |
+| 2026-09-01 | P01 | v5 | WAS Clustering | Not Started |Next version — begins Sprint 1. dsb-node02 VM provisioning required (first new VM since dsb-ihs). |
 ---
 
 ## Cross-Part Dependency Chain
@@ -183,7 +186,7 @@ describe artifacts from the pre-reset build (lost along with the lab
 VM), not artifacts currently on disk. Re-add un-struck rows once each
 version is actually rebuilt and signed off again.
 
-*(Empty until Version 1 is implemented. Example row, for reference only — remove once real rows are added: `V15 | V3 (accounts table), V2 (users/session) | Customer/Account/Beneficiary/Fund Transfer tables, JMS Queue+MDB | V16 (REST Fund Transfer endpoint), V19 (external MQ leg), V23 (CBS migration)`.)*
+| V5 | V4 (digistack-bank-v4.ear), V1 (WAS profile) | DMgr devdsbindmgr01, federated nodes devdsbinnode01/02, cluster devdsbinappcluster01, memory-to-memory session replication, digistack-bank-v5.ear | V6 (DMgr/federation deep-dive, Freeze/Unfreeze via wsadmin), V7 (JNDI DataSource across cluster), V8 (plugin-cfg.xml regenerated for cluster) |
 
 ---
 
@@ -214,9 +217,9 @@ version is actually rebuilt and signed off again.
 ---
 ## Environment Notes
 
-- **WAS ND version installed:** Not yet installed — target/placeholder pin only (9.0.5.28), per STD. Lab VM lost in second reset (2026-08-25), rebuild required.
+- **WAS ND version installed:** 9.0.5.28 — confirmed at P01 v5 sign-off (2026-09-01). Install path: /apps/IBM/WebSphere/AppServer/ (corrected this version).
 - **Profile(s) created so far:** None.
-- **Database (PostgreSQL):** Not yet installed — PostgreSQL 16 target/placeholder pin only. Rebuild required. Runs on dsb-db (192.168.10.30). Active P01 v1 through P02 v22 only; decommissioned at P03 v23 Sprint 4.
+- **Database (PostgreSQL):** 16 — confirmed at P01 v5 sign-off. Runs on dsb-db (192.168.10.30), digistack_app password rotated at v5 (Wasadmin@951951). Active through P02 v22 only; decommissioned at P03 v23 Sprint 4. Runs on dsb-db (192.168.10.30). Active P01 v1 through P02 v22 only; decommissioned at P03 v23 Sprint 4.
 - **Database (Oracle):** Not yet provisioned — dsb-oracle VM not built. Oracle 21c XE target/placeholder pin (v22.5 sign-off confirms). IP: 192.168.10.32. Powers on at P02 v22.5. NEVER co-hosted with PostgreSQL on dsb-db.
 - **IBM HTTP Server installed:** No — planned v8.
 - **Any deviations from the roadmap so far:** OS confirmed as RHEL 8.x on dsb-dmgr (P01 v1 Sprint 2) — 
@@ -348,6 +351,8 @@ event. Reset executed:
   pass: the 2026-08-11 reset entry below already claimed this same
   revert had been done, but STD/SOE01's actual pins were never edited
   at that time and still read CONFIRMED (dated 2026-08-07) until now
+
+
 
 Physical rebuild (VM provisioning, WAS ND install, PostgreSQL install)
 begins fresh at P01 v1 Sprint 1.

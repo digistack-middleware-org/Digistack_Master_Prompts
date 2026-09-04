@@ -10,9 +10,10 @@ Title: Session State — Global Pointer
 
 Folder:   02_Application_Development/
 Part:     P01 — Foundation
-Version:  v1 — Project Setup & Enterprise Architecture
-Sprint:   Sprint 1 — Provision VM + Validate WAS Install
+Version:     v6 — Application Administration
+Sprint:   Sprint 1
 Status:   NOT YET STARTED
+VM Status: dsb-ihs → ON (confirmed running, IHS 9.0.5.28)
 
 ---
 
@@ -43,7 +44,7 @@ PostgreSQL:   16          (confirms at P01 v1 sign-off;
                            decommissioned at P03 v23)
 Oracle DB:    21c XE      (confirms at v22.5 sign-off)
 ojdbc8.jar:   latest      (confirms at v22.5 sign-off)
-IHS:          9.0.5.28   (confirms at P01 v8)
+IHS:          9.0.5.28   (confirms at P01 v4.5)
 IBM MQ:       9.3.x/9.4.x (confirms at P02 v19)
 OS:           RHEL 8.x 
 
@@ -62,7 +63,9 @@ dsb-oracle: OFF — powers on at P02 v22.5
             Target spec: 2 vCPU / 4 GB RAM / 60 GB disk
             Oracle 21c XE / DIGISTACK_CBS PDB (v22.5 onward)
             NEVER shares host with dsb-db
-dsb-node02: OFF — powers on at P01 v5
+dsb-node02: ON — powered on at P01 v5
+            WAS ND 9.0.5.28 running
+            (install path corrected: /apps/IBM/WebSphere/AppServer/)
 dsb-ihs:    OFF — powers on at P01 v4.5
 dsb-mq:     OFF — powers on at P02 v19
 dsb-monitor:OFF — powers on at P04 v31

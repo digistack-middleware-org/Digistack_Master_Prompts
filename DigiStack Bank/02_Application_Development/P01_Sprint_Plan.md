@@ -148,12 +148,12 @@
 **WebSphere Admin:** Confirm app status for test execution.
 **Deliverables:** TestCases-v2.md.
 **Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7.
-**Enterprise Outcome:** Version 1 test coverage complete.
+**Enterprise Outcome:** Version 2 test coverage complete.
 
 ### Sprint 7
 **Goal:** Sign off Version 2.
 **Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
-**Enterprise Outcome:** Version 1 signed off.
+**Enterprise Outcome:** Version 2 signed off.
 
 ### Sprint 8
 **Goal:** Fault Injection + Incident Simulation for Version 2.
@@ -589,7 +589,7 @@ changes (standalone → cluster).
 
 ### Sprint 5
 **Goal:** Prove session replication and failover.
-**Version 5 Deliverables:** `digistack-bank-v5.ear`, SetupDoc-v5.md, TestCases-v5.md (no schema change).
+**Learning Objective:** Memory-to-memory session replication and cluster failover.
 **Acceptance Criteria:** Session attribute intact after failover; no duplicate/lost transaction; Deposit/Withdraw mid-failover survives (per P01_Foundation.md v5 Sprint Deliverable).
 **Enterprise Outcome:** Core HA guarantee proven for the first time — kill one member mid-session, login state and a completed Deposit both survive via replication/failover.
 
@@ -876,9 +876,9 @@ plugin generation from Sprint 1 confirmed against both cluster members.
 ### Sprint 6
 **Goal:** Write and execute test cases for Version 8.
 **Learning Objective:** Test Case discipline (TCS01/TCS02).
-**WebSphere Admin:** Confirm app status for test execution.
-**Deliverables:** TestCases-v8.md.
-**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7.
+**Deliverables:** TestCases-v8.md (including TP01 Pipeline Results section).
+**WebSphere Admin:** Execute TP01_Test_Pipeline.md stages 1–5 (DEV → SIT → UAT → PRE-PROD → PROD) and record every stage in the "TP01 Pipeline Results — v8" table.
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7; all TP01 pipeline stages Pass (Critical/High) per TP01 R3.
 **Enterprise Outcome:** Version 8 test coverage complete.
 
 ### Sprint 7
@@ -942,9 +942,9 @@ plugin generation from Sprint 1 confirmed against both cluster members.
 ### Sprint 6
 **Goal:** Write and execute test cases for Version 9.
 **Learning Objective:** Test Case discipline (TCS01/TCS02).
-**WebSphere Admin:** Confirm app status for test execution.
-**Deliverables:** TestCases-v9.md.
-**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7.
+**Deliverables:** TestCases-v9.md (including TP01 Pipeline Results section).
+**WebSphere Admin:** Execute TP01_Test_Pipeline.md stages 1–5 (DEV → SIT → UAT → PRE-PROD → PROD) and record every stage in the "TP01 Pipeline Results — v9" table.
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7; all TP01 pipeline stages Pass (Critical/High) per TP01 R3.
 **Enterprise Outcome:** Version 9 test coverage complete.
 
 ### Sprint 7
@@ -1010,9 +1010,9 @@ plugin generation from Sprint 1 confirmed against both cluster members.
 ### Sprint 6
 **Goal:** Write and execute test cases for Version 10.
 **Learning Objective:** Test Case discipline (TCS01/TCS02).
-**WebSphere Admin:** Confirm app status for test execution.
-**Deliverables:** TestCases-v10.md.
-**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7.
+**Deliverables:** TestCases-v10.md (including TP01 Pipeline Results section).
+**WebSphere Admin:** Execute TP01_Test_Pipeline.md stages 1–5 (DEV → SIT → UAT → PRE-PROD → PROD) and record every stage in the "TP01 Pipeline Results — v10" table.
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7; all TP01 pipeline stages Pass (Critical/High) per TP01 R3.
 **Enterprise Outcome:** Version 10 test coverage complete.
 
 ### Sprint 7
@@ -1075,9 +1075,9 @@ plugin generation from Sprint 1 confirmed against both cluster members.
 ### Sprint 6
 **Goal:** Write and execute test cases for Version 11.
 **Learning Objective:** Test Case discipline (TCS01/TCS02).
-**WebSphere Admin:** Confirm app status for test execution.
-**Deliverables:** TestCases-v11.md.
-**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7.
+**Deliverables:** TestCases-v11.md (including TP01 Pipeline Results section).
+**WebSphere Admin:** Execute TP01_Test_Pipeline.md stages 1–5 (DEV → SIT → UAT → PRE-PROD → PROD) and record every stage in the "TP01 Pipeline Results — v11" table.
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7; all TP01 pipeline stages Pass (Critical/High) per TP01 R3.
 **Enterprise Outcome:** Version 11 test coverage complete.
 
 ### Sprint 7
@@ -1140,9 +1140,9 @@ plugin generation from Sprint 1 confirmed against both cluster members.
 ### Sprint 6
 **Goal:** Write and execute test cases for Version 12.
 **Learning Objective:** Test Case discipline (TCS01/TCS02).
-**WebSphere Admin:** Confirm app status for test execution.
-**Deliverables:** TestCases-v12.md.
-**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7.
+**Deliverables:** TestCases-v12.md (including TP01 Pipeline Results section).
+**WebSphere Admin:** Execute TP01_Test_Pipeline.md stages 1–5 (DEV → SIT → UAT → PRE-PROD → PROD) and record every stage in the "TP01 Pipeline Results — v12" table.
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7; all TP01 pipeline stages Pass (Critical/High) per TP01 R3.
 **Enterprise Outcome:** Version 12 test coverage complete.
 
 ### Sprint 7
@@ -1208,9 +1208,9 @@ plugin generation from Sprint 1 confirmed against both cluster members.
 ### Sprint 6
 **Goal:** Write and execute test cases for Version 13.
 **Learning Objective:** Test Case discipline (TCS01/TCS02).
-**WebSphere Admin:** Confirm app status for test execution.
-**Deliverables:** TestCases-v13.md.
-**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7.
+**Deliverables:** TestCases-v13.md (including TP01 Pipeline Results section).
+**WebSphere Admin:** Execute TP01_Test_Pipeline.md stages 1–5 (DEV → SIT → UAT → PRE-PROD → PROD) and record every stage in the "TP01 Pipeline Results — v13" table.
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7; all TP01 pipeline stages Pass (Critical/High) per TP01 R3.
 **Enterprise Outcome:** Version 13 test coverage complete.
 
 ### Sprint 7
@@ -1275,9 +1275,9 @@ plugin generation from Sprint 1 confirmed against both cluster members.
 ### Sprint 6
 **Goal:** Write and execute test cases for Version 14.
 **Learning Objective:** Test Case discipline (TCS01/TCS02).
-**WebSphere Admin:** Confirm app status for test execution.
-**Deliverables:** TestCases-v14.md.
-**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7.
+**Deliverables:** TestCases-v14.md (including TP01 Pipeline Results section).
+**WebSphere Admin:** Execute TP01_Test_Pipeline.md stages 1–5 (DEV → SIT → UAT → PRE-PROD → PROD) and record every stage in the "TP01 Pipeline Results — v14" table.
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7; all TP01 pipeline stages Pass (Critical/High) per TP01 R3.
 **Enterprise Outcome:** Version 14 test coverage complete.
 
 ### Sprint 7

@@ -25,7 +25,7 @@ version of SOE01 §1a / CAP01 §1a's tables.
 | dsb-dmgr (+Node1) | Standalone AppServer, hosts digistack-bank-v1.ear | 2 | 3 GB | 40 GB (thin) | **Off** — lost in 2026-08-25 reset #2, not yet rebuilt |
 | dsb-db | PostgreSQL 16 (P01–v22 only) | 2 | 4 GB | 40 GB (thin) | **Off** — lost in 2026-08-25 reset #2, not yet rebuilt. Powers on at P01 v1; decommissioned (final pg_dump, snapshot, VM deleted) at P03 v23 Sprint 4. Oracle 21c XE is NEVER installed here — Oracle runs on dsb-oracle only. |
 | dsb-node02 | 2nd cluster member | 2 | 2 GB | 40 GB | Off — powers on at P01 v5 |
-| dsb-ihs | IBM HTTP Server | 1 | 1 GB | 20 GB | Off — powers on at P01 v8 |
+| dsb-ihs | IBM HTTP Server | 1 | 1 GB | 20 GB | Off — powers on at P01 v4.5 |
 | dsb-mq | IBM MQ | 1 | 1.5 GB | 20 GB | Off — powers on at P02 v19 |
 | dsb-monitor | Prometheus/Grafana | 1 | 1.5 GB | 30 GB | Off — powers on at P04 v31 |
 | dsb-elk | OpenSearch stack | 1 | 1.5 GB | 40 GB | Off — powers on at P04 v32 |

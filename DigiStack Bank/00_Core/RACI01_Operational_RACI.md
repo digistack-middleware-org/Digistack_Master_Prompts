@@ -62,7 +62,7 @@ RACI Definitions
 | Role | Scope |
 |---|---|
 | WAS Admin | JVM, Cluster, Deployment, Plugin, WAS Security config, wsadmin |
-| DBA | PostgreSQL (schema, replication, backup/restore, performance) |
+| DBA | PostgreSQL (P01–v22) / Oracle 21c XE, DIGISTACK_CBS PDB (P03 v23 onward) — schema, replication, backup/restore, performance |
 | MQ Admin | Queue Manager, channels, queue depth, DLQ, CHLAUTH |
 | Network Team | Load Balancer, IHS reverse-proxy config, firewall, DNS, VPN/hybrid link (P09) |
 | Security Team | SSL/TLS certs, LDAP/LTPA, IAM (cloud phase), security audit findings |
@@ -80,7 +80,7 @@ ownership attached.)
 |---|---|---|---|---|---|---|---|
 | Server Failure (JVM/cluster member down) | **A/R** | I | I | C | I | I | R (detect/page) |
 | Application Failure (hangs/errors, server fine) | **A/R** | C | I | I | I | **C/R** | R (detect/page) |
-| Database Failure (PostgreSQL unreachable) | C | **A/R** | I | I | I | I | R (detect/page) |
+| Database Failure (PostgreSQL/Oracle unreachable) | C | **A/R** | I | I | I | I | R (detect/page) |
 | Storage Failure (disk full/unavailable) | C | C | I | I | I | I | R (detect/page) |
 | Network Failure (connectivity between tiers) | I | I | I | **A/R** | I | I | R (detect/page) |
 | DNS Failure | I | I | I | **A/R** | I | I | R (detect/page) |
