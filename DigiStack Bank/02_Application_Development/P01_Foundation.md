@@ -443,20 +443,39 @@ executes the TP01_Test_Pipeline.md multi-environment pipeline
 are unaffected (pipeline applies from v8 onward).
 
 Version 9 — Session Management
------------------------------------
+-------------------------------
 WebSphere Topic: Sticky sessions, session persistence/failover across the
-cluster, memory-to-memory replication tuning.
+cluster — with all three persistence strategies built and compared:
+(a) Memory-to-Memory (default), (b) Database-backed session persistence,
+(c) sticky-only (no replication) as the control case.
 
 Minimum App: Zero new functionality. Session Timeout (auto-logout after N
-minutes idle) — smallest feature that lets you observe session replication/
-timeout behavior across cluster members.
+minutes idle) — smallest feature that lets you observe session
+replication/timeout behavior across cluster members.
 
-Topics Covered: HTTP Sessions, Sticky Sessions, Session Persistence, Session
-Failover, Memory-to-Memory Replication.
+Topics Covered: HTTP Sessions, Sticky Sessions, Session Persistence,
+Session Failover, Memory-to-Memory Replication, Database-Backed Session
+Persistence (session table in PostgreSQL, dedicated DataSource/jdbc/
+SessionDS or reusing jdbc/BankDS), Session Persistence Frequency/tuning,
+Trade-off Analysis (performance vs. reliability vs. DB load).
 
-Sprint Deliverable: Session timeout enforced correctly; session survives a
-cluster member restart (memory-to-memory replication proven); sticky-session
-routing confirmed via IHS/plugin logs.
+Sprint Deliverable: All three strategies configured and exercised in turn:
+- (c) sticky-only: kill member, session lost — observed as baseline
+- (a) memory-to-memory: kill member, session survives; replication tuning
+  (single replica vs. multi-replica) observed
+- (b) DB-backed: kill member, session survives; session table growth
+  observed; timeout/purge behavior confirmed
+Comparison recorded in SetupDoc-v9.md: latency difference between (a) and
+(b) under load, DB connection-pool impact of (b) (reusing the P01 v7
+pool-sizing math), and a stated decision on which strategy this project
+ships with going forward (memory-to-memory, with DB-backed documented as
+the fallback for non-replicable session state).
+
+Interview-anchor note: the three-way comparison (when each is appropriate,
+sizing implications, DR implications) is explicitly written up as a
+SetupDoc section — this is a standard admin interview question and the
+documented reasoning is the deliverable, not just the config.
+  
 
 Version 10 — Users & Groups
 --------------------------------

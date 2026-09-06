@@ -20,7 +20,7 @@
 
 **Business Scope:** Customer Information, Customer Verification, Open/Close Account, Deposit, Withdrawal, Balance Inquiry, Fund Transfer, Mini Statement, Savings/Current Account products.
 
-**WebSphere Focus:** Enterprise Service Layer, Shared Business Services, XA Transactions, Clustered Business Services, JDBC Optimization/Connection Pool Tuning, Enterprise Deployment, Application Ownership Migration (data, endpoints, messaging, satellite service extraction).
+**WebSphere Focus:** Enterprise Service Layer, Shared Business Services, JTA/XA-capable transaction management within CBS, Clustered Business Services, JDBC Optimization/Connection Pool Tuning, Enterprise Deployment, Application Ownership Migration (data, endpoints, messaging, satellite service extraction). Cross-EAR payment settlement deliberately uses Saga/compensating-transaction coordination rather than a distributed XA transaction.
 
 **Expected Outcome:** Internet Banking Portal invokes CBS exclusively via REST/SOAP for every transaction; direct Portal→DB access is removed entirely; CBS enforces business validation and XA transaction integrity; existing P01/P02 data is migrated into `digistack_cbs` and verified; Notification Service and Reporting Service stood up as independent applications.
 
@@ -59,7 +59,7 @@
 **Application Development:**
 - UI: N/A (CBS is service-only; Portal keeps existing UI)
 - Backend: CBS EAR scaffold — `controller/`, `service/`, `dao/`, `model/`, `config/` per ARCH02
-- Database: V23__migrate_existing_data_to_cbs.sql — Oracle-dialect DDL extension script (new CBS columns/tables on the already-populated schema); data itself was migrated at v22.5
+- Database: `V23__migrate_existing_data_to_cbs.sql` — Oracle-dialect CBS schema-extension script applied to the already-populated `digistack_cbs` schema; no second full data migration occurs in v23 because the data was migrated and row-count verified during v22.5
 - API: N/A this sprint
 
 **WebSphere Administration:**
@@ -116,7 +116,7 @@
 
 **Dependencies:** Sprint 3's relocated endpoints, ARCH01 P-5 (presentation-only channels).
 **Deliverables:** Portal redeployed with zero direct DB access; negative test proving old DataSource lookup fails; jdbc/BankDS and jdbc/OracleDS retired; final pg_dump archived; dsb-db VM deleted (no PostgreSQL left in the estate).
-**Acceptance Criteria:** Every existing Portal transaction still works end-to-end via CBS; a deliberate JNDI lookup of Portal's old DataSource throws a NameNotFoundException.
+**Acceptance Criteria:** Every existing Portal transaction still works end-to-end via CBS; a deliberate JNDI lookup of Portal's old DataSource throws a NameNotFoundException; Portal deployment configuration contains no active database DataSource, database credentials, or direct JDBC connection path to `digistack_cbs`.
 **Enterprise Outcome:** The Governing Rule ("only CBS writes to digistack_cbs") becomes enforced, not aspirational — the architectural pivot point of the whole project.
 
 ---
@@ -127,7 +127,7 @@
 **Business Features:** Withdraw-triggered email (relocated from P01 v13), Transaction Report + Account Statement (relocated from P01 v14/P02 v16).
 **Application Development:**
 - UI: N/A (Reporting Service reuses existing report output)
-- Backend: `NotificationService.ear` (consumes CBS-published MQ events), `ReportingService.ear` (reads `digistack_cbs` directly — accepted tradeoff)
+- Backend: `NotificationService.ear` (consumes CBS-published MQ events), `ReportingService.ear` (read-only access to `digistack_cbs` — explicit, temporary architecture exception documented in the Governing Rule and scheduled for later removal)
 - Database: Negative-test grants — both services' DB accounts are read-only or no-access
 - API: N/A this sprint
 
@@ -209,7 +209,13 @@
 
 ## Version Overview
 
-**Version Objective:** Introduce the Customer Information File (CIF) as the master customer repository used by every banking channel, supporting one customer → multiple accounts, with simulated Aadhaar/PAN verification gating creation.
+**Version Objective:** Introduce the Customer Information File (CIF) as the
+master customer repository used by every banking channel, supporting multiple
+independent customers, with one CIF per customer and one customer → multiple
+accounts. Simulated Aadhaar/PAN verification gates creation of each CIF.
+Each CIF must be associated with the authenticated customer identity used by
+the banking channels so that Customer1 and Customer2 remain independently
+identifiable throughout account and payment processing.
 
 **Business Scope:** Create CIF, Modify CIF, Customer Search, Aadhaar Verification, PAN Verification, Primary Holder, Nominee.
 
@@ -262,7 +268,10 @@
 
 **Dependencies:** Sprint 1's `cif` table, P03 v23's CBS EAR scaffold.
 **Deliverables:** Working CIF create/modify flow.
-**Acceptance Criteria:** A new CIF record is created via the Portal UI and persists correctly; modifying an existing CIF record updates the correct row.
+**Acceptance Criteria:** At least two independent CIF records can be created via
+the Portal UI and persist as separate rows. Each CIF is associated with its
+corresponding authenticated customer identity. Modifying one CIF updates only
+that CIF, and searching for Customer1 does not return Customer2's CIF data.
 **Enterprise Outcome:** First new service module added cleanly to the multi-module EAR pattern established at v23.
 
 ---
@@ -439,6 +448,9 @@
 **Sprint Goal:** Implement Beneficiary management (Add/Modify/Delete) as CBS-facing calls from Payment Hub.
 **Learning Objective:** Payment Hub as a pure coordinator — even beneficiary data lives in CBS, not locally.
 **Business Features:** Add Beneficiary, Modify Beneficiary, Delete Beneficiary.
+A beneficiary belongs to the authenticated source customer/CIF and identifies
+the destination customer/CIF and destination account when the beneficiary is
+another customer of the same bank.
 **Application Development:**
 - UI: Beneficiary management form (Internet Banking Portal)
 - Backend: `BeneficiaryService` in Payment Hub, delegates persistence to CBS via REST/SOAP client stub
@@ -1146,7 +1158,7 @@
 ## Version 28 Exit Criteria
 - ✅ Application functionality complete (Issue/Activate/Generate PIN/Block/Hotlist/Reset PIN/Status Lookup)
 - ✅ Database validated (V28 migration applied and verified; Card Portal confirmed zero direct DB access)
-- ✅ WebSphere deployment successful (sixth independent WAS EAR live, plugin-routed subdomain confirmed distinct from Tomcat subdomains)
+- ✅ WebSphere deployment successful (sixth independent WAS EAR live — Card Portal; plugin-routed `card.digistack.cloud` subdomain confirmed distinct from the Tomcat subdomains; seven WAS EARs will exist after Version 29)
 - ✅ TP01 pipeline passed (all 5 stages, all Critical/High rows Pass in TP01 Pipeline Results table)
 - ✅ Smoke testing passed (full regression + Card Portal negative test + Block-Card/ATM integration re-verification)
 - ✅ Ready for Version 29
@@ -1273,7 +1285,7 @@
 **Business Features:** EOD Reconciliation Report.
 **Application Development:**
 - UI: Reconciliation Report view (internal ops), flags any mismatch
-- Backend: ReconciliationService (within Reporting Service, P03 v23) — reads CBS's ledger directly (read-only) and Payment Hub's settled NEFT/IMPS records via Payment Hub's REST query endpoint (Payment Hub holds no database of its own per v25), ties them out, flags discrepancies
+- Backend: ReconciliationService (within Reporting Service, P03 v23) — reads CBS's ledger through explicitly approved read-only access and Payment Hub's settled NEFT/IMPS records via Payment Hub's REST query endpoint (Payment Hub holds no database of its own per v25), ties them out, and flags discrepancies without modifying CBS business data
 - Database: N/A (read-only, per Reporting Service's accepted OLTP-read tradeoff)
 - API: REST endpoint to retrieve the reconciliation report
 
@@ -1549,7 +1561,10 @@
 ## P03 Final Application State
 Total deployable applications: Internet Banking Portal, CBS, Payment Hub, Notification Service, Reporting Service, Branch Portal, Card Portal (7 WAS EARs) + Mobile Banking, ATM Simulator (2 Tomcat apps) = **9 distinct deployable applications**.
 
-Governing Rule in force: only CBS writes to `digistack_cbs` — every other application invokes CBS services or consumes CBS-published events. Verified via negative tests at every version from v23 onward.
+**Governing Rule:** Only CBS writes to `digistack_cbs`. Other applications
+must not perform business-data writes. They either invoke CBS services,
+consume CBS-published events, or use explicitly approved read-only access
+where this roadmap defines a direct-read requirement. Verified via negative tests at every version from v23 onward.
 
 CBS internal modules (single EAR, per v23's architectural decision): CIF, Account, Transaction, Card, Operations, Loan.
 

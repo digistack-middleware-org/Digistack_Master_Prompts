@@ -111,7 +111,11 @@ materially extended this Part.
   columns on users/account, not a
   separate table until P03 v24 CIF,
   v17 OTP/lockout/audit fields,
-  v19 external-flag on Beneficiary)
+- v19 is_external flag on Beneficiary — distinguishes internal
+  beneficiary (own account, SIBus route) from external beneficiary
+  (another customer of the same bank, IBM MQ route). External
+  beneficiaries identify both the destination customer_id and
+  destination account number.
 
 Not in scope this Part: 09_DR_Architecture.md (still P05). Cluster
 topology (04) is unchanged from P01 — no new members added in P02.
@@ -127,24 +131,35 @@ Async processing needs *something* moving between two parties to be worth
 doing asynchronously — Deposit/Withdraw against a single account don't
 qualify. So this version introduces the smallest possible new features
 that make async meaningful:
-- Customer — minimal: the existing users row (from v2) gets a customer_id,
-  name, and the ability to hold more than one account. No KYC, no
-  verification workflow — just enough to say "a customer can have multiple
-  accounts."
+- Customer — minimal: the existing users row (from v2) represents a
+  customer/login identity and gets a customer_id and name. The application
+  must support creation of multiple independent customers, each with a
+  separate login identity. No KYC or verification workflow is required in
+  P02 — customer creation is intentionally lightweight. Each customer can
+  subsequently own more than one account.
 - Account (multi-account) — the existing accounts table (v3) gains a
   customer_id foreign key, so one customer can have 2+ accounts.
-- Beneficiary — minimal: register another account (own or a test
-  "external" account) you're allowed to transfer to. One table, no
-  approval workflow.
-- Fund Transfer — the actual new transaction: move money from one of your
-  accounts to a registered Beneficiary account. This is the feature that
-  gets processed asynchronously.
+- Beneficiary — minimal (INTERNAL ONLY in this version): register your own
+  other account (Account1 → Account2, same customer) as an internal
+  beneficiary you're allowed to transfer to. One table, no approval
+  workflow. Transfers to ANOTHER customer (external beneficiaries) do NOT
+  exist yet — that is v19's IBM MQ leg.
+- Fund Transfer (INTERNAL) — the actual new transaction: move money from
+  one of your own accounts (Account1) to another of your own registered
+  accounts (Account2). This is the feature that gets processed
+  asynchronously via SIBus. Customer-to-Customer (external) transfers are
+  explicitly out of scope until v19.
 
 How It's Wired
-Fund Transfer returns an immediate "accepted" response to the customer,
-then the actual balance update happens via an MDB consuming from a JMS
-Queue on SIBus. A deliberately-failing transfer (e.g., insufficient funds
-discovered only during async processing) lands in the DLQ and is inspected.
+INTERNAL Fund Transfer (Account1 → Account2, same customer) returns an
+immediate "accepted" response to the customer, then the actual balance
+update on Account2 happens via an MDB consuming from a JMS Queue on SIBus.
+A deliberately-failing transfer (e.g., insufficient funds discovered only
+during async processing) lands in the DLQ and is inspected.
+
+Routing rule established here and honored for the rest of the roadmap:
+- Internal beneficiary (own account)  → SIBus JMS/MDB (this version)
+- External beneficiary (another customer, Customer2) → IBM MQ (v19)
 
 Application Evolution This Version
 
@@ -360,6 +375,47 @@ working on SystemOut/SystemErr.
 > Version 31 note for the retirement/decommission detail.
 
 ---
+Version 18.5 — DynaCache (Dynamic Caching)
+---------------------------------------------
+WebSphere Topic: WebSphere Dynamic Cache (DynaCache) — object cache,
+servlet cache, cache instances, cache replication across the cluster,
+cache monitoring via PMI/JMX and CacheMonitor.
+
+Rationale (slot placement): v16 exposed REST/SOAP endpoints and v16.5
+built the paged Transaction History — both now have cacheable hot paths
+(Balance Inquiry responses, Dashboard "Recent Transactions" fragments,
+Beneficiary lookup results). v18's Operations Dashboard then gains a
+cache hit-ratio panel, so DynaCache lands immediately before it.
+
+Minimum App:
+- Servlet cache: cache the Dashboard's Recent Transactions fragment
+  (read-heavy, identical per customer for the duration of a session)
+  with an appropriate invalidation rule on new Fund Transfer events.
+- Object cache: a dedicated cache instance for Beneficiary lookups
+  (v15 data) — read on nearly every transfer, rarely changes.
+- Zero new banking features. Deliberate invalidation test: a successful
+  Fund Transfer invalidates the cached fragment; next read reflects the
+  new balance.
+
+Topics Covered: Dynamic Cache Service, Object Cache Instances, Servlet
+Caching (cachespec.xml), Cache Replication (cluster-wide, via the existing
+memory-to-memory session replication infrastructure from P01 v9), Cache
+Invalidation Rules, DynaCache MBeans / PMI monitoring, edge cases
+(cache vs. security: never caching per-user data into shared instances).
+
+Sprint Deliverable: cachespec.xml drives servlet caching on the Recent
+Transactions fragment and a dedicated cache instance holds Beneficiary
+lookups; a balance-affecting transfer triggers visible invalidation (stale
+balance proved, then corrected); cache replication confirmed by hitting
+the cached entry from both cluster members; hit/miss ratios visible via the existing PMI/JMX Operations Dashboard
+introduced in Version 18.
+
+Security guardrail (cross-ref v17): the Balance Inquiry endpoint is
+deliberately NOT cached at the shared-instance level — documented as a
+negative decision with reasoning (per-user data + shared cache = data
+leak risk). Proving you know what NOT to cache is the interview-grade
+skill here.
+---
 
 Version 19 — IBM MQ Integration
 --------------------------------------
@@ -367,20 +423,34 @@ WebSphere Topic: IBM MQ Queue Manager, local/remote/transmission queues,
 channels, MQ JMS Connection Factory, MQ-level DLQ.
 
 Minimum App Needed
-No new banking feature — extends v15's Fund Transfer with an external leg:
-- A Fund Transfer whose Beneficiary is flagged "external bank" now routes
-  its message through IBM MQ instead of (or in addition to) the internal
-  SIBus queue from v15, simulating a Payment Request sent to an external
-  banking system and a Payment Response received back.
+Extends v15's Fund Transfer with the customer-to-customer (EXTERNAL) leg:
+- "External beneficiary" here means a destination account owned by ANOTHER
+  CUSTOMER of the same bank (Customer2), registered by Customer1 as an
+  external beneficiary — NOT an external bank. The beneficiary record must
+  identify Customer2 and the destination account number so the payment-leg
+  simulator can credit the correct Customer2 account.
+- A Fund Transfer to an external beneficiary (Customer1 → Customer2) now
+  routes its message through IBM MQ instead of the internal SIBus queue
+  used for own-account transfers at v15 — simulating a Payment Request
+  sent to the external payment leg and a Payment Response received back.
+- When Customer2 next logs in, the credited amount is reflected in
+  Customer2's account (balance + transaction history), proving the MQ
+  round-trip completed the settlement.
+- Internal transfers (Customer's own Account1 → Account2) continue to use
+  SIBus exactly as built at v15 — both paths coexist from this version.
 
 Topics Covered: IBM MQ, Queue Manager, Local Queue, Remote Queue,
 Transmission Queue, Channels, Listener, Triggering, MQ JMS, MQ Connection
 Factory, Dead Letter Queue, MQ Monitoring.
 
-Sprint Deliverable: IBM MQ Queue Manager created and connected via MQ JMS
-Connection Factory; an "external" Fund Transfer sends a Payment Request
-message to an external banking system simulator and receives a Payment
-Response back through a dedicated response queue.
+Sprint Deliverable: IBM MQ Queue Manager created and connected via MQ JMS Connection Factory;
+Customer1 registers Customer2 as an external beneficiary and sends money —
+the payment travels as a Payment Request message through IBM MQ and
+receives a Payment Response back through a dedicated response queue; the
+amount is then credited to Customer2's account, visible when Customer2
+logs in. Own-account (internal) transfers still work over SIBus, proving
+both routing paths independently.
+
 
 Security note (unchanged from original): MQ channels connecting to the
 external simulator use channel authentication records (CHLAUTH) and
@@ -691,7 +761,8 @@ dsb-oracle confirmed stable (PDB auto-opens after reboot via SAVE STATE,
 remote connection from WAS VMs verified); dsb-db (PostgreSQL VM)
 untouched and running independently; existing
 application (digistack-bank-v22.ear) confirmed fully functional against
-both DataSources before PostgreSQL handoff to v23.
+jdbc/OracleDS after migration; jdbc/BankDS remains available only as the
+rollback/source DataSource until P03 v23 Sprint 4.
 
 Technical Debt Introduced
 - PostgreSQL digistack_bank remains live on its dedicated VM (dsb-db)
@@ -708,8 +779,10 @@ Completion Checklist
 ------------------------
 □ Customer/Account model supports multiple accounts per customer
   (introduced v15)
-□ Beneficiary registration and Fund Transfer (internal via SIBus, external
-  via IBM MQ) working, with DLQ handling proven on both paths
+□ Beneficiary registration and Fund Transfer proven on both routing paths:
+  internal (own Account1 → Account2 via SIBus) and external (Customer1 →
+  Customer2 via IBM MQ, credit visible on Customer2's login), with DLQ
+  handling proven on both paths
 □ Transaction History/Account Statement available via both REST (Balance
   Inquiry) and SOAP (Statement) endpoints, WSDL published
 □ MFA/OTP, account lockout, and basic security-event detection enforced;

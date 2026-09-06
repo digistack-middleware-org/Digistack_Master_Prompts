@@ -146,8 +146,11 @@ Still not in scope this Part: 09_DR_Architecture.md (P05).
 The One Governing Rule (Introduced at Version 23, Applies for the Rest of the Roadmap)
 -------------------------------------------------------------------------------------------
 Only CBS writes to digistack_cbs. Every other application either invokes
-CBS services (synchronously, via REST/SOAP/EJB) or consumes CBS-published
-events (asynchronously, via JMS/MQ). No exceptions.
+CBS services (synchronously, via REST/SOAP/EJB), consumes CBS-published
+events (asynchronously, via JMS/MQ), or has explicitly approved read-only
+access where this roadmap states that direct reads are required. No
+application other than CBS may perform a business-data write to
+digistack_cbs.
 
 Applied per service, from Version 23 onward:
 
@@ -181,11 +184,11 @@ Applied per service, from Version 23 onward:
  Never updates account balances 
 |
 |
- Reporting Service 
+|  Reporting Service 
 |
- Reads data, generates reports 
+|  Reads approved CBS data read-only and generates reports 
 |
- Never updates business tables 
+|  Never updates business tables and never performs business-data writes 
 |
 |
  Branch Portal 
@@ -586,7 +589,7 @@ Ownership Matrix (before/after this version):
 | Database Writes | Portal | CBS only |
 | REST/SOAP Endpoints | Portal | CBS |
 | SIBus / MDB | Portal | CBS |
-| IBM MQ Business Processing | Portal | CBS |
+| IBM MQ Business Processing (external/Customer-to-Customer leg) | Portal | CBS |
 | Authentication | Portal (own session/MFA) | Internet Banking authenticates users (login/MFA) and propagates a trusted identity (LTPA/JWT) to CBS; CBS performs authorization for business services |
 | Notifications | Portal module (v13) | Notification Service (own EAR) |
 | Reporting | Portal module (v14, v16 SOAP) | Reporting Service (own EAR) |
@@ -712,8 +715,10 @@ Notification Service, Reporting Service, and Branch Portal.
 Version 24 — Customer Information File (CIF) & Account Lifecycle
 ------------------------------------------------------------------------
 Objective: Introduce Customer Information File (CIF), the master customer
-repository used by every banking channel. One customer → multiple
-accounts.
+repository used by every banking channel. The CIF model supports multiple
+independent customers, with one CIF representing one customer and one customer
+owning multiple accounts. Each CIF is associated with the authenticated
+customer identity used by the banking channels.
 
 Banking Features Added: Create CIF, Modify CIF, Customer Search, Aadhaar
 Verification, PAN Verification, Primary Holder, Nominee.
@@ -744,10 +749,12 @@ Communication, JDBC Transactions, Data Integrity.
 Enterprise Learning: CIF Architecture, Customer Master Data, Enterprise
 Banking Relationships, Account Lifecycle Management.
 
-Sprint Deliverable: A single CIF record supports multiple linked accounts;
-Aadhaar/PAN verification (simulated) gates CIF creation; CIF Service and
-Account Service communicate as separate modules within CBS's multi-module
-EAR, not as one monolithic class.
+Sprint Deliverable: Multiple independent CIF records can be created and
+searched; each CIF supports multiple linked accounts; Aadhaar/PAN
+verification (simulated) gates creation of each CIF; each CIF is associated
+with its authenticated customer identity; CIF Service and Account Service
+communicate as separate modules within CBS's multi-module EAR, not as one
+monolithic class.
 
 Note: "Enterprise Validation" appeared as a heading with no listed content
 in the source material — folded into Enterprise Learning above (Aadhaar/PAN

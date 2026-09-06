@@ -2,11 +2,11 @@
 ## Consolidated Sprint Plan (Versions 15–22)
 
 **Part:** P02 — WebSphere / Enterprise Middleware Integration
-**Versions Covered:** 15, 16, 16.5, 17, 18, 19, 20, 21, 22
+**Versions Covered:** 15, 16, 16.5, 17, 18, 19, 20, 21, 22, 22.5
 **Status:** ⏳ Not Started — planning document only, no versions built or signed off
 **Prerequisite:** P01 Completion Checkpoint satisfied (`digistack-bank-v14.ear`, 2-member cluster, IHS, SSL end-to-end, JNDI DataSource, Customer/Administrator roles, JNDI Mail Session)
 **Next:** P03 — Enterprise Banking Systems (CBS, Payments, Channel Simulators, Loans)
-**Sprint Structure:** 8 sprints per version — Sprint 1–4 Build, Sprint 5 Package and Deploy, Sprint 6 Test Cases (executes the full TP01 5-stage pipeline per TP01_Test_Pipeline.md), Sprint 7 Sign-off, Sprint 8 Fault Injection + Incident.
+**Sprint Structure:** 8 sprints per version — Sprint 1–5 Build/Configuration, Sprint 6 Test Cases and final deployment validation (executes the full TP01 5-stage pipeline per TP01_Test_Pipeline.md), Sprint 7 Sign-off, Sprint 8 Fault Injection + Incident.
 **Test Pipeline:** TP01 (mandatory from v8 onward) — every version's Sprint 6 runs DEV → SIT → UAT → PRE-PROD → PROD stages; results recorded in each TestCases-v<N>.md under "## TP01 Pipeline Results — v<N>".
 
 
@@ -29,12 +29,12 @@
 ---
 
 ### Sprint 1
-**Sprint Goal:** Extend the data model for multi-account customers.
+**Sprint Goal:** Extend the data model for multiple customers and multi-account customers.
 **Learning Objective:** Schema evolution without breaking existing deployables.
-**Business Features:** Customer entity (customer_id, name) linked to existing `users` row; Account gains `customer_id` FK, supports 2+ accounts per customer.
+**Business Features:** Customer entity (customer_id, name) linked to existing `users` row; the application supports multiple independent customers, each with a separate login identity. Account gains `customer_id` FK and supports 2+ accounts per customer.
 **Application Development:**
-- UI: Account list view (replaces single-balance view)
-- Backend: CustomerService, AccountService (multi-account aware)
+- UI: Customer creation/login setup flow for test customers; Account list view (replaces single-balance view)
+- Backend: CustomerService, AccountService (multi-customer and multi-account aware)
 - Database: `V15__create_customer_account_beneficiary_fundtransfer.sql`
 - API: N/A
 
@@ -44,7 +44,7 @@
 
 **Dependencies:** P01 v3 accounts table, P01 v7 DataSource.
 **Deliverables:** Updated schema, redeployed EAR, multi-account UI.
-**Acceptance Criteria:** A test customer has 2 accounts, both visible and independently balance-checkable.
+**Acceptance Criteria:** At least two independent test customers can be created, each can authenticate with a separate login identity, and each can own 2+ accounts. All accounts are visible only under their owning customer and are independently balance-checkable. Customer1 cannot view, modify, freeze, withdraw from, transfer from, or transfer to Customer2's accounts in Version 15.
 **Enterprise Outcome:** Baseline multi-account data model ready for async work.
 
 ---
@@ -52,11 +52,11 @@
 ### Sprint 2
 **Sprint Goal:** Add Beneficiary registration.
 **Learning Objective:** Model a minimal cross-account relationship without an approval workflow.
-**Business Features:** Register a Beneficiary (own or test external account); view registered Beneficiaries.
+**Business Features:** **Business Features:** Register an internal Beneficiary representing another account owned by the same customer; view registered Beneficiaries. External/Customer-to-Customer beneficiaries are explicitly deferred to Version 19.; view registered Beneficiaries.
 **Application Development:**
 - UI: Beneficiary registration form + list
 - Backend: BeneficiaryService
-- Database: (part of `V15__create_customer_account_beneficiary_fundtransfer.sql`, per Sprint 1)
+- Database: (part of `V15__create_customer_account_beneficiary_fundtransfer.sql`, per Sprint 1). The Beneficiary model must contain `id`, `customer_id` (source/owner customer), `destination_customer_id`, `account_number` (destination account), `name`, `is_external`, and `created_at`.
 - API: N/A
 
 **WebSphere Administration:**
@@ -64,8 +64,8 @@
 
 **Dependencies:** Sprint 1's Account model.
 **Deliverables:** Beneficiary table + UI.
-**Acceptance Criteria:** A customer registers one internal and one "external" test beneficiary successfully.
-**Enterprise Outcome:** Fund Transfer (Sprint 3+) has a real target to transfer to.
+**Acceptance Criteria:** A customer registers one internal beneficiary pointing to another account owned by the same customer; an external/Customer-to-Customer beneficiary cannot be registered or used until Version 19.
+**Enterprise Outcome:** Fund Transfer (Sprint 4+) has a real target to transfer to.
 
 ---
 
@@ -89,10 +89,10 @@
 ### Sprint 4
 **Sprint Goal:** Implement Fund Transfer as an async-triggering transaction.
 **Learning Objective:** Producer pattern — send a message, return immediately.
-**Business Features:** Fund Transfer: select source Account, Beneficiary, amount.
+**Business Features:** Fund Transfer: select source Account, Beneficiary, amount. FundTransferService must validate that the source Account belongs to the authenticated customer and that, for Version 15 internal beneficiaries, the destination Account belongs to the same customer. External beneficiaries and Customer-to-Customer transfers are not accepted in Version 15 and remain disabled until Version 19.
 **Application Development:**
 - UI: Fund Transfer form
-- Backend: FundTransferService (producer) — validates request, sends JMS message, returns "Accepted"
+- Backend: FundTransferService (producer) — validates authenticated customer ownership, source-account ownership, beneficiary type, destination-account validity, and sufficient-transfer prerequisites; internal transfers are sent to the SIBus JMS queue and return "Accepted" immediately.
 - Database: (part of `V15__create_customer_account_beneficiary_fundtransfer.sql`, status: PENDING/PROCESSED/FAILED)
 - API: N/A (REST comes in Version 16)
 
@@ -124,7 +124,7 @@
 
 **Dependencies:** Sprint 4's producer, Sprint 3's Queue.
 **Deliverables:** End-to-end async Fund Transfer.
-**Acceptance Criteria:** A submitted transfer moves from PENDING → PROCESSED within seconds; balances update correctly.
+**Acceptance Criteria:** A submitted internal transfer moves from PENDING → PROCESSED within seconds; the source Account is debited exactly once, the destination Account is credited exactly once, both Accounts belong to the authenticated Customer, the transfer amount is positive, insufficient funds result in FAILED rather than PROCESSED, and the corresponding transaction-history entries are consistent with the final balances.
 **Enterprise Outcome:** First true asynchronous banking transaction, WebSphere's core JMS/MDB pattern proven.
 
 ---
@@ -889,15 +889,15 @@
 
 ## Version Overview
 
-**Version Objective:** Extend v15's Fund Transfer with an external leg — a transfer to an "external bank" beneficiary routes through IBM MQ instead of the internal SIBus queue, simulating a Payment Request sent to and Payment Response received from an external banking system.
+**Version Objective:** Extend v15's Fund Transfer with a customer-to-customer external leg — a transfer from Customer1 to Customer2 routes through IBM MQ instead of the internal SIBus queue, simulating a Payment Request sent to the external payment leg and a Payment Response received back.
 
 **Business Scope:** No new banking feature — extends existing Fund Transfer with an external-routing path.
 
 **WebSphere Focus:** IBM MQ, Queue Manager, Local Queue, Remote Queue, Transmission Queue, Channels, Listener, Triggering, MQ JMS, MQ Connection Factory, Dead Letter Queue, MQ Monitoring.
 
-**Expected Outcome:** IBM MQ Queue Manager created and connected via MQ JMS Connection Factory; an "external" Fund Transfer sends a Payment Request message to an external banking system simulator and receives a Payment Response back through a dedicated response queue.
+**Expected Outcome:** IBM MQ Queue Manager created and connected via MQ JMS Connection Factory; a Customer1-to-Customer2 Fund Transfer sends a Payment Request through IBM MQ to the external payment-leg simulator and receives a Payment Response back through a dedicated response queue.
 
-**Prerequisites:** P02 Version 18 Completion Checkpoint satisfied — Operations Dashboard (JVM/Session/Queue/DB Pool) live; log rotation confirmed.
+**Prerequisites:** P02 Version 18 Completion Checkpoint satisfied — Operations Dashboard (JVM/Session/Queue/DB Pool) live; log rotation confirmed. Test data must contain at least two independent customers (Customer1 and Customer2), each with at least one active account and separate login credentials. Customer1 must have sufficient funds in the source account and Customer2 must have a valid destination account.
 
 ---
 
@@ -924,7 +924,7 @@
 **Application Development:** N/A this sprint.
 **WebSphere Administration:**
 - Create `BANK.PAYMENT.REQUEST.Q` (local), `BANK.PAYMENT.RESPONSE.Q` (local)
-- Create a transmission queue and remote queue definition simulating the "external bank" endpoint
+- Create a transmission queue and remote queue definition simulating the "external payment-leg" endpoint. This simulator represents the external payment-processing leg of the same bank's Customer1 → Customer2 flow; it is not a second bank and does not represent an interbank transfer.
 - Configure a sender/receiver channel pair
 
 **Dependencies:** Sprint 1's Queue Manager.
@@ -953,9 +953,9 @@
 ### Sprint 4
 **Sprint Goal:** Route "external" Fund Transfers through IBM MQ instead of SIBus.
 **Learning Objective:** Conditional routing logic — internal vs. external payment leg.
-**Business Features:** A Fund Transfer whose Beneficiary is flagged "external bank" routes via IBM MQ.
+**Business Features:** A Fund Transfer whose Beneficiary is flagged `is_external=true`, identifies a valid `destination_customer_id` belonging to another customer of the same bank, and identifies that customer's destination account routes via IBM MQ. A beneficiary with `is_external=false` represents the authenticated customer's own account and routes via SIBus.
 **Application Development:**
-- UI: Beneficiary flag ("external bank") surfaced in the existing registration form
+- UI: Beneficiary flag (`is_external`) surfaced in the existing registration form; external means another customer of the same bank, not another bank
 - Backend: FundTransferService updated to check the Beneficiary flag and route to MQ (via Sprint 3's Connection Factory) instead of SIBus when external
 - Database: `V19__add_external_flag_to_beneficiary.sql`
 - API: N/A (reuses v16's REST endpoint)
@@ -968,15 +968,40 @@
 **Acceptance Criteria:** A transfer to an internal beneficiary still uses SIBus (unchanged from v15); a transfer to an external-flagged beneficiary sends a message on `BANK.PAYMENT.REQUEST.Q`.
 **Enterprise Outcome:** First dual-messaging-path banking transaction, proving the app can route to the correct backbone based on business rules.
 
+**IBM MQ Payment Request Message Contract:**
+- `message_id` — unique MQ message/correlation identifier
+- `transfer_id` — original Fund Transfer identifier
+- `source_customer_id` — Customer1
+- `source_account_id` — Customer1 source account
+- `destination_customer_id` — Customer2
+- `destination_account_number` — Customer2 destination account
+- `amount` — transfer amount
+- `currency` — simulation currency
+- `created_at` — request timestamp
+- `message_type` — `PAYMENT_REQUEST`
+
+**IBM MQ Payment Response Message Contract:**
+- `message_id`
+- `transfer_id`
+- `status` — `PROCESSED` or `FAILED`
+- `destination_customer_id`
+- `destination_account_number`
+- `amount`
+- `error_code` — populated for failed processing
+- `processed_at`
+- `message_type` — `PAYMENT_RESPONSE`
+
+The `transfer_id` must be used as the correlation identifier between the request and response.
+
 ---
 
 ### Sprint 5
-**Sprint Goal:** Build the external banking system simulator and complete the response leg.
+**Sprint Goal:** Build the external payment-leg simulator and complete the response leg.
 **Learning Objective:** Simulating an external counterparty system consuming/producing MQ messages.
 **Business Features:** Payment Response received back and applied to the Fund Transfer's status.
 **Application Development:**
 - UI: Fund Transfer status reflects response from external simulator (PROCESSED/FAILED)
-- Backend: ExternalBankSimulatorMDB — consumes from `BANK.PAYMENT.REQUEST.Q`, simulates processing, sends a Payment Response to `BANK.PAYMENT.RESPONSE.Q`; PaymentResponseConsumerMDB — consumes response, updates Fund Transfer status
+- Backend: ExternalPaymentLegSimulatorMDB — consumes from `BANK.PAYMENT.REQUEST.Q`, reads the source customer/account, `destination_customer_id`, destination account number, amount, and transfer correlation ID from the payment message, validates/simulates Customer2 payment-leg processing, credits the destination account, and sends a Payment Response to `BANK.PAYMENT.RESPONSE.Q`; PaymentResponseConsumerMDB — consumes the response, correlates it to the original Fund Transfer, and updates Fund Transfer status.
 - Database: N/A (reuses v15's fund_transfer table)
 - API: N/A
 
@@ -1030,7 +1055,7 @@
 ---
 
 ## Version 19 Deliverables
-- `digistack-bank-v19.ear` (external Fund Transfer routing, external bank simulator MDBs)
+- `digistack-bank-v19.ear` (customer-to-customer external Fund Transfer routing, external payment-leg simulator MDBs)
 - `V19__add_external_flag_to_beneficiary.sql`
 - IBM MQ Queue Manager, queue/channel configuration exports, MQ JMS Connection Factory/JNDI bindings, CHLAUTH/SSL config
 - SetupDoc-v19.md, TestCases-v19.md
@@ -1574,7 +1599,8 @@ deployment and lifecycle management.
 ---
 
 ### Sprint 1
-**Sprint Goal:** Provision dsb-oracle, install Oracle 21c XE, and create\nthe DIGISTACK_CBS Pluggable Database.
+**Sprint Goal:** Provision dsb-oracle, install Oracle 21c XE, and create
+the DIGISTACK_CBS Pluggable Database.
 **Learning Objective:** Oracle 21c XE CDB/PDB architecture — understanding
 the Container Database (CDB) / Pluggable Database (PDB) model that
 replaces PostgreSQL's flat database model; SESSIONS and PROCESSES
@@ -1582,7 +1608,12 @@ init parameters that replace PostgreSQL's max_connections.
 **Business Features:** None (pure infrastructure).
 **Application Development:** N/A this sprint.
 **WebSphere Administration:**
-- Create VM dsb-oracle in VMware Workstation: 2 vCPU, 4 GB RAM, 60 GB\n  disk, Oracle Linux 8; static IP, same subnet as the WAS VMs; power on\n  and confirm vCPU/RAM visible to OS\n- Install Oracle 21c XE on dsb-oracle following Oracle's silent install\n  method (response file); confirm CDB (XEPDB1 default, we rename to\n  DIGISTACK_CBS) is created
+- Create VM dsb-oracle in VMware Workstation: 2 vCPU, 4 GB RAM, 60 GB
+  disk, Oracle Linux 8; static IP, same subnet as the WAS VMs; power on
+  and confirm vCPU/RAM visible to OS
+- Install Oracle 21c XE on dsb-oracle following Oracle's silent install
+  method (response file); confirm the Oracle CDB and the
+  DIGISTACK_CBS PDB are created
 - Set Oracle init parameters:
   - SESSIONS: set to 100 (2 × PROCESSES + 5 formula; matches our
     connection pool headroom requirement)
@@ -1592,7 +1623,8 @@ init parameters that replace PostgreSQL's max_connections.
   - PGA_AGGREGATE_TARGET: 512 MB
 - Create PDB: DIGISTACK_CBS with schema owner DIGISTACK_APP
   (credentials externalized — never hardcoded, per STD Golden Rules)
-- Open Oracle listener on port 1521 on dsb-oracle only (firewall\n  restricts to the WAS subnet); confirm reachable from dsb-dmgr
+- Confirm PostgreSQL 16 still running independently on dsb-db, port
+  5432 — dsb-db is untouched by this sprint
 - Confirm PostgreSQL 16 still running independently on dsb-db, port\n  5432 — dsb-db is untouched by this sprint
 
 **Dependencies:** New dsb-oracle VM provisioned per SOE01.
@@ -1705,10 +1737,11 @@ identity columns, VARCHAR2, NUMBER(1) for boolean, SYSTIMESTAMP,
 constraint naming conventions unchanged (per STD).
 **Business Features:** None.
 **Application Development:**
-- Write Oracle DDL migration scripts (one file per table, Oracle dialect):
+- Write Oracle DDL migration scripts using source-version grouping, ensuring every required application table is represented in the Oracle schema:using the same source-version grouping as the PostgreSQL schema, with all seven P02 application tables represented:
   - `V1__create_app_config_oracle.sql`
   - `V2__create_users_oracle.sql`
   - `V3__create_accounts_oracle.sql`
+  - `V3__create_transaction_oracle.sql`
   - `V4__add_frozen_flag_oracle.sql`
   - `V15__create_customer_account_beneficiary_fundtransfer_oracle.sql`
   - `V17__add_otp_lockout_fields_and_security_audit_log_oracle.sql`
@@ -1757,7 +1790,7 @@ created_at TIMESTAMP DEFAULT SYSTIMESTAMP
 DIGISTACK_CBS.
 **Acceptance Criteria:**
 - All tables present in DIGISTACK_CBS: app_config, users, accounts,
-  customer, beneficiary, fund_transfer, security_audit_log
+  beneficiary, fund_transfer, transaction, security_audit_log
 - All constraints verified (PK, FK, CHECK, NOT NULL) via
   `SELECT * FROM USER_CONSTRAINTS WHERE TABLE_NAME = '<TABLE>'`
 - DIGISTACK_APP schema owner confirmed with correct grants
@@ -1807,22 +1840,32 @@ public class MigrationServlet extends HttpServlet {
             "created_at) VALUES (?, ?, ?, ?)");
         TABLE_MAP.put("users",
             "INSERT INTO users (id, username, password_hash, " +
-            "last_login, otp_secret, login_attempts, locked, " +
-            "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            "customer_id, name, last_login, otp_secret, " +
+            "login_attempts, locked, created_at) " +
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         TABLE_MAP.put("accounts",
-            "INSERT INTO accounts (id, user_id, balance, " +
-            "is_frozen, created_at) VALUES (?, ?, ?, ?, ?)");
-        TABLE_MAP.put("customer",
-            "INSERT INTO customer (id, user_id, customer_id, " +
-            "name, created_at) VALUES (?, ?, ?, ?, ?)");
+            "INSERT INTO accounts (id, user_id, customer_id, balance, " +
+            "is_frozen, created_at) VALUES (?, ?, ?, ?, ?, ?)");
+        // Customer is not a separate table in P02.
+        // Customer identity/name remains embedded in users,
+        // while accounts carry customer_id for multi-account ownership.
+        // For external beneficiaries, destination_customer_id identifies
+        // Customer2 and account_number identifies Customer2's destination account.
         TABLE_MAP.put("beneficiary",
             "INSERT INTO beneficiary (id, customer_id, " +
-            "account_number, name, is_external, created_at) " +
-            "VALUES (?, ?, ?, ?, ?, ?)");
+            "destination_customer_id, account_number, name, " +
+            "is_external, created_at) " +
+            "VALUES (?, ?, ?, ?, ?, ?, ?)");
         TABLE_MAP.put("fund_transfer",
             "INSERT INTO fund_transfer (id, from_account_id, " +
             "to_account_id, amount, status, created_at) " +
             "VALUES (?, ?, ?, ?, ?, ?)");
+
+        TABLE_MAP.put("transaction",
+            "INSERT INTO transaction (id, account_id, " +
+            "transaction_type, amount, description, created_at) " +
+            "VALUES (?, ?, ?, ?, ?, ?)");
+
         TABLE_MAP.put("security_audit_log",
             "INSERT INTO security_audit_log (id, user_id, " +
             "event_type, event_time, details) " +
@@ -2256,22 +2299,23 @@ Non-gating — does not block sign-off.
   provisioning on dsb-oracle is verified stable before Sprint 3's DDL
   work begins.
 - **Technical debt:** PostgreSQL digistack_bank remains live on
-  dsb-db (unchanged, PostgreSQL-only) until P03 v23 Sprint 4 —\n  documented open debt, tracked
-  explicitly in P03 v23's Migration & Ownership Transfer section.
+  dsb-db (unchanged, PostgreSQL-only) until P03 v23 Sprint 4 —
+  documented open debt, tracked explicitly in P03 v23's Migration &
+  Ownership Transfer section.
 
 ---
 
 # P02 — Overall Completion Summary
 
-**All 10 versions (15–22, plus suffix-slot versions v16.5 and v22.5), 80 sprints total, complete.**
+**All 10 versions (15–22, plus suffix-slot versions v16.5 and v22.5), 80 sprints total, planned.**
 
-## P02 Final Application State
+## P02 Target Final Application State
 - Modules: Customer (multi-account), Account, Beneficiary, Fund Transfer (internal via SIBus/MDB, external via IBM MQ), Transaction History/Account Statement (REST + SOAP), MFA/OTP, account lockout, Security Event Detection, Operations Dashboard (JVM/Session/Queue/DB Pool)
 - Infrastructure added on top of P01: SIBus/JMS (queues, MDB, DLQ), Web Services engine (JAX-RS + JAX-WS, WSDL), hardened security (MFA, LTPA, CSRF/XSS, API auth), PMI/JMX monitoring dashboard, IBM MQ Queue Manager, IHS advanced admin (rewrite, maintenance mode, health checks), External Load Balancer (blue-green, HA)
 - Still one EAR: `digistack-bank-v22.ear` — no Portal/CBS split yet (that's P03 v23)
 
 ## Carried Forward to P03
-This is the exact starting point P03 picks up from — where the real Portal/CBS application split (v23), the two Tomcat-based channel simulators (Mobile v26, ATM v27), the WAS-hosted Card Portal (v28), and Branch Portal (v29) begin.
+This is the target starting point for P03 after all P02 versions are successfully built and signed off — where the real Portal/CBS application split (v23), the two Tomcat-based channel simulators (Mobile v26, ATM v27), the WAS-hosted Card Portal (v28), and Branch Portal (v29) begin.
 
 ---
 
