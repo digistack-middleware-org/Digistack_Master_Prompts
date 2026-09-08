@@ -244,6 +244,17 @@ Sprint Deliverable: Balance/Deposit/Withdraw work end-to-end through
 Controller → Service → DAO → DB, deployed as v3, layering explained
 class-by-class.
 
+Audit Trail Note (added 2026-08-25, retroactive — no v3 code change)
+-----------------------------------------------------------------------
+The `transaction` table built at v3 is the customer-facing ledger, NOT an
+audit trail — it is mutable, lacks actor context, and has no tamper
+guarantees. A real bank maintains a separate, append-only audit log of
+every balance-affecting operation. That table is introduced at P02 v17
+(Security Hardening), which retroactively instruments all existing
+balance-affecting operations (Deposit, Withdraw — and Fund Transfer once
+it exists at v15) to write to it. v3's delivered code is unchanged; the
+deferred audit table is documented here so the gap is visible, not silent.
+
 Dashboard UI Note (added 2026-08-24, applies at Sprint 4 retrofit)
 -------------------------------------------------------------------
 Per the project's standing Dashboard-first UI standard, this version's
@@ -389,6 +400,19 @@ pool, JAAS auth alias.
 
 Topics Covered: JDBC Providers, DataSources, JNDI, Connection Pool,
 Validation, Transactions.
+
+Transaction Boundary Note (added 2026-08-25, retroactive)
+-------------------------------------------------------------
+All balance writes to date (Deposit/Withdraw, P01 v3) are single-table,
+single-DataSource operations running as local transactions inside one
+EAR — simple by construction, and already-deployed v3 code is unchanged
+by this note. The moment an operation writes TWO balances from ONE
+action (Fund Transfer, P02 v15), explicit transaction-boundary design
+becomes necessary; 2PC/XA reasoning is formally addressed at P02 v15
+(local boundary) and P03 v23/v25 (deliberate avoidance of distributed
+XA in favor of single-writer CBS + Saga patterns). Recorded here so the
+transaction story is traceable from the version where transactions
+first became a WebSphere topic.
 
 Connection Pool Sizing — Worked Example
 ------------------------------------------

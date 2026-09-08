@@ -715,8 +715,9 @@ changes (standalone → cluster).
 ### Sprint 3
 **Goal:** Size the connection pool using CAP01 §4's lab-adjusted worked example.
 **Learning Objective:** Connection Pool Sizing math, applied to this project's actual 2-member topology (not the generic 3-member enterprise illustration).
-**WebSphere Admin:** Apply CAP01 §4's lab-adjusted formula: 2 members × 20-connection pool each = 40 connections required at peak, comfortably under `max_connections=100` on the 2 GB PostgreSQL VM (per SOE01 §1a). Configure pool min/max accordingly on `jdbc/BankDS`.
-**Acceptance Criteria:** Configured pool size matches CAP01 §4's 40-connection figure; documented headroom against `max_connections=100`.
+**WebSphere Admin:** Apply CAP01 §4's lab-adjusted formula: 2 members × 20-connection pool each = 40 connections required at peak, comfortably under `max_connections=100` on the 2 GB dsb-db VM (dedicated PostgreSQL 16 VM, per SOE01 §1a and P01_Foundation.md v7 VM Note — dsb-db hosts PostgreSQL alone for the whole of P01; Oracle 21c XE gets its own separate VM, dsb-oracle, at P02 v22.5 and never shares dsb-db; dsb-db is fully decommissioned at P03 v23 Sprint 4). Configure pool min/max accordingly on `jdbc/BankDS`.
+**WebSphere Admin:** Also configure pool validation on `jdbc/BankDS` (pre-test connection / validation query) so stale connections are detected and evicted — per P01_Foundation.md v7 Topics Covered ("Validation").
+**Acceptance Criteria:** Configured pool size matches CAP01 §4's 40-connection figure; documented headroom against `max_connections=100`; pool validation configured and proven (deliberately kill a backend PostgreSQL connection, confirm the pool detects/evicts it and the next request succeeds without app error).
 
 ### Sprint 4
 **Goal:** Migrate all DAO code from direct JDBC to JNDI lookup.
@@ -725,10 +726,10 @@ changes (standalone → cluster).
 **Enterprise Outcome:** Direct-JDBC debt from v1 fully closed.
 
 ### Sprint 5
-**Goal:** Package/deploy `digistack-bank-v7.ear`; validate transactional behavior.
-**Learning Objective:** WAS-managed Transactions (commit/rollback via pooled connection).
-**WebSphere Admin:** Deploy to cluster; trigger a deliberate failed Withdraw, confirm clean rollback.
-**Acceptance Criteria:** All features function as v6; deliberate failure rolls back correctly.
+**Goal:** Package/deploy `digistack-bank-v7.ear`; validate transactional behavior; record the transaction-boundary traceability note.
+**Learning Objective:** WAS-managed Transactions (commit/rollback via pooled connection). Transaction boundaries first become a WebSphere topic here (per P01_Foundation.md v7 Transaction Boundary Note, added 2026-08-25): all balance writes to date are single-table, single-DataSource local transactions inside one EAR. Explicit boundary design is only needed at P02 v15 (Fund Transfer writes TWO balances from ONE action); 2PC/XA reasoning is addressed at P02 v15 (local boundary) and P03 v23/v25 (deliberate avoidance of distributed XA in favor of single-writer CBS + Saga patterns).
+**WebSphere Admin:** Deploy to cluster; trigger a deliberate failed Withdraw, confirm clean rollback. Record the transaction-boundary traceability in SetupDoc-v7.md so the local-transaction story is traceable from this version.
+**Acceptance Criteria:** All features function as v6; deliberate failure rolls back correctly; SetupDoc-v7.md includes the transaction-boundary note (current state = local transactions; future boundary design points: P02 v15, P03 v23/v25).
 
 ### Sprint 6
 **Goal:** Write and execute test cases for Version 7.
@@ -761,7 +762,7 @@ changes (standalone → cluster).
 
 ---
 
-# Version 8 — Full IHS (Cluster Era)
+# Version 8 — IBM HTTP Server (IHS, Cluster Era)
 
 ## Version Overview
 **Objective:** Migrate the existing `dsb-ihs` IBM HTTP Server (installed
@@ -919,9 +920,10 @@ plugin generation from Sprint 1 confirmed against both cluster members.
 **Acceptance Criteria:** Plugin log shows a session's requests consistently routed to the same member.
 
 ### Sprint 2
-**Goal:** Enable memory-to-memory session replication across the cluster.
-**WebSphere Admin:** Enable replication domain for `devdsbinappcluster01`; confirm both members registered as partners.
-**Acceptance Criteria:** Admin Console shows both members actively replicating.
+**Goal:** Configure and compare the sticky-only control case and enable memory-to-memory session replication.
+**Learning Objective:** The three persistence strategies (per P01_Foundation.md v9): (c) sticky-only (no replication) as the control case, and (a) memory-to-memory (default).
+**WebSphere Admin:** First configure sticky-only (no replication) and exercise the control case — log in, kill a member, confirm session lost (baseline). Then enable replication domain for `devdsbinappcluster01`; confirm both members registered as partners; observe single-replica vs. multi-replica tuning.
+**Acceptance Criteria:** Sticky-only baseline observed (session lost on member kill); Admin Console shows both members actively replicating; M2M kill-test shows session survives; replica-count tuning observed and documented.
 
 ### Sprint 3
 **Goal:** Implement Session Timeout (auto-logout after N minutes idle).
@@ -935,9 +937,10 @@ plugin generation from Sprint 1 confirmed against both cluster members.
 **Acceptance Criteria:** No forced re-login during restart window.
 
 ### Sprint 5
-**Goal:** Package/deploy `digistack-bank-v9.ear`; tune replication behavior.
-**WebSphere Admin:** Deploy v9; review/document replication tuning parameters at baseline setting.
-**Acceptance Criteria:** App functions as v8; tuning documented with rationale.
+**Goal:** Package/deploy `digistack-bank-v9.ear`; build and evaluate the DB-backed persistence case; record the three-way comparison.
+**Learning Objective:** Database-backed session persistence (session table in PostgreSQL, dedicated DataSource `jdbc/SessionDS` or reusing `jdbc/BankDS`), persistence frequency tuning, and trade-off analysis (performance vs. reliability vs. DB load).
+**WebSphere Admin:** Deploy v9; configure strategy (b) DB-backed session persistence; kill a member and confirm session survives; observe session table growth and timeout/purge behavior; measure latency difference between (a) M2M and (b) DB-backed under load; assess DB connection-pool impact of (b) reusing the P01 v7 pool-sizing math (per P01_Foundation.md v7 Connection Pool Sizing worked example).
+**Acceptance Criteria:** All three strategies configured and exercised in turn ((c) sticky-only baseline, (a) M2M, (b) DB-backed); comparison recorded in SetupDoc-v9.md covering latency (a) vs (b), pool impact of (b), and a stated ship decision (memory-to-memory, with DB-backed documented as the fallback for non-replicable session state); interview-anchor three-way write-up (when each is appropriate, sizing implications, DR implications) included as a SetupDoc-v9.md section.
 
 ### Sprint 6
 **Goal:** Write and execute test cases for Version 9.
@@ -963,7 +966,7 @@ plugin generation from Sprint 1 confirmed against both cluster members.
 **Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
 **Enterprise Outcome:** Version 9 fault drill complete. Non-gating — does not block sign-off.
 
-**Version 9 Deliverables:** `digistack-bank-v9.ear`, SetupDoc-v9.md, TestCases-v9.md, FaultDrill-v9.md, replication domain/session timeout config.
+**Version 9 Deliverables:** `digistack-bank-v9.ear`, SetupDoc-v9.md (including three-way persistence comparison + interview-anchor write-up), TestCases-v9.md, FaultDrill-v9.md, replication domain/session timeout config, DB-backed session persistence config (session table + DataSource).
 **Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed; Fault drill complete (Sprint 8, non-gating).
 **Lessons Learned:** Sticky sessions (routing) and replication (data protection) are distinct mechanisms.
 **Technical Debt:** None introduced.
@@ -978,7 +981,7 @@ plugin generation from Sprint 1 confirmed against both cluster members.
 **WebSphere Focus:** Administrative Security, File Registry (or LDAP), Users, Groups, Roles, Authorization.
 **Expected Outcome:** File-based registry configured; Customer/Administrator roles defined; Freeze/Unfreeze unreachable by Customer role.
 **Prerequisites:** P01 v9 signed off.
-**Clarification:** Only Customer and Administrator roles are built anywhere in this roadmap. Branch Operator/Auditor are not built.
+**Clarification:** Only two roles are built in P01: Customer and Administrator (this version). Auditor is not built anywhere in P01–P10. Branch Operator is not built in P01–P02 — P03 v29's Branch Portal (Teller Login) introduces a Teller role there. Until that version, only Customer and Administrator exist; no role is assumed to already exist (per P01_Foundation.md v10 "Roles Actually Built").
 
 ### Sprint 1
 **Goal:** Configure a file-based user registry in WAS.
@@ -1192,7 +1195,7 @@ plugin generation from Sprint 1 confirmed against both cluster members.
 ### Sprint 3
 **Goal:** Build email-sending logic; wire it to successful Withdraw.
 **Business Features:** Withdraw triggers confirmation email.
-**App Dev:** Backend: `NotificationService.sendWithdrawEmail()` via JavaMail/JNDI, called from `AccountService.withdraw()`.
+**App Dev:** Backend: `NotificationService.sendWithdrawEmail()` via JavaMail/JNDI, called from `AccountService.withdraw()`. UI: notification/alert bell icon on Dashboard header showing Withdraw email event count (per P01_Foundation.md v13 UI note; extended at P0215).
 **Acceptance Criteria:** Successful Withdraw triggers real, delivered email with correct details.
 
 ### Sprint 4

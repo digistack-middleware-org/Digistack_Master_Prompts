@@ -355,6 +355,8 @@ DigiStack CBS (sole writer of digistack_cbs)
 digistack_cbs Database
 
 
+Payment-routing exception (applies from v26 onward): account-data reads — login/auth, balance, mini statement, beneficiary list — go to CBS exclusively, exactly as the flow above shows. However, channel payment submissions (IMPS transfers, Quick Pay) go directly to Payment Hub's REST endpoint, not through CBS: payment routing is Payment Hub's role per v25, and Payment Hub still never writes balances — CBS alone performs the settlement write. This is the one deliberate exception to the "everything calls CBS" picture and does not weaken the Governing Rule (no channel ever touches digistack_cbs).
+
 Shared WebSphere/Enterprise topics across Mobile and ATM (Tomcat):
 - Heterogeneous backend routing (WAS + non-WAS Tomcat instances behind one
   IHS/LB tier)
@@ -691,6 +693,21 @@ Optimization, Connection Pool Tuning, Enterprise Deployment, Application
 Ownership Migration (data, endpoints, messaging, and satellite service
 extraction — new to this version).
 
+Transaction Boundary Note (added 2026-08-25)
+------------------------------------------------
+"XA Transactions" in this topic list means: the CBS decision documented
+below (CBS stays a single application) is what makes distributed 2PC
+unnecessary for core banking writes — CIF, Accounts, and Transactions
+participate in one local transaction inside one EAR. The remaining
+cross-EAR coordination (Payment Hub routing settlement back to CBS, v25)
+is explicitly a Saga/compensating-transaction pattern, not XA — see v25's
+resolved note. SetupDoc-v23.md includes a short "Transaction Boundaries"
+section stating this per operation type: which writes are local (all CBS
+balance writes), which are async-coordinated (Payment Hub, MQ leg from
+P02 v19), and why 2PC spanning EARs was rejected. This closes the
+"no visible transaction boundaries" gap with a documented decision
+rather than an absent one.
+
 Enterprise Learning: Core Banking Architecture, Banking Domain Model,
 Shared Service Design, Enterprise Transaction Processing, Production
 Banking Flow, Real-world migration/ownership-transfer discipline (no
@@ -699,7 +716,8 @@ breaking contracts, verified cutover, explicit rollback complexity).
 Sprint Deliverable: Internet Banking Portal calls CBS exclusively via
 REST/SOAP for every transaction (deposit, withdrawal, balance inquiry, fund
 transfer) — direct Portal→DB access is removed entirely; CBS enforces
-business validation and XA transaction integrity for all writes; existing
+business validation and local-transaction integrity for all writes (per
+the Transaction Boundary Note above — no distributed XA); existing
 P01/P02 data is migrated into digistack_cbs and verified; Notification
 Service and Reporting Service are stood up as independent applications
 consuming CBS events/data.
@@ -900,6 +918,11 @@ REST calls only
 ▼
 DigiStack CBS → digistack_cbs Database
 
+Exception (payment submissions only, per v25): IMPS transfers and Quick Pay
+go directly to Payment Hub's REST endpoint — payment routing is Payment
+Hub's role. All account-data reads (auth, balance, statement, beneficiary
+list) remain CBS-only. Mobile still never touches digistack_cbs directly.
+
 
 Topics Covered (in addition to the shared Channel Simulator topics above):
 API-first channel design (mobile as "just another CBS API consumer"),
@@ -911,10 +934,12 @@ banking IT, Channel isolation and blast-radius reasoning (why a bank might
 deliberately keep mobile off the same cluster as core Internet Banking).
 
 Sprint Deliverable: mobile.digistack.cloud resolves through the IHS/LB tier
-and routes to Tomcat (not the WAS plugin); a customer can log in (CBS
-auth, MFA intact), check balance, view mini statement, and complete an
-IMPS Quick Pay — all via REST calls to CBS, zero direct database access
-from the Tomcat app, clean Bootstrap 5 UI.
+and routes to Tomcat (not the WAS plugin); a customer can log in (CBS auth,
+MFA intact), check balance, view mini statement, and complete an
+IMPS Quick Pay — all data reads via REST calls to CBS, the IMPS submission
+via Payment Hub's endpoint (v25 payment-routing exception), zero direct
+database access from the Tomcat app, clean Bootstrap 5 UI.
+
 
 ---
 
@@ -1137,8 +1162,12 @@ merge:
   rebuilt here — that's already P02 v18's Operations Dashboard (PMI/JMX),
   which stays its own screen; Branch Portal does not duplicate it.
 - A general Customers/Accounts/Transactions/Reports/Configuration admin
-  menu and an Audit Log UI remain out of scope — P01 v6 already
-  explicitly excluded an Audit Log UI, and nothing since has scoped one.
+  menu remains out of scope. The Audit Log UI is also out of scope — but
+  note the distinction: the audit LOG itself exists and is live since
+  P02 v17 (immutable `audit_log` table, INSERT-only, all balance-
+  affecting operations). What is out of scope is only a UI to VIEW it —
+  queried directly via SQL when needed. P01 v6's exclusion was about the
+  UI, and this version keeps exactly that boundary.
   Only the specific operations named above (Teller cash ops, BOD/EOD,
   reconciliation, Unlock User) exist in Branch Portal.
 - App/server naming from the mockup ("DigiBank-Web/API/Payments" on

@@ -20,9 +20,9 @@
 
 **Business Scope:** Customer Information, Customer Verification, Open/Close Account, Deposit, Withdrawal, Balance Inquiry, Fund Transfer, Mini Statement, Savings/Current Account products.
 
-**WebSphere Focus:** Enterprise Service Layer, Shared Business Services, JTA/XA-capable transaction management within CBS, Clustered Business Services, JDBC Optimization/Connection Pool Tuning, Enterprise Deployment, Application Ownership Migration (data, endpoints, messaging, satellite service extraction). Cross-EAR payment settlement deliberately uses Saga/compensating-transaction coordination rather than a distributed XA transaction.
+**WebSphere Focus:** Enterprise Service Layer, Shared Business Services, Local (non-distributed) transaction management within CBS — one EAR/one JVM keeps CIF/Accounts/Transactions in a single local transaction; 2PC spanning EARs explicitly rejected (Transaction Boundary Note), Clustered Business Services, JDBC Optimization/Connection Pool Tuning, Enterprise Deployment, Application Ownership Migration (data, endpoints, messaging, satellite service extraction). Cross-EAR payment settlement deliberately uses Saga/compensating-transaction coordination rather than a distributed XA transaction.
 
-**Expected Outcome:** Internet Banking Portal invokes CBS exclusively via REST/SOAP for every transaction; direct Portal→DB access is removed entirely; CBS enforces business validation and XA transaction integrity; existing P01/P02 data is migrated into `digistack_cbs` and verified; Notification Service and Reporting Service stood up as independent applications.
+**Expected Outcome:** Internet Banking Portal invokes CBS exclusively via REST/SOAP for every transaction; direct Portal→DB access is removed entirely; CBS enforces business validation and local-transaction integrity for all writes (no distributed XA — per the Transaction Boundary Note; cross-EAR settlement from v25 uses Saga/compensating transactions); existing P01/P02 data is migrated into `digistack_cbs` and verified; Notification Service and Reporting Service stood up as independent applications.
 
 **Prerequisites:** P02 Completion Checkpoint satisfied (`digistack-bank-v22.ear` — full middleware stack operational).
 
@@ -59,7 +59,7 @@
 **Application Development:**
 - UI: N/A (CBS is service-only; Portal keeps existing UI)
 - Backend: CBS EAR scaffold — `controller/`, `service/`, `dao/`, `model/`, `config/` per ARCH02
-- Database: `V23__migrate_existing_data_to_cbs.sql` — Oracle-dialect CBS schema-extension script applied to the already-populated `digistack_cbs` schema; no second full data migration occurs in v23 because the data was migrated and row-count verified during v22.5
+- Database: `V23__migrate_existing_data_to_cbs.sql` — Oracle-dialect CBS schema-extension script applied to the already-populated `digistack_cbs` schema — specifically the `branches` lookup table plus new `branch_name` and `ifsc_code` display-only columns on `accounts` (per the Account Schema Note, sourced from the lookup, not user-entered); no second full data migration occurs in v23 because the data was migrated and row-count verified during v22.5
 - API: N/A this sprint
 
 **WebSphere Administration:**
@@ -70,7 +70,7 @@
 
 **Dependencies:** Sprint 1's DataSource, P01 v3 accounts table, P02 v15 Customer/Account/Beneficiary/Fund Transfer tables.
 **Deliverables:** CBS EAR skeleton deployed; migration script executed with row-count verification.
-**Acceptance Criteria:** DDL extension applied cleanly; row-count reconciliation re-verified between digistack_cbs and the pre-cutover shared DB for every migrated table (originally verified at v22.5).
+**Acceptance Criteria:** DDL extension applied cleanly, including the branches lookup table and branch_name/ifsc_code columns on accounts; row-count reconciliation re-verified between digistack_cbs and the pre-cutover shared DB for every migrated table (originally verified at v22.5).
 **Enterprise Outcome:** First proof that data ownership can move without data loss — the foundation the rest of the version depends on.
 
 ---
@@ -91,7 +91,8 @@
 - JDBC / JMS / JNDI: SIBus/MQ Connection Factories re-bound to CBS's JNDI namespace
 - Security: N/A this sprint
 
-**Dependencies:** P02 v15 SIBus/MDB, P02 v16 REST/SOAP, P02 v19 MQ.
+**Authentication (Ownership Matrix row):** Implement trusted-identity propagation — Portal authenticates users (login/MFA) and propagates identity (LTPA/JWT) to CBS; CBS performs authorization for business services. This hosts v17's MFA/OTP/session rules in CBS for channel consumption (required later by Mobile/ATM/Card Portal).
+**Dependencies:** P02 v15 SIBus/MDB, P02 v16 REST/SOAP, P02 v19 MQ, P02 v17 security.
 **Deliverables:** REST/SOAP endpoints and JMS/MQ relocated into CBS, contracts unchanged.
 **Acceptance Criteria:** A Postman/SoapUI call against the existing v16 endpoint paths succeeds and is now served by CBS; an external Fund Transfer still round-trips via MQ.
 **Enterprise Outcome:** Confirms relocation is invisible to existing clients — a real-world zero-breaking-change migration pattern.
@@ -103,13 +104,13 @@
 **Learning Objective:** Enforcing the single-writer rule at the application boundary, not just by convention.
 **Business Features:** All existing Portal transactions (Deposit, Withdraw, Balance, Fund Transfer) now proxy through CBS.
 **Application Development:**
-- UI: No visible change — same screens, now backed by REST/SOAP calls instead of direct JDBC
+- UI: Accounts screen detail card now shows the full field set (masked account number, account type, branch_name, ifsc_code, available balance, View Transactions + Download Statement buttons — all read via CBS); Dashboard account tiles add the "SAVINGS ACCOUNT" / "CURRENT ACCOUNT" type label alongside masked number and balance (tile layout otherwise unchanged)
 - Backend: Portal's DAO layer removed; replaced with CBS REST/SOAP client stubs (`client/`)
 - Database: Portal's old DataSource unbound from JNDI
 - API: N/A (consumes CBS's existing contracts)
 
 **WebSphere Administration:**
-- Configuration: Remove Portal's JDBC Provider/DataSource JNDI binding entirely; retire the v22.5-era jdbc/OracleDS (its role is assumed by jdbc/CBSDataSource); decommission the PostgreSQL VM (dsb-db): final pg_dump archived, VM shut down, single retention snapshot, VM deleted
+- Configuration: Remove Portal's JDBC Provider/DataSource JNDI binding entirely and remove Portal's direct SIBus/JMS/MQ configuration (Migration Note 3 — Portal retains no messaging config); retire the v22.5-era jdbc/OracleDS (its role is assumed by jdbc/CBSDataSource); decommission the PostgreSQL VM (dsb-db): final pg_dump archived, VM shut down, single retention snapshot, VM deleted
 - Deployment: Redeploy Portal EAR with DB access removed
 - JDBC / JMS / JNDI: Negative test — confirm Portal's old DataSource JNDI lookup now fails
 - Security: N/A this sprint
@@ -156,7 +157,7 @@
 - Security: Full negative-test pass (Portal DB access, Notification/Reporting write access)
 
 **Dependencies:** Sprints 1–5 complete.
-**Deliverables:** `SetupDoc-v23.md` (with required "Migration & Ownership Transfer" section per STDGAP01 §3.8), `TestCases-v23.md` (including negative tests), old Portal DB decommission **verified** (decommission executed in Sprint 4 per the roadmap).
+**Deliverables:** `SetupDoc-v23.md` (with required "Migration & Ownership Transfer" section per STDGAP01 §3.8 **and** the required "Transaction Boundaries" section stating: all CBS balance writes are local transactions, Payment Hub/MQ coordination is async-Saga, and why 2PC spanning EARs was rejected), `TestCases-v23.md` (including negative tests: Portal old DataSource lookup fails; Notification/Reporting cannot write to `digistack_cbs`; CBS rejects business calls without a propagated trusted identity), old Portal DB decommission **verified** (decommission executed in Sprint 4 per the roadmap).
 **TP01 Pipeline (mandatory, per TP01_Test_Pipeline.md):** Sprint 6 executes the full 5-stage test pipeline — DEV (Unit/Component, Developer, Code Quality/Security) → SIT (API, Integration, Database, Middleware, End-to-End, Negative, Regression Pack v1–v<N-1>) → UAT (Business Process, Customer Journey, Financial/Accounting Validation, Business Acceptance) → PRE-PROD (Production-like Smoke, Performance, Security, DR/Recovery, Operational Readiness, Deployment/Rollback) → PROD (Smoke, Sanity, Monitoring Verification, Business Validation). Results recorded in `TestCases-v<N>.md` under "## TP01 Pipeline Results — v<N>" using the TP01 stage table. All Critical/High rows must Pass before Sprint 7 sign-off (TP01 R1–R3).
 **Acceptance Criteria:** Every item in the Ownership Matrix confirmed correct; full regression pack (all prior TestCases-v1–v22) passes against the new topology; no open Critical/High defects.
 **Enterprise Outcome:** Version 23 signed off — the architectural pivot is complete and verified, not just deployed. CBS is now the single system of record for the rest of the roadmap.
@@ -168,7 +169,7 @@
 **Learning Objective:** SetupDoc discipline (SDD01), with the required Migration & Ownership Transfer section.
 **WebSphere Administration:** Capture backupConfig baseline for all four EARs; final smoke test across CBS, Portal, Notification Service, Reporting Service.
 **Deliverables:** SetupDoc-v23.md (including Migration & Ownership Transfer section per STDGAP01 §3.8).
-**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured for all four applications; smoke test passes; migration row-count reconciliation re-confirmed.
+**Acceptance Criteria:** SetupDoc complete (including both the Migration & Ownership Transfer and Transaction Boundaries sections) and followed start to finish; backupConfig captured for all four applications; smoke test passes; migration row-count reconciliation re-confirmed.
 **Enterprise Outcome:** Version 23 signed off — the architectural pivot point of the whole project.
 
 ---
@@ -234,7 +235,7 @@ identifiable throughout account and payment processing.
 **Application Development:**
 - UI: N/A this sprint
 - Backend: N/A this sprint
-- Database: `V24__create_cif_table.sql` (cif_id, primary_holder fields, nominee fields, verification status)
+- Database: `V24__create_cif_table.sql` (cif_id, primary_holder fields, nominee fields, verification status) **plus backfill of standalone `cif` rows from the customer columns that arrived on `account`/`users` at the P02 v22.5 migration** (per the main v24 migration note — no standalone customer table existed at v15, so every existing customer must be backfilled into a CIF record, one CIF per customer)
 - API: N/A
 
 **WebSphere Administration:**
@@ -244,8 +245,8 @@ identifiable throughout account and payment processing.
 - Security: N/A this sprint
 
 **Dependencies:** P03 v23's `digistack_cbs`, `jdbc/CBSDataSource`.
-**Deliverables:** `cif` table live in `digistack_cbs`.
-**Acceptance Criteria:** Table created with correct constraints (PK/FK per STD naming); a manual insert/select round-trips correctly.
+**Deliverables:** `cif` table live in `digistack_cbs`, backfilled with one CIF row per existing customer.
+**Acceptance Criteria:** Table created with correct constraints (PK/FK per STD naming); a manual insert/select round-trips correctly; backfill row-count reconciliation confirms every pre-existing customer from the migrated v22.5 data has exactly one corresponding `cif` row.
 **Enterprise Outcome:** Master customer data model established as its own first-class entity, distinct from the old `users`/simple `customer_id` from P02 v15.
 
 ---
@@ -283,7 +284,7 @@ that CIF, and searching for Customer1 does not return Customer2's CIF data.
 **Application Development:**
 - UI: Account list view updated to show accounts grouped under one CIF
 - Backend: `AccountService` updated to reference `cif_id` FK; CIF Service and Account Service call each other directly in-process (per ARCH02 CBS internal layering rule)
-- Database: `V25__add_cif_id_to_accounts.sql` (FK from accounts to cif)
+- Database: `V24.1__add_cif_id_to_accounts.sql` (FK from accounts to cif) — version-scoped to v24 to avoid collision with Version 25's own migration scripts (Engineering Standards §7 Version Numbering Freeze)
 - API: N/A this sprint
 
 **WebSphere Administration:**
@@ -386,12 +387,12 @@ that CIF, and searching for Customer1 does not return Customer2's CIF data.
 
 ## Version 24 Deliverables
 - `digistack-cbs-v24.ear` (CIF Service, updated Account Service)
-- `V24__create_cif_table.sql`, `V25__add_cif_id_to_accounts.sql`
+- `V24__create_cif_table.sql`, `V24.1__add_cif_id_to_accounts.sql` (plus CIF backfill executed with V24)
 - SetupDoc-v24.md, TestCases-v24.md
 
 ## Version 24 Exit Criteria
 - ✅ Application functionality complete (CIF create/modify/search, Aadhaar/PAN gating, multi-account linkage)
-- ✅ Database validated (V24–V25 migrations applied and verified, FK integrity confirmed)
+- ✅ Database validated (V24 and V24.1 migrations applied and verified, CIF backfill row-count-verified, FK integrity confirmed)
 - ✅ WebSphere deployment successful (new module integrated into existing multi-module EAR, no regression)
 - ✅ TP01 pipeline passed (all 5 stages, all Critical/High rows Pass in TP01 Pipeline Results table)
 - ✅ Smoke testing passed (full regression against v1–v23 passes)
@@ -475,8 +476,8 @@ another customer of the same bank.
 **Learning Objective:** Real-time payment path design — validate synchronously, settle asynchronously via JMS.
 **Business Features:** IMPS Transfer.
 **Application Development:**
-- UI: IMPS transfer form (amount, beneficiary)
-- Backend: `PaymentRoutingService.routeIMPS()` — synchronous validation, then publishes a settlement message to CBS's SIBus queue (reused from P02 v15)
+- UI: Transfer Money screen's "Transfer Type" selector activates with exactly one option this sprint — IMPS (NEFT joins at Sprint 4; RTGS deliberately excluded and never offered in any version, per the Dashboard UI Note) — plus the IMPS transfer form (amount, beneficiary)
+- Backend: `PaymentRoutingService.routeIMPS()` — synchronous payment validation **and beneficiary validation** (per the main doc's Processing scope), then publishes a settlement message to CBS's SIBus queue (reused from P02 v15)
 - Database: N/A (settlement write happens in CBS)
 - API: REST endpoint for IMPS transfer
 
@@ -498,9 +499,9 @@ another customer of the same bank.
 **Learning Objective:** Batch-window financial processing pattern, distinct from IMPS's real-time path.
 **Business Features:** NEFT Transfer.
 **Application Development:**
-- UI: NEFT transfer form (amount, beneficiary) — shows "processed in next batch window" messaging
+- UI: NEFT option added to the Transfer Money screen's "Transfer Type" selector — now exactly two options: IMPS and NEFT (RTGS is deliberately excluded and never offered, per the Dashboard UI Note); NEFT transfer form (amount, beneficiary) shows "processed in next batch window" messaging
 - Backend: `PaymentRoutingService.routeNEFT()` — queues request, `NEFTBatchProcessor` (EJB Timer-driven) processes accumulated requests in a scheduled window
-- Database: `V26__create_neft_batch_queue.sql` (staging table for queued NEFT requests, status: QUEUED/PROCESSED/FAILED)
+- Database: `V25__create_neft_batch_queue.sql` (staging table for queued NEFT requests, status: QUEUED/PROCESSED/FAILED) — version-scoped to v25, consistent with the v24 numbering fix (V24 / V24.1)
 - API: REST endpoint for NEFT transfer submission
 
 **WebSphere Administration:**
@@ -523,7 +524,7 @@ another customer of the same bank.
 **Application Development:**
 - UI: Failed Payments review screen (internal/ops use)
 - Backend: `RetryPolicy` (max attempts, exponential backoff — shared constant, reused later by P08's shared retry constants), `FailedPaymentQueue` for exhausted retries
-- Database: `V27__create_failed_payment_queue.sql`
+- Database: `V25.1__create_failed_payment_queue.sql` (version-scoped to v25)
 - API: REST endpoint to list/review failed payments
 
 **WebSphere Administration:**
@@ -554,7 +555,7 @@ another customer of the same bank.
 **Deliverables:** SetupDoc-v25.md, TestCases-v25.md (including the Payment-Hub-never-writes negative test).
 **TP01 Pipeline (mandatory, per TP01_Test_Pipeline.md):** Sprint 6 executes the full 5-stage test pipeline — DEV (Unit/Component, Developer, Code Quality/Security) → SIT (API, Integration, Database, Middleware, End-to-End, Negative, Regression Pack v1–v<N-1>) → UAT (Business Process, Customer Journey, Financial/Accounting Validation, Business Acceptance) → PRE-PROD (Production-like Smoke, Performance, Security, DR/Recovery, Operational Readiness, Deployment/Rollback) → PROD (Smoke, Sanity, Monitoring Verification, Business Validation). Results recorded in `TestCases-v<N>.md` under "## TP01 Pipeline Results — v<N>" using the TP01 stage table. All Critical/High rows must Pass before Sprint 7 sign-off (TP01 R1–R3).
 
-**Acceptance Criteria:** IMPS/NEFT/retry/failed-payment flows all pass together; negative test confirms zero direct write path from Payment Hub; full regression pack (v1–v24) passes.
+**Acceptance Criteria:** IMPS/NEFT/retry/failed-payment flows all pass together; the Transfer Money screen's Transfer Type selector offers exactly IMPS and NEFT and never RTGS; negative test confirms zero direct write path from Payment Hub; full regression pack (v1–v24) passes.
 **Enterprise Outcome:** Version 25 signed off — Payment Hub proven as a genuine Saga-pattern coordinator, the deliberate architectural counterpoint to CBS's single-writer design.
 
 ---
@@ -580,13 +581,13 @@ another customer of the same bank.
 
 ## Version 25 Deliverables
 - `digistack-paymenthub-v25.ear`
-- `V26__create_neft_batch_queue.sql`, `V27__create_failed_payment_queue.sql`
+- `V25__create_neft_batch_queue.sql`, `V25.1__create_failed_payment_queue.sql`
 - JMS/MQ binding exports, EJB Timer Service configuration export
 - SetupDoc-v25.md, TestCases-v25.md
 
 ## Version 25 Exit Criteria
 - ✅ Application functionality complete (Beneficiary CRUD, IMPS real-time, NEFT batch, retry/failed-payment handling)
-- ✅ Database validated (V26–V27 migrations applied and verified; confirmed Payment Hub holds no writable balance data)
+- ✅ Database validated (V25 and V25.1 migrations applied and verified; confirmed Payment Hub holds no writable balance data)
 - ✅ WebSphere deployment successful (independent EAR, startup-order dependency on CBS proven)
 - ✅ TP01 pipeline passed (all 5 stages, all Critical/High rows Pass in TP01 Pipeline Results table)
 - ✅ Smoke testing passed (full regression + Payment-Hub-never-writes negative test)
@@ -604,7 +605,7 @@ another customer of the same bank.
 
 ## Version Overview
 
-**Version Objective:** Build Mobile Banking as a small, standalone, neat-UI application deployed on Apache Tomcat (not WebSphere), under its own subdomain, calling CBS exclusively via REST — proving heterogeneous WAS+Tomcat topology routing at the IHS/LB tier.
+**Version Objective:** Build Mobile Banking as a small, standalone, neat-UI application deployed on Apache Tomcat (not WebSphere), under its own subdomain, calling CBS exclusively via REST — proving heterogeneous WAS+Tomcat topology routing at the IHS/LB tier and practicing API-first channel design: Mobile is deliberately built as "just another CBS API consumer," with zero contract changes to what it consumes.
 
 **Business Scope:** Mobile Login (delegates auth to CBS, same MFA/OTP rules as P02 v17), Balance Inquiry, Mini Statement, Fund Transfer (IMPS only), Quick Pay to Saved Beneficiary.
 
@@ -613,6 +614,8 @@ another customer of the same bank.
 **Expected Outcome:** `mobile.digistack.cloud` resolves through the IHS/LB tier and routes to Tomcat (not the WAS plugin); a customer can log in (CBS auth, MFA intact), check balance, view mini statement, and complete an IMPS Quick Pay — all via REST calls to CBS, zero direct database access from the Tomcat app.
 
 **Prerequisites:** P03 Version 25 Completion Checkpoint satisfied — Payment Hub live, IMPS/NEFT functional, Beneficiary CRUD operational.
+
+**Enterprise Learning:** Multi-vendor application server estates in real banking IT; channel isolation and blast-radius reasoning (why a bank deliberately keeps Mobile off the same cluster as core Internet Banking); API-first channel design (Mobile as "just another CBS API consumer"). Channel-specific rate limiting/throttling at the IHS layer remains an optional stretch goal, deliberately not built.
 
 ---
 
@@ -722,7 +725,7 @@ another customer of the same bank.
 **Dependencies:** P03 v25's IMPS/Beneficiary endpoints, Sprint 4's authenticated session.
 **Deliverables:** Working IMPS Quick Pay from Mobile.
 **Acceptance Criteria:** A Quick Pay to a saved beneficiary completes successfully via IMPS, confirmed against CBS's ledger — no NEFT option exposed on Mobile (real-time-bias, by design).
-**Enterprise Outcome:** Second independent consumer of Payment Hub's IMPS path — validates the endpoint is genuinely reusable across channels, not hardcoded to Internet Banking.
+**Enterprise Outcome:** Second independent consumer of Payment Hub's IMPS path — validates the endpoint is genuinely reusable across channels, not hardcoded to Internet Banking. Also exercises channel-isolation / blast-radius reasoning: Mobile deliberately runs off-cluster (Tomcat), so a Mobile-tier failure or compromise never touches the WAS cluster hosting CBS and Internet Banking — a deliberate real-bank architectural choice.
 
 ---
 
@@ -801,6 +804,12 @@ another customer of the same bank.
 
 **Prerequisites:** P03 Version 26 Completion Checkpoint satisfied — Mobile Banking live on Tomcat, heterogeneous IHS routing proven, zero-DB-access discipline confirmed.
 
+**Topics Covered (this version, in addition to the shared Channel Simulator topics):** Connection Pools sized for high-frequency, low-latency ATM-style calls (Sprint 3); Thread Pool tuning for synchronous request patterns (Sprint 3); High Availability considerations for always-on ATM traffic (Sprint 6, reasoned not built).
+
+**Enterprise Learning:** ATM Switch concepts (what a real ATM switch does versus what this simulator deliberately does not); Card Authorization flow (Sprint 2's card/PIN pattern); External Banking Integration patterns (how third-party channels consume bank contracts — third independent consumer of CBS's v16 contracts after Internet Banking and Mobile).
+
+**Scope Note (per the "ATM & POS Integration {Minimal}" instruction):** Intentionally minimal — a functional web-based simulator proving the request flow and the WebSphere admin topics above, not a full ISO 8583 switch implementation. POS shares this same simulator's transaction path, distinguished by transaction type (purchase vs. withdrawal) rather than built as a separate app — deferred to avoid over-expanding this Part. Any future POS enablement is a transaction-type extension here, not a new build.
+
 ---
 
 ### Sprint 1
@@ -860,9 +869,9 @@ another customer of the same bank.
 - API: Consumes existing CBS contracts, unchanged
 
 **WebSphere Administration:**
-- Configuration: N/A this sprint
+- Configuration: Tomcat thread pool tuned for ATM's synchronous, short-lived request pattern (max threads, connection timeout) — first thread-pool tuning exercise in the roadmap; CBS-side connection pool sizing reviewed for high-frequency, low-latency ATM-style calls
 - Deployment: Redeploy ATM WAR
-- JDBC / JMS / JNDI: Connection pool behavior observed under ATM-style call pattern (short, frequent requests)
+- JDBC / JMS / JNDI: Connection pool behavior observed under the ATM-style call pattern (short, frequent requests), before and after tuning
 - Security: N/A this sprint
 
 **Dependencies:** Sprint 2's card auth, P02 v16's REST/SOAP contracts.
@@ -891,7 +900,7 @@ another customer of the same bank.
 **Dependencies:** Sprint 3's authenticated flow, P01 v3 Withdrawal, P02 v17 Freeze/Unfreeze enforcement.
 **Deliverables:** Working Cash Withdrawal end-to-end.
 **Acceptance Criteria:** A withdrawal correctly debits the account in `digistack_cbs` and returns a simulated dispense confirmation; an insufficient-funds attempt is correctly rejected before any debit occurs.
-**Enterprise Outcome:** First write-path transaction on the ATM channel, proving the full Check PIN → Check Balance → Debit → Update Ledger sequence documented in the roadmap's request flow.
+**Enterprise Outcome:** First write-path transaction on the ATM channel, proving the full Check PIN → Check Balance → Debit → Update Ledger sequence documented in the roadmap's request flow. This same transaction path is the one POS would share (distinguished by transaction type: purchase vs. withdrawal) — the withdrawal path built here is deliberately the reusable base for that deferred extension.
 
 ---
 
@@ -924,7 +933,7 @@ another customer of the same bank.
 **Business Features:** None (validation sprint).
 **Application Development:** Bug-fix only, no new work.
 **WebSphere Administration:**
-- Configuration: Final review of both Tomcat subdomains (`mobile.`, `atm.`) routing correctly and independently via IHS
+- Configuration: Final review of both Tomcat subdomains (`mobile.`, `atm.`) routing correctly and independently via IHS; HA considerations for always-on ATM traffic documented and reasoned through (single Tomcat instance = known single point of failure; what always-on ATM availability would require — multiple Tomcat nodes behind the same IHS/LB virtual host — deliberately reasoned, not built)
 - Deployment: Redeploy final ATM WAR
 - JDBC / JMS / JNDI: N/A this sprint
 - Security: Negative test — confirm ATM app has zero direct database connectivity; confirm blocked-PIN negative case one final time
@@ -991,6 +1000,12 @@ another customer of the same bank.
 **Expected Outcome:** A card can be issued, activated, blocked, and have its PIN reset through the Card Portal UI; a blocked card correctly fails authorization when tested against the ATM Simulator (v27) — proving Card Portal (WAS), ATM Simulator (Tomcat), and CBS are properly integrated across the heterogeneous topology.
 
 **Prerequisites:** P03 Version 27 Completion Checkpoint satisfied — ATM Simulator live, Card/PIN auth flow built (coordinated ahead against this version's contract), blocked/incorrect-PIN negative test proven.
+
+**Enterprise Learning:** Card Authorization (Sprint 4's block→ATM-rejection proof); Card Lifecycle Management (Issued → Activated → Blocked/Hotlisted state machine, Sprint 3–5); External Banking Integration (card management as an enterprise-owned channel — deliberately WAS-hosted, the counterpoint to Mobile/ATM on Tomcat).
+
+**Dashboard Scope Note:** Per the main roadmap's Dashboard UI Note (2026-08-24), the Internet Banking Portal's "Your Cards" placeholder activates this version — a masked summary tile with a navigation redirect to card.digistack.cloud (built in Sprint 5). The tile reads from CBS's Card Service per the Governing Rule; Card Portal is never a data provider to the Portal.
+
+**Scope Note:** Card expiry/renewal is a deliberate, documented omission — consistent with the "minimal" instruction for this area, not an oversight.
 
 ---
 
@@ -1091,8 +1106,8 @@ another customer of the same bank.
 **Learning Objective:** Completing the card lifecycle surface with the remaining self-service operations.
 **Business Features:** Reset PIN, Card Status Lookup.
 **Application Development:**
-- UI: PIN Reset form, Card Status lookup view (shows Issued/Activated/Blocked/Hotlisted)
-- Backend: `CardService.resetPin()`, `CardService.getStatus()`
+- UI: PIN Reset form, Card Status lookup view (shows Issued/Activated/Blocked/Hotlisted); Internet Banking Portal Dashboard "Your Cards" tile activated (replacing the P01 v3 "Coming soon — v28" placeholder): masked card number + status, with a "Manage Card" action that redirects the customer to card.digistack.cloud
+- Backend: `CardService.resetPin()`, `CardService.getStatus()`; Portal's tile summary populated via REST read from CBS's Card Service (per the Governing Rule — the Portal reads from CBS, NOT from Card Portal, which is presentation-only and not a data provider). The hand-off is a navigation redirect only — no iframe, no embedded API call from Portal into Card Portal; full card management happens on Card Portal after redirect
 - Database: N/A (reuses Sprint 2's `card` table)
 - API: REST endpoints for PIN Reset, Card Status Lookup
 
@@ -1104,7 +1119,7 @@ another customer of the same bank.
 
 **Dependencies:** Sprint 3's PIN Generation, Sprint 4's status field.
 **Deliverables:** Working PIN Reset and Card Status Lookup.
-**Acceptance Criteria:** PIN Reset succeeds on an activated, non-blocked card; Status Lookup correctly reflects the card's current lifecycle state at every stage tested so far.
+**Acceptance Criteria:** PIN Reset succeeds on an activated, non-blocked card; Status Lookup correctly reflects the card's current lifecycle state at every stage tested so far; the Portal Dashboard "Your Cards" tile shows the correct masked number and live status, and "Manage Card" redirects to card.digistack.cloud where the full card operations are available — confirming the tile reads from CBS's Card Service and never from Card Portal directly.
 **Enterprise Outcome:** Closes out the card lifecycle feature set — every state (Issued/Activated/Blocked/Hotlisted) is now both settable and observable end-to-end.
 
 ---
@@ -1124,7 +1139,7 @@ another customer of the same bank.
 **Deliverables:** SetupDoc-v28.md, TestCases-v28.md (including the Card Portal-never-writes and Block-Card-blocks-ATM negative/integration tests).
 **TP01 Pipeline (mandatory, per TP01_Test_Pipeline.md):** Sprint 6 executes the full 5-stage test pipeline — DEV (Unit/Component, Developer, Code Quality/Security) → SIT (API, Integration, Database, Middleware, End-to-End, Negative, Regression Pack v1–v<N-1>) → UAT (Business Process, Customer Journey, Financial/Accounting Validation, Business Acceptance) → PRE-PROD (Production-like Smoke, Performance, Security, DR/Recovery, Operational Readiness, Deployment/Rollback) → PROD (Smoke, Sanity, Monitoring Verification, Business Validation). Results recorded in `TestCases-v<N>.md` under "## TP01 Pipeline Results — v<N>" using the TP01 stage table. All Critical/High rows must Pass before Sprint 7 sign-off (TP01 R1–R3).
 
-**Acceptance Criteria:** Issue/Activate/Generate PIN/Block/Hotlist/Reset PIN/Status Lookup all pass together in one combined pass; zero-DB-access confirmed; cross-app Block Card integration re-verified; full regression pack (v1–v27) passes.
+**Acceptance Criteria:** Issue/Activate/Generate PIN/Block/Hotlist/Reset PIN/Status Lookup all pass together in one combined pass; Portal Dashboard "Your Cards" tile + redirect hand-off verified (including that a card blocked via Card Portal updates the Portal tile's status — again proving the Portal reads CBS not Card Portal); zero-DB-access confirmed; cross-app Block Card integration re-verified; full regression pack (v1–v27) passes, including the v28 placeholder tile's retirement from the P01-era UI convention.
 **Enterprise Outcome:** Version 28 signed off — six independent WAS EARs plus two Tomcat apps now coexist and cross-integrate correctly, the fullest heterogeneous topology proof point so far in the roadmap.
 
 ---
@@ -1156,7 +1171,7 @@ another customer of the same bank.
 - SetupDoc-v28.md, TestCases-v28.md
 
 ## Version 28 Exit Criteria
-- ✅ Application functionality complete (Issue/Activate/Generate PIN/Block/Hotlist/Reset PIN/Status Lookup)
+- ✅ Application functionality complete (Issue/Activate/Generate PIN/Block/Hotlist/Reset PIN/Status Lookup; Portal Dashboard "Your Cards" tile + redirect hand-off live, closing the P01 v3 placeholder)
 - ✅ Database validated (V28 migration applied and verified; Card Portal confirmed zero direct DB access)
 - ✅ WebSphere deployment successful (sixth independent WAS EAR live — Card Portal; plugin-routed `card.digistack.cloud` subdomain confirmed distinct from the Tomcat subdomains; seven WAS EARs will exist after Version 29)
 - ✅ TP01 pipeline passed (all 5 stages, all Critical/High rows Pass in TP01 Pipeline Results table)
@@ -1177,13 +1192,17 @@ another customer of the same bank.
 
 **Version Objective:** Implement day-to-day banking operations performed by branch staff — Branch Portal deployed as its own WebSphere EAR, presentation-only, with scheduled BOD/EOD batch jobs closing the banking day against CBS's ledger.
 
-**Business Scope:** Teller Login, Cash Deposit, Cash Withdrawal, Beginning of Day (BOD), End of Day (EOD), EOD Reconciliation Report (NEFT/IMPS settlement tie-out against CBS ledger).
+**Business Scope:** Teller Login, Cash Deposit, Cash Withdrawal, Beginning of Day (BOD), End of Day (EOD), EOD Reconciliation Report (NEFT/IMPS settlement tie-out against CBS ledger), Unlock User (Teller-performed, per P02 v17's lockout rule).
 
 **WebSphere Focus:** Batch Scheduling, JVM Monitoring, Thread Pools, JMS Batch Queue, Log Analysis, Performance Tuning, Production Troubleshooting.
 
 **Expected Outcome:** A Teller can log in to Branch Portal and process cash deposits/withdrawals against CBS; a scheduled BOD job opens the banking day and an EOD job closes it — including a reconciliation report, generated by Reporting Service, that ties out the day's NEFT/IMPS settlements against CBS's own ledger, surfacing any mismatch — both run as WAS-scheduled batch jobs, not manually triggered code.
 
 **Prerequisites:** P03 Version 28 Completion Checkpoint satisfied — Card Portal live, seven WAS EARs + two Tomcat apps coexisting, Block Card → ATM cross-app integration proven.
+
+**Enterprise Learning:** Branch Banking (teller-initiated operations as a distinct channel); Batch Processing (EJB Timer BOD/EOD jobs closing the banking day); EOD/BOD Operations (the real open/close lifecycle of a bank); Production Support (Sprint 8's silent-EOD-failure drill is squarely a production-support scenario); Banking Operations (reconciliation at EOD — where real banks do it).
+
+**Scope Notes (per the main roadmap's Admin Portal Merge + Unlock User notes, 2026-08-25):** The earlier mockup's separate "Admin Portal" is merged into Branch Portal as an Operations side menu containing only the four scoped operations above — no second internal portal, no System Overview rebuild (P02 v18's Operations Dashboard remains the live-infra view), no general admin menu, no Audit Log UI (the immutable `audit_log` table stays live since P02 v17, queried via SQL — preserving P01 v6's exact boundary), and the mockup's "DigiBank-Web/API/Payments" server naming is dropped as not mapping to this project's real 7-EAR + 2-Tomcat topology. Unlock User is Teller-only; the customer Login screen retires its "Coming soon — v29" placeholder without gaining self-unlock.
 
 ---
 
@@ -1284,7 +1303,8 @@ another customer of the same bank.
 **Learning Objective:** Cross-service batch reporting — Reporting Service consuming settlement data produced by two other independent services (CBS, Payment Hub) to surface mismatches.
 **Business Features:** EOD Reconciliation Report.
 **Application Development:**
-- UI: Reconciliation Report view (internal ops), flags any mismatch
+- UI: Reconciliation Report view (internal ops), flags any mismatch; Branch Portal's Operations side menu finalized per the Admin Portal merge note — Teller functions plus exactly four Operations entries: Cash Deposit/Withdrawal (Sprint 2), BOD/EOD status (Sprints 3–4), Reconciliation Report (this sprint), and Unlock User. No System Overview infrastructure tiles (P02 v18's Operations Dashboard stays the live-infra view), no general Customers/Accounts/Reports/Configuration admin menu, no Audit Log UI (the immutable `audit_log` table stays live since P02 v17 — viewed via SQL only, preserving P01 v6's exact boundary)
+- Backend: `UnlockUserService` flow via CBS's Operations Service — Teller looks up a locked account (locked per P02 v17's lockout-after-N-attempts rule) and clears the lock; the customer Login screen's "Coming soon — v29" Unlock User placeholder (P01 v2) is retired WITHOUT the customer gaining a working self-unlock control
 - Backend: ReconciliationService (within Reporting Service, P03 v23) — reads CBS's ledger through explicitly approved read-only access and Payment Hub's settled NEFT/IMPS records via Payment Hub's REST query endpoint (Payment Hub holds no database of its own per v25), ties them out, and flags discrepancies without modifying CBS business data
 - Database: N/A (read-only, per Reporting Service's accepted OLTP-read tradeoff)
 - API: REST endpoint to retrieve the reconciliation report
@@ -1297,7 +1317,7 @@ another customer of the same bank.
 
 **Dependencies:** Sprint 4's EOD close, P03 v25's NEFT/IMPS settlement data (via Payment Hub's REST query endpoint), P03 v23's Reporting Service.
 **Deliverables:** Working EOD Reconciliation Report.
-**Acceptance Criteria:** After a full BOD→transactions→EOD cycle, the reconciliation report correctly ties out every NEFT/IMPS settlement against CBS's ledger; a deliberately introduced mismatch (e.g., a manually altered test record) is correctly flagged, not silently passed.
+**Acceptance Criteria:** After a full BOD→transactions→EOD cycle, the reconciliation report correctly ties out every NEFT/IMPS settlement against CBS's ledger; a deliberately introduced mismatch (e.g., a manually altered test record) is correctly flagged, not silently passed; a Teller successfully unlocks an account locked by P02 v17's lockout rule via the Operations menu, and the customer-facing Login screen no longer shows a dead "Coming soon" placeholder.
 **Enterprise Outcome:** This is where "Reconciliation" — previously only named under v25's Enterprise Learning with no concrete feature — gets its actual implementation, exactly where a real bank would put it: at EOD close.
 
 ---
@@ -1316,7 +1336,7 @@ another customer of the same bank.
 **Dependencies:** Sprints 1–5 complete, P03 v25 (NEFT), P03 v23 (Reporting Service).
 **Deliverables:** SetupDoc-v29.md, TestCases-v29.md (including the Branch-Portal-never-writes negative test).
 **TP01 Pipeline (mandatory, per TP01_Test_Pipeline.md):** Sprint 6 executes the full 5-stage test pipeline — DEV (Unit/Component, Developer, Code Quality/Security) → SIT (API, Integration, Database, Middleware, End-to-End, Negative, Regression Pack v1–v<N-1>) → UAT (Business Process, Customer Journey, Financial/Accounting Validation, Business Acceptance) → PRE-PROD (Production-like Smoke, Performance, Security, DR/Recovery, Operational Readiness, Deployment/Rollback) → PROD (Smoke, Sanity, Monitoring Verification, Business Validation). Results recorded in `TestCases-v<N>.md` under "## TP01 Pipeline Results — v<N>" using the TP01 stage table. All Critical/High rows must Pass before Sprint 7 sign-off (TP01 R1–R3).
-**Acceptance Criteria:** Teller Login, Cash Deposit/Withdrawal, BOD, EOD, and Reconciliation Report all pass together in one combined pass; zero-DB-access confirmed; full regression pack (v1–v28) passes.
+**Acceptance Criteria:** Teller Login, Cash Deposit/Withdrawal, BOD, EOD, Reconciliation Report, and Unlock User all pass together in one combined pass; Operations menu contains only the four scoped entries (merge boundaries confirmed — no duplicated infra view, no audit log UI); zero-DB-access confirmed; full regression pack (v1–v28) passes, including P02 v17's lockout behavior continuing to work correctly with Unlock User now in the loop.
 **Enterprise Outcome:** Version 29 signed off — seven independent WAS EARs plus two Tomcat apps now operate together, with a genuine scheduled operational day-cycle proven end-to-end; only Loan Management (v30) remains before Part-3 closes.
 
 ---
@@ -1348,7 +1368,7 @@ another customer of the same bank.
 - SetupDoc-v29.md, TestCases-v29.md
 
 ## Version 29 Exit Criteria
-- ✅ Application functionality complete (Teller Login, Cash Deposit/Withdrawal, BOD, EOD, Reconciliation Report)
+- ✅ Application functionality complete (Teller Login, Cash Deposit/Withdrawal, BOD, EOD, Reconciliation Report, Unlock User — retiring the P01 v2 "Coming soon — v29" placeholder)
 - ✅ Database validated (V29 migration applied and verified; Branch Portal confirmed zero direct DB access)
 - ✅ WebSphere deployment successful (seventh independent WAS EAR live, BOD/EOD scheduled jobs confirmed running automatically)
 - ✅ TP01 pipeline passed (all 5 stages, all Critical/High rows Pass in TP01 Pipeline Results table)
@@ -1376,6 +1396,8 @@ another customer of the same bank.
 **Expected Outcome:** A customer can apply for a Personal Loan, pass a simulated eligibility check, get approved, and have the loan amount disbursed straight into their CBS savings account; an EMI schedule is generated and at least one EMI auto-debits on its due date via EJB Timer Service, correctly reducing the outstanding principal.
 
 **Prerequisites:** P03 Version 29 Completion Checkpoint satisfied — Branch Portal live, BOD/EOD scheduled jobs operational, EOD Reconciliation Report proven.
+
+**Enterprise Learning:** Lending Domain Model (loan lifecycle from application to closure); EMI Amortization Logic (principal/interest split, due-date computation); Credit Risk Simulation — simplified eligibility rules standing in for real credit assessment; Batch-Driven Financial Processing (interest accrual feeding schedule generation); NPA/Overdue Handling Basics (simulated threshold flagging).
 
 ---
 
@@ -1407,7 +1429,7 @@ another customer of the same bank.
 **Learning Objective:** A hard business gate (eligibility) blocking progression, mirroring v24's Aadhaar/PAN verification gate pattern.
 **Business Features:** Loan Application, Eligibility Check (simulated credit/income rules).
 **Application Development:**
-- UI: Loan Application form (product selection, amount requested, income declaration)
+- UI: Loan Application form (product selection, amount requested, income declaration) — hosted in the Internet Banking Portal (presentation-only; calls CBS's LoanService REST endpoint, zero direct DB access per the Governing Rule)
 - Backend: `LoanService.apply()`, `EligibilityService` (simulated rule-based check — income multiple, existing loan exposure)
 - Database: N/A (reuses Sprint 1 schema)
 - API: REST endpoint for Loan Application
@@ -1453,8 +1475,8 @@ another customer of the same bank.
 **Learning Objective:** Amortization schedule computation as a batch-style generation step following disbursement.
 **Business Features:** EMI Schedule Generation.
 **Application Development:**
-- UI: EMI Schedule view (customer-facing, amount/due-date per installment)
-- Backend: `EMIScheduleService.generate()` — amortization calculation, populates `emi_schedule` table
+- UI: EMI Schedule view (customer-facing, amount/due-date per installment) — hosted in the Internet Banking Portal, presentation-only via CBS REST
+- Backend: `EMIScheduleService.generate()` — amortization calculation, populates `emi_schedule` table; `InterestAccrualService` batch step (per the version's Batch Interest Accrual topic) computes/records accrued interest as schedule-generation input, reusing the batch-style pattern from v25/v29
 - Database: N/A (reuses Sprint 1's `emi_schedule` table)
 - API: REST endpoint to retrieve EMI Schedule
 
@@ -1466,7 +1488,7 @@ another customer of the same bank.
 
 **Dependencies:** Sprint 3's Disbursement.
 **Deliverables:** Working EMI Schedule generation.
-**Acceptance Criteria:** Immediately after disbursement, a correctly computed EMI schedule (principal + interest split, due dates) is generated and viewable.
+**Acceptance Criteria:** Immediately after disbursement, a correctly computed EMI schedule (principal + interest split, due dates) is generated and viewable; the interest-accrual batch step runs before schedule generation and its output is reflected in the principal + interest split.
 **Enterprise Outcome:** First amortization-style computed schedule in the roadmap — sets up the due-date-driven auto-debit this version's headline deliverable depends on.
 
 ---
@@ -1476,7 +1498,7 @@ another customer of the same bank.
 **Learning Objective:** EJB Timer Service applied to per-loan due-date scheduling (many independent timers, not one shared batch job like BOD/EOD), plus transaction isolation for concurrent EMI processing across multiple loans.
 **Business Features:** EMI Auto-Debit (scheduled), Loan Statement, Foreclosure/Prepayment, Overdue/NPA Flagging (simulated).
 **Application Development:**
-- UI: Loan Statement view, Foreclosure/Prepayment form, Overdue flag indicator
+- UI: Loan Statement view, Foreclosure/Prepayment form, Overdue flag indicator; Internet Banking Portal Dashboard gains a "Loans" section (per the Dashboard UI Note, 2026-08-24) — shown only when the customer has an active loan (origination through disbursement), displaying loan type, outstanding principal, and next EMI due date, sourced read-only from CBS's Loans module via REST/SOAP (same Governing Rule as Cards — Portal never writes to digistack_cbs); section omitted entirely when no active loan, consistent with the Dashboard's placeholder/omission discipline
 - Backend: `EMIAutoDebitTimer` (EJB Timer Service, per-schedule-entry due-date trigger) — debits the linked account, reduces outstanding principal; `LoanService.foreclose()`; `NPAFlagService` (simulated overdue threshold check)
 - Database: N/A (reuses Sprint 1 schema; updates `emi_schedule` status, loan outstanding balance)
 - API: REST endpoints for Loan Statement, Foreclosure/Prepayment
@@ -1508,7 +1530,7 @@ another customer of the same bank.
 **Dependencies:** Sprints 1–5 complete, all of P03 v23–v29.
 **Deliverables:** SetupDoc-v30.md, TestCases-v30.md; full P03 Completion Checklist signed off.
 **TP01 Pipeline (mandatory, per TP01_Test_Pipeline.md):** Sprint 6 executes the full 5-stage test pipeline — DEV (Unit/Component, Developer, Code Quality/Security) → SIT (API, Integration, Database, Middleware, End-to-End, Negative, Regression Pack v1–v<N-1>) → UAT (Business Process, Customer Journey, Financial/Accounting Validation, Business Acceptance) → PRE-PROD (Production-like Smoke, Performance, Security, DR/Recovery, Operational Readiness, Deployment/Rollback) → PROD (Smoke, Sanity, Monitoring Verification, Business Validation). Results recorded in `TestCases-v<N>.md` under "## TP01 Pipeline Results — v<N>" using the TP01 stage table. All Critical/High rows must Pass before Sprint 7 sign-off (TP01 R1–R3).
-**Acceptance Criteria:** Application → Eligibility → Approval → Disbursement → EMI Schedule → Auto-Debit → Statement/Foreclosure/NPA all pass together in one combined pass; every item in P03's Completion Checklist passes; no open Critical/High defects; full regression pack (v1–v29) passes.
+**Acceptance Criteria:** Application → Eligibility → Approval → Disbursement → EMI Schedule → Auto-Debit → Statement/Foreclosure/NPA all pass together in one combined pass; Dashboard "Loans" section shows an active loan read-only and is correctly omitted for a customer with no active loan; every item in P03's Completion Checklist passes; no open Critical/High defects; full regression pack (v1–v29) passes.
 **Enterprise Outcome:** Version 30 signed off — Part-3 complete. Nine distinct deployable applications (7 WAS EARs + 2 Tomcat apps) now operate together under CBS's single-writer governing rule, with lending closing the last referenced-but-unbuilt gap from P02's Capstone.
 
 ---
@@ -1536,11 +1558,11 @@ another customer of the same bank.
 ## Version 30 Deliverables
 - `digistack-cbs-v30.ear` (new LoanService, EMIScheduleService, NPAFlagService modules)
 - `V30__create_loan_tables.sql`
-- EJB Timer Service configuration export (EMI Auto-Debit), Loan Statement export
+- EJB Timer Service configuration export (EMI Auto-Debit), Loan Statement export, Interest Accrual batch configuration export
 - SetupDoc-v30.md, TestCases-v30.md
 
 ## Version 30 Exit Criteria
-- ✅ Application functionality complete (Application, Eligibility, Approval, Disbursement, EMI Schedule, Auto-Debit, Statement, Foreclosure, NPA Flagging)
+- ✅ Application functionality complete (Application, Eligibility, Approval, Disbursement, EMI Schedule, Auto-Debit, Statement, Foreclosure, NPA Flagging, Portal Dashboard "Loans" section with active-loan-only display)
 - ✅ Database validated (V30 migration applied and verified)
 - ✅ WebSphere deployment successful (sixth CBS internal module live, per-loan EJB Timer scheduling confirmed alongside existing fixed-window timers)
 - ✅ TP01 pipeline passed (all 5 stages, all Critical/High rows Pass in TP01 Pipeline Results table)

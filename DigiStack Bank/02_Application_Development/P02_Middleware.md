@@ -80,42 +80,138 @@ P01 already populated (Network, VM Layout, Request Flows, Cluster,
 Deployment, DB ER, Security) aren't redrawn here — only what's new or
 materially extended this Part.
 
-                 DIGISTACK BANK — P02 (v15-v22)
-                       |
-              (inherits P01's Network/VM/Deployment/
-               Cluster/Security tree unchanged)
-                       |
-                       v
-              WebSphere ND
-                       |
-       +---------------+---------------+
-       |                               |
-       v                               v
-   REQUESTS                          MQ
-       |                               |
- 03_Request_Flows.md            05_MQ_Architecture.md
- (extended: v15 JMS/SIBus         (NEW this Part — v19,
-  producer/consumer added          Queue Manager, BANK.
-  to the request path)             PAYMENT.REQUEST.Q/
-       |                           RESPONSE.Q, DLQ, CHLAUTH)
-       v
-   APPLICATION
-       |
-       v
-   PostgreSQL
-       |
-       v
- 06_Database_ER_Diagram.md
- (extended: v15 Account/Beneficiary/
-  Fund Transfer — Customer added as
-  columns on users/account, not a
-  separate table until P03 v24 CIF,
-  v17 OTP/lockout/audit fields,
-- v19 is_external flag on Beneficiary — distinguishes internal
-  beneficiary (own account, SIBus route) from external beneficiary
-  (another customer of the same bank, IBM MQ route). External
-  beneficiaries identify both the destination customer_id and
-  destination account number.
+                 DIGISTACK BANK — P02 (v15–v22)
+                              |
+                              |
+                              v
+        +---------------------------------------------+
+        | P01 INHERITED FOUNDATION                   |
+        |                                             |
+        | Network / Deployment / Cluster / Security  |
+        | tree remains unchanged from P01            |
+        |                                             |
+        | VM Layout extended at v22.5                |
+        | dsb-oracle powers on                       |
+        +---------------------------------------------+
+                              |
+                              v
+                    +-------------------+
+                    |   WebSphere ND    |
+                    |                   |
+                    | Network Deployment|
+                    +-------------------+
+                              |
+              +---------------+---------------+
+              |                               |
+              v                               v
+        +-----------+                    +-----------+
+        | REQUESTS  |                    |    MQ     |
+        +-----------+                    +-----------+
+              |                               |
+              |                               |
+              v                               v
+   +-------------------------+       +---------------------------+
+   | 03_Request_Flows.md     |       | 05_MQ_Architecture.md     |
+   |                         |       |                           |
+   | Extended in v15         |       | NEW in v19                |
+   |                         |       |                           |
+   | JMS / SIBus             |       | IBM MQ Queue Manager       |
+   | producer / consumer     |       |                           |
+   | added to request path  |       | BANK.PAYMENT.REQUEST.Q    |
+   |                         |       | BANK.PAYMENT.RESPONSE.Q   |
+   | v15 creates SIBus       |       | DLQ                       |
+   | queue:                  |       | CHLAUTH                   |
+   |                         |       |                           |
+   | BANK.FUNDTRANSFER.Q     |       +---------------------------+
+   |                         |
+   | Queue depth is read by  |
+   | v18 dashboard            |
+   |                         |
+   | NOTE: SIBus queue is    |
+   | separate from IBM MQ    |
+   | BANK.PAYMENT.* queues   |
+   | introduced in v19       |
+   +-------------------------+
+              |
+              v
+   +-------------------------+
+   |      APPLICATION        |
+   |                         |
+   | Banking application     |
+   | request processing      |
+   |                         |
+   | JMS/SIBus producer      |
+   |        |                |
+   |        v                |
+   | BANK.FUNDTRANSFER.Q     |
+   |        |                |
+   |        v                |
+   | JMS/SIBus consumer      |
+   +-------------------------+
+              |
+              |
+              v
+   +--------------------------------+
+   |          PostgreSQL             |
+   |                                |
+   | 06_Database_ER_Diagram.md      |
+   |                                |
+   | Extended in v15:               |
+   | • Account                      |
+   | • Beneficiary                  |
+   | • Fund Transfer                |
+   | • Customer-related columns     |
+   |   on users/account             |
+   |                                |
+   | Customer is NOT a separate     |
+   | table yet                      |
+   |                                |
+   | Separate CIF arrives in P03    |
+   | v24                             |
+   |                                |
+   | Extended in v17:               |
+   | • OTP fields                   |
+   | • Lockout fields               |
+   | • Audit fields                 |
+   +--------------------------------+
+              |
+              |
+              v
+   +--------------------------------+
+   |       v22.5 ORACLE             |
+   |                                |
+   | dsb-oracle VM                 |
+   | powers on                     |
+   |                                |
+   | Oracle Database               |
+   | DIGISTACK_CBS PDB             |
+   +--------------------------------+
+
+
+              IMPORTANT QUEUE SEPARATION
+              ==========================
+
+   WebSphere SIBus                         IBM MQ
+   Introduced v15                         Introduced v19
+          |                                      |
+          v                                      v
+   BANK.FUNDTRANSFER.Q                  BANK.PAYMENT.REQUEST.Q
+          |                                      |
+          |                                      v
+          |                              BANK.PAYMENT.RESPONSE.Q
+          |
+          v                                      |
+   v18 Dashboard                               DLQ
+   reads queue depth                           CHLAUTH
+
+
+- v15 introduces the Beneficiary table including the is_external
+  column (default FALSE in v15 — all beneficiaries are internal).
+  v19 is where is_external is first SET to TRUE and acted upon —
+  it distinguishes internal beneficiary (own account, SIBus route)
+  from external beneficiary (another customer of the same bank,
+  IBM MQ route). External beneficiaries identify both the
+  destination customer_id and destination account number.
 
 Not in scope this Part: 09_DR_Architecture.md (still P05). Cluster
 topology (04) is unchanged from P01 — no new members added in P02.
@@ -154,8 +250,36 @@ How It's Wired
 INTERNAL Fund Transfer (Account1 → Account2, same customer) returns an
 immediate "accepted" response to the customer, then the actual balance
 update on Account2 happens via an MDB consuming from a JMS Queue on SIBus.
-A deliberately-failing transfer (e.g., insufficient funds discovered only
-during async processing) lands in the DLQ and is inspected.
+Failure semantics are split explicitly: a business-rule failure discovered
+during async processing (e.g., insufficient funds) consumes the message and
+marks the transfer FAILED — no retry, no DLQ. A technical/system failure
+(e.g., DB fault, forced MDB exception) redelivers per the retry policy and,
+on exhaustion, lands in the DLQ and is inspected. The deliberate DLQ drill
+in Sprint 6 uses the technical-failure path.
+
+Transaction Boundary Note (added 2026-08-25)
+------------------------------------------------
+Because Fund Transfer is the roadmap's first operation that writes TWO
+balances from ONE business action, its transaction boundaries are stated
+explicitly — this is the version where 2PC/distributed-transaction
+reasoning first becomes visible, per the gap flagged against P01's
+transfer/withdraw logic:
+
+- The MDB's debit of Account1 AND credit of Account2 both run inside a
+  single LOCAL transaction (one EAR, one DataSource, one JVM) — the debit
+  and credit legs are never split across a distributed XA transaction
+  at this stage.
+- The MDB consumes with a transactional JMS session: if the balance
+  update fails/rolls back, the message is NOT acknowledged — it redelivers
+  per the retry policy, and only exhausts to the DLQ after repeated
+  failure. This is the atomicity story: message consumption and balance
+  write succeed or fail together.
+- A deliberate distributed (XA/2PC) transaction — spanning multiple
+  EARs or DataSources — is deliberately NOT used here. Why that becomes
+  the right call, and where Saga/compensating-transaction patterns take
+  over, is formalized at P03 v25 (Payment Hub) and P03 v23 (single-writer
+  CBS decision). v15 is where the LOCAL boundary is exercised and
+  observed; the rejection of XA is documented, not silent.
 
 Routing rule established here and honored for the rest of the roadmap:
 - Internal beneficiary (own account)  → SIBus JMS/MDB (this version)
@@ -264,9 +388,10 @@ activates here — the SOAP Account Statement / Transaction History
 service built this version is queried to populate the Dashboard's
 last-10-transactions list (date, description, amount), per the standing
 Dashboard-first UI standard. The Statements sidebar item (also
-"Coming soon — v16") activates in lockstep with this. This is a read-only UI consumer of the
-existing SOAP endpoint — no new backend logic beyond what this version
-already delivers.
+"Coming soon — v16") activates in lockstep with this. This is a read-only UI consumer of the SOAP endpoint built in this
+version — no backend logic is added for the Dashboard beyond the
+AccountStatementService itself (Sprints 3–4); the UI wiring consumes it
+as-is.
 
 Dashboard UI Note — Download Statement (added 2026-08-24)
 ---------------------------------------------------------------
@@ -274,7 +399,9 @@ A "Download Statement" link is added next to the Dashboard's Recent
 Transactions section, calling this version's SOAP Account
 Statement/Transaction History service to produce the same PDF/CSV
 format P01 v14's Transaction Report already generates. No new report
-logic — just a Dashboard entry point into an existing service.
+logic is written — the link reuses the statement service's output;
+"existing" means the v14 report format and underlying transaction data,
+not a pre-existing service.
 
 ---
 
@@ -286,8 +413,9 @@ zero new WebSphere administration work.
 Rationale: The SOAP Account Statement / Transaction History service
 introduced at v16 returns all matching records in one response. The
 Transaction History screen (Statement sidebar) needs client-side
-pagination for usability — the backend already supports date/type
-filters, but a long result set needs page-by-page navigation. This is
+pagination for usability — the backend already supports date-range
+filtering (the SOAP contract's dateRange parameter), but a long result
+set needs page-by-page navigation. This is
 filed as v16.5 rather than inside v16 (to keep v16 a clean single-topic
 SOAP/REST sprint) and before v17 (so the UI is complete before security
 hardening locks down the endpoints).
@@ -306,11 +434,13 @@ What Is Built
 - No new database queries, no new backend service, no new WSDL changes.
 
 Scope Boundary
-Pagination lives entirely in the Portal's presentation layer
-(TransactionHistoryServlet + TransactionHistory.jsp). The SOAP endpoint
-at CBS is unchanged. If the full result set is very large, the filter
-controls (date range + type, live since v16) are the primary tool for
-narrowing — pagination handles the remainder.
+Pagination lives entirely in the application's presentation layer
+(TransactionHistoryServlet + TransactionHistory.jsp — still one EAR,
+per P02's single-deployable model; no CBS exists until P03 v23). The
+SOAP endpoint is unchanged. If the full result set is very large, the filter
+control (date range, live since v16 — the SOAP contract's only filter
+parameter) is the primary tool for narrowing — pagination handles the
+remainder.
 
 Sprint Deliverable: Transaction History screen displays results 10 per
 page with working ← / → navigation; navigating pages does not trigger a
@@ -333,11 +463,25 @@ No new banking feature — hardens what already exists:
 - Security Event Detection (renamed from "fraud detection" — this isn't a
   rules engine or ML, it's exactly one threshold check): rapid repeated
   Fund Transfers (from v15) raise a security audit log entry.
+- Immutable Audit Trail — NEW (added 2026-08-25): a dedicated
+  `audit_log` table in the application database (digistack_bank on
+  PostgreSQL at this version; carried into Oracle DIGISTACK_CBS by the
+  v22.5 migration) records every balance-affecting
+  operation (Deposit, Withdraw from P01 v3; internal Fund Transfers from
+  v15 at this version) with actor, timestamp, before/after balances,
+  and correlation ID; the external (MQ-routed) transfer audit hook is
+  added in v19 when external transfers come into existence. Append-only by design and enforced by grants: the
+  application DB user has INSERT only — no UPDATE, no DELETE, ever. This
+  retroactively closes the gap flagged at P01 v3 (whose `transaction`
+  table is the customer-facing ledger, not an audit record) without
+  touching v3's delivered code. Security events (rapid transfers,
+  lockouts, OTP failures) are recorded in the SAME table with a
+  distinct event class — one audit trail, not two.
 
-Rapid Transfers
+Rapid Transfers / Balance-Affecting Operation
 │
 ▼
-Security Audit Event
+Audit Log Entry (INSERT-only, immutable)
 
 
 Topics Covered: Global Security, Administrative Security, Application
@@ -347,7 +491,10 @@ Protection.
 Sprint Deliverable: MFA/OTP enforced on login; account locks after N failed
 attempts; LTPA token validated across the cluster; v16's REST/SOAP
 endpoints reject unauthenticated calls; a rapid-repeated-transfer test
-triggers a security audit log entry.
+triggers a security audit log entry. The new `audit_log` table receives
+an entry for every balance-affecting operation with before/after balances
+and actor identity; a negative test proves the app DB user cannot UPDATE
+or DELETE audit rows (grant-level immutability, not just convention).
 
 ---
 
@@ -373,6 +520,13 @@ working on SystemOut/SystemErr.
 > Note: this custom Operations Dashboard is later superseded and retired at
 > P04 v31, once Prometheus/Grafana reaches equivalent coverage — see P04's
 > Version 31 note for the retirement/decommission detail.
+
+> Note (forward reference, added 2026-08-26): P04 v32 establishes a project
+> Correlation ID Standard (format FT-{YYYYMMDD}-{seq}) applied retroactively
+> as a code fix to this Part's Fund Transfer from v15 onward — the transfer
+> servlet generates the ID, and every service touching the transfer logs it.
+> The propagation mechanics are defined in P04 v32; no change to this Part's
+> scope or version numbering results from that retrofit.
 
 ---
 Version 18.5 — DynaCache (Dynamic Caching)
@@ -695,13 +849,16 @@ Oracle 21c XE Limits (apply for the remainder of the roadmap)
 - No RAC support: P05's DR uses Oracle Data Guard, not RAC — compatible
 
 **Tables Migrated** (from PostgreSQL 16, schema `bank`, into Oracle DIGISTACK_CBS, via the JDBC-based migration utility — expdp is the backup discipline from this version onward, not the migration mechanism):
+- `app_config` (v1) — application configuration key/value pairs
 - `users` (v2) — user identity + role
-- `account` (v3) — includes embedded customer/holder columns (v15 did NOT model a
+- `accounts` (v3) — includes embedded customer/holder columns (v15 did NOT model a
   separate customer table; customer data lives as columns on `account` and `users`
   until P03 v24 introduces the CIF model — consistent with P03 v24's note)
 - `beneficiary` (v15)
 - `fund_transfer` (v15)
 - `transaction` (v3, Deposit/Withdraw ledger per P01 v3) — migrated with only its existing P01/P02-era rows; later Teller-channel entries (P03 v29) and REST-led entries accumulate in Oracle after migration
+- `audit_log` (v17, immutable INSERT-only audit trail per P02 v17) — migrated with its existing P02-era rows; all later entries (v23+ balance-affecting operations, security events) accumulate in Oracle after migration
+
 
 
 DDL Dialect Changes (PostgreSQL → Oracle 21c XE)
@@ -794,6 +951,11 @@ Completion Checklist
   load balancer fronting IHS with blue-green capability proven
 □ Full platform integration validated end-to-end (Capstone) with a
   documented runbook and tested backup/recovery
+□ Oracle 21c XE live on dedicated VM dsb-oracle; DIGISTACK_CBS PDB created;
+  jdbc/OracleDS coexisting with jdbc/BankDS; all tables (incl. audit_log)
+  migrated with row-count verification passing; expdp backup captured and
+  verified restorable; dsb-db (PostgreSQL VM) untouched and running
+  independently (decommission deferred to P03 v23 Sprint 4)
 □ Still one EAR (digistack-bank-v22.ear) — no Portal/CBS split yet; that's
   P03 v23
 
@@ -818,6 +980,9 @@ IHS/SSL/Security/JVM/Mail/Reports)
 - IBM MQ Queue Manager
 - IHS advanced admin (rewrite, maintenance mode, health checks)
 - External Load Balancer (blue-green, HA)
+- Oracle 21c XE (DIGISTACK_CBS PDB) on dedicated VM dsb-oracle, with
+  jdbc/OracleDS + OracleAlias live alongside jdbc/BankDS (PostgreSQL on
+  dsb-db) until the P03 v23 cutover — per v22.5
 
 Carried Forward to P03
 ---------------------------

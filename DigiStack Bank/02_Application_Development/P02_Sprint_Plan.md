@@ -52,7 +52,7 @@
 ### Sprint 2
 **Sprint Goal:** Add Beneficiary registration.
 **Learning Objective:** Model a minimal cross-account relationship without an approval workflow.
-**Business Features:** **Business Features:** Register an internal Beneficiary representing another account owned by the same customer; view registered Beneficiaries. External/Customer-to-Customer beneficiaries are explicitly deferred to Version 19.; view registered Beneficiaries.
+**Business Features:** Register an internal Beneficiary representing another account owned by the same customer; view registered Beneficiaries. External/Customer-to-Customer beneficiaries are explicitly deferred to Version 19.; view registered Beneficiaries.
 **Application Development:**
 - UI: Beneficiary registration form + list
 - Backend: BeneficiaryService
@@ -64,7 +64,7 @@
 
 **Dependencies:** Sprint 1's Account model.
 **Deliverables:** Beneficiary table + UI.
-**Acceptance Criteria:** A customer registers one internal beneficiary pointing to another account owned by the same customer; an external/Customer-to-Customer beneficiary cannot be registered or used until Version 19.
+**Acceptance Criteria:** A customer registers one internal beneficiary pointing to another account owned by the same customer, stored with is_external = FALSE (the column default); an external/Customer-to-Customer beneficiary cannot be registered or used until Version 19, and any transfer attempt against a non-owned or external-flagged beneficiary is rejected by FundTransferService validation.
 **Enterprise Outcome:** Fund Transfer (Sprint 4+) has a real target to transfer to.
 
 ---
@@ -113,14 +113,14 @@
 **Business Features:** None (completes Sprint 4's feature).
 **Application Development:**
 - UI: Fund Transfer status now reflects PROCESSED after async completion
-- Backend: FundTransferMDB — consumes message, performs balance debit/credit, updates status
+- Backend: FundTransferMDB — consumes message transactionally; performs balance debit/credit guarded by an idempotency check on the fund_transfer row status (a redelivered message for an already-PROCESSED transfer is acked and discarded without re-applying balances); updates status
 - Database: N/A (reuses Sprint 4 table)
 - API: N/A
 
 **WebSphere Administration:**
 - Create Activation Specification bound to `BANK.FUNDTRANSFER.Q`
 - Deploy MDB module as part of EAR
-- Size MDB Listener Port thread pool (baseline from CAP01)
+- Size MDB concurrency via the Activation Specification's maximum concurrent endpoints and the SIBus messaging engine thread pool (baseline from CAP01)
 
 **Dependencies:** Sprint 4's producer, Sprint 3's Queue.
 **Deliverables:** End-to-end async Fund Transfer.
@@ -132,10 +132,10 @@
 ### Sprint 6
 **Sprint Goal:** Prove failure handling via Dead Letter Queue.
 **Learning Objective:** DLQ configuration, retry semantics, message inspection.
-**Business Features:** Deliberately failing transfer (e.g., insufficient funds discovered only during async processing).
+**Business Features:** Deliberately failing transfer via a TECHNICAL failure (e.g., forced MDB exception / simulated DB fault during async processing). Business failures (insufficient funds) are NOT routed to DLQ — per Sprint 5 they consume the message and mark the transfer FAILED; this distinction is what Sprint 6 demonstrates.
 **Application Development:**
 - UI: Failed transfer shown with FAILED status
-- Backend: MDB throws on invalid business rule, message retried per configured attempts, then lands in DLQ
+- Backend: MDB throws on a forced technical fault, message retried per configured attempts, then lands in DLQ; the MDB's insufficient-funds path remains the business-FAILED path (acked, no retry) so both semantics are observable side by side
 - Database: N/A
 - API: N/A
 
@@ -147,7 +147,7 @@
 **Dependencies:** Sprint 5's MDB.
 **Deliverables:** DLQ configured and proven; `SetupDoc-v15.md`, `TestCases-v15.md` drafted.
 **TP01 Pipeline (mandatory, per TP01_Test_Pipeline.md):** Sprint 6 executes the full 5-stage test pipeline — DEV (Unit/Component, Developer, Code Quality/Security) → SIT (API, Integration, Database, Middleware, End-to-End, Negative, Regression Pack v1–v<N-1>) → UAT (Business Process, Customer Journey, Financial/Accounting Validation, Business Acceptance) → PRE-PROD (Production-like Smoke, Performance, Security, DR/Recovery, Operational Readiness, Deployment/Rollback) → PROD (Smoke, Sanity, Monitoring Verification, Business Validation). Results recorded in `TestCases-v<N>.md` under "## TP01 Pipeline Results — v<N>" using the TP01 stage table. All Critical/High rows must Pass before Sprint 7 sign-off (TP01 R1–R3).
-**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7; all TP01 pipeline stages Pass (Critical/High) per TP01 R3.
+**Acceptance Criteria:** A deliberately failing transfer exhausts retries and lands in the DLQ (visible via Admin Console browse); an insufficient-funds transfer is marked FAILED with the message consumed (never reaching DLQ); all Critical/High test cases pass per TCS01 §2.7; all TP01 pipeline stages Pass (Critical/High) per TP01 R3.
 **Enterprise Outcome:** Full asynchronous processing lifecycle — including failure — demonstrated end-to-end.
 
 ---
@@ -201,6 +201,8 @@
 
 **Business Scope:** No new banking feature — exposes what already exists: Balance Inquiry (REST), Fund Transfer (REST), Account Statement/Transaction History (SOAP, formalized from v14's report data).
 
+**Security Boundary Note (deliberate, per the P02 scoping discipline):** The three endpoints are unauthenticated at this version — v17 (Security Hardening) is where MFA/token auth lands. Until then, the REST contract resolves customer identity from the authenticated web session where one exists, and for direct external calls (Postman/SoapUI) a fixed test-customer identity is used explicitly for testing. Endpoint exposure beyond the test harness is documented as a known, time-boxed state in SetupDoc-v16.md. Building v16 unauthenticated and closing it in v17 is the deliberate sequence — the endpoints exist first so v17 has something real to harden.
+
 **WebSphere Focus:** Web Services Engine (JAX-WS/JAX-RS), WSDL generation/publishing, SOAP binding, REST endpoint deployment, Admin Console API endpoint configuration, request/response logging.
 
 **Expected Outcome:** Two REST endpoints (Balance Inquiry, Fund Transfer) and one SOAP endpoint (Account Statement) are live; WSDL is published and browsable; an external client (Postman/SoapUI) successfully calls all three with logged request/response.
@@ -236,7 +238,7 @@
 **Business Features:** Fund Transfer (existing feature, now callable externally).
 **Application Development:**
 - UI: N/A
-- Backend: FundTransferResource (JAX-RS) — delegates to existing FundTransferService producer
+- Backend: FundTransferResource (JAX-RS) — delegates to existing FundTransferService producer; carries the customer identity v15's ownership validation requires (from session where present, fixed test identity otherwise per the Version Overview Security Boundary Note)
 - Database: N/A (reuses v15's fund_transfer table)
 - API: `POST /api/transfers`
 
@@ -246,7 +248,7 @@
 
 **Dependencies:** Sprint 1's JAX-RS engine, P02 v15 Fund Transfer producer.
 **Deliverables:** Working REST Fund Transfer endpoint.
-**Acceptance Criteria:** Postman POST returns "Accepted" immediately; transfer completes asynchronously as in v15.
+**Acceptance Criteria:** Postman POST returns "Accepted" immediately; transfer completes asynchronously as in v15; transfers against non-owned source accounts or external-flagged beneficiaries are rejected by the same v15 validation; duplicate submissions of the same transfer do not double-debit (v15's idempotency guard holds through the REST path).
 **Enterprise Outcome:** REST contract established for the exact flow P03's Mobile/ATM simulators will consume later.
 **Note:** No API versioning scheme is introduced at this version — endpoint contracts are expected to stay stable; a breaking change would require an explicit, newly-scoped decision (per ARCH02 §3).
 
@@ -278,7 +280,7 @@
 **Learning Objective:** WSDL publishing, SOAP binding configuration in Admin Console.
 **Business Features:** None (completes Sprint 3's feature).
 **Application Development:**
-- UI: N/A
+- UI: Dashboard "Your Recent Transactions" section activates (placeholder since P01 v3, shown as "Coming soon — v16") — a read-only consumer of this sprint's SOAP endpoint, populating the last-10-transactions list (date, description, amount); the "Statements" sidebar item activates in lockstep; a "Download Statement" link is added next to Recent Transactions, calling the same SOAP service to produce the PDF/CSV format P01 v14's Transaction Report already generates. No new report or backend logic — UI wiring only.
 - Backend: Finalize AccountStatementService response mapping (POJO → SOAP response)
 - Database: N/A
 - API: SOAP response now returns real transaction rows, not a stub
@@ -289,7 +291,7 @@
 
 **Dependencies:** Sprint 3's service skeleton.
 **Deliverables:** Fully functional SOAP endpoint.
-**Acceptance Criteria:** SoapUI call against the published WSDL returns real transaction history for a test account.
+**Acceptance Criteria:** SoapUI call against the published WSDL returns real transaction history for a test account; the Dashboard's Recent Transactions list renders the same data via the SOAP consumer, the Download Statement link produces the same PDF/CSV output as P01 v14's Transaction Report, and the "Coming soon — v16" placeholders (Recent Transactions, Statements sidebar) are gone.
 **Enterprise Outcome:** First real enterprise SOAP contract, independently testable via SoapUI.
 
 ---
@@ -420,7 +422,7 @@
 **WebSphere Administration:** N/A this sprint.
 **Dependencies:** Sprint 1.
 **Deliverables:** Working in-memory slicing logic.
-**Acceptance Criteria:** Navigating between pages does not trigger a new SOAP call, confirmed via request/response logging (P02 v16 Sprint 5).
+**Acceptance Criteria:** Navigating between pages does not trigger a new SOAP call, confirmed via request/response logging (P02 v16 Sprint 5). **Freshness rule:** the cache is invalidated by any new navigation into Transaction History from elsewhere in the application (re-entering the screen re-fetches once); only in-screen page navigation reuses the cached result — so a transfer that completes asynchronously is never missing simply because the customer paged through an old result.
 **Enterprise Outcome:** Confirms pagination is a presentation-layer concern only — no load added to the SOAP endpoint per page view.
 
 ---
@@ -462,7 +464,7 @@
 ---
 
 ### Sprint 5
-**Sprint Goal:** Confirm date/type filter controls (live since v16) interact correctly with pagination.
+**Sprint Goal:** Confirm the date-range filter control (live since v16 — the SOAP contract's only filter parameter) interacts correctly with pagination.
 **Learning Objective:** Ensuring two independently-built features (filtering, pagination) compose correctly rather than conflicting.
 **Business Features:** Filtering + pagination working together.
 **Application Development:**
@@ -474,8 +476,9 @@
 **WebSphere Administration:** N/A this sprint.
 **Dependencies:** Sprint 4, P02 v16's existing filter controls.
 **Deliverables:** Verified filter+pagination interaction.
-**Acceptance Criteria:** Changing a filter resets to page 1 and re-fetches; paging within an active filter does not re-fetch.
-**Enterprise Outcome:** Confirms the scope boundary — pagination handles page-to-page navigation, filters remain the primary tool for narrowing large result sets.
+**Acceptance Criteria:** Changing the date range resets to page 1 and re-fetches; paging within an active filter does not re-fetch; changing date range while on page 3+ never renders a page number beyond the new result set's last page.
+**Account Selection Note:** The Transaction History screen operates on the account selected in the Dashboard's account list/switcher (v15 Sprint "Your Accounts"); the selected accountId is what the servlet passes to the SOAP contract. Changing the selected account resets pagination to page 1 and triggers a fresh SOAP call — same semantics as a filter change.
+**Enterprise Outcome:** Confirms the scope boundary — pagination handles page-to-page navigation, filters (date range, account selection) remain the primary tools for narrowing large result sets.
 
 ---
 
@@ -542,13 +545,13 @@
 
 ## Version Overview
 
-**Version Objective:** Harden everything already built — MFA/OTP, account lockout, endpoint authentication, and a basic Security Event Detection check — without adding new banking features.
+**Version Objective:** Harden everything already built — MFA/OTP, account lockout, endpoint authentication, CSRF/XSS protection, an Immutable Audit Trail, and a basic Security Event Detection check — without adding new banking features.
 
 **Business Scope:** No new banking feature — hardens v2's Login, and retroactively secures v16's REST/SOAP endpoints.
 
 **WebSphere Focus:** Global/Application Security, LDAP, LTPA, JAAS, role mapping, CSRF/XSS protection.
 
-**Expected Outcome:** MFA/OTP enforced on login; account locks after N failed attempts; LTPA token validated across the cluster; v16's REST/SOAP endpoints reject unauthenticated calls; a rapid-repeated-transfer test triggers a security audit log entry.
+**Expected Outcome:** MFA/OTP enforced on login; account locks after N failed attempts; LTPA token validated across the cluster; v16's REST/SOAP endpoints reject unauthenticated calls; a rapid-repeated-transfer test triggers a security audit log entry; the `audit_log` table records every balance-affecting operation (Deposit, Withdraw, internal Fund Transfer) with before/after balances and actor identity, and is proven immutable at the grant level.
 
 **Prerequisites:** P02 Version 16.5 Completion Checkpoint satisfied — Balance Inquiry/Fund Transfer (REST), Account Statement (SOAP), and paginated Transaction History all live and traceable.
 
@@ -561,12 +564,12 @@
 **Application Development:**
 - UI: OTP entry screen post-password
 - Backend: OTPService (simulated OTP generation/validation)
-- Database: (part of `V17__add_otp_lockout_fields_and_security_audit_log.sql`)
+- Database: (part of `V17__add_otp_lockout_fields_and_audit_log.sql`)
 - API: N/A
 
 **WebSphere Administration:**
 - No new WAS config yet (application-level OTP logic)
-- Redeploy over v16
+- Redeploy over v16.5
 
 **Dependencies:** P01 v2 Login/session.
 **Deliverables:** Working MFA/OTP login flow.
@@ -582,7 +585,7 @@
 **Application Development:**
 - UI: "Account locked" message
 - Backend: LoginAttemptTracker, lockout check in Login flow
-- Database: (part of `V17__add_otp_lockout_fields_and_security_audit_log.sql`)
+- Database: (part of `V17__add_otp_lockout_fields_and_audit_log.sql`)
 - API: N/A
 
 **WebSphere Administration:**
@@ -629,7 +632,7 @@
 **Dependencies:** P02 v16 endpoints, Sprint 3's LTPA/security realm.
 **Deliverables:** Authenticated REST/SOAP endpoints.
 **Acceptance Criteria:** Postman/SoapUI calls without a valid token/API key are rejected (401/403); calls with a valid token succeed as before.
-**Enterprise Outcome:** Previously open endpoints now enforce authentication, closing a real security gap before P03's channel simulators consume them.
+**Enterprise Outcome:** Previously open endpoints now enforce authentication, closing a real security gap before P03's channel simulators consume them. This formally retires v16's declared Security Boundary Note (unauthenticated endpoints + fixed test identity) — SetupDoc-v17.md documents the v16 boundary as closed, and the fixed test identity is replaced by the token/API-key credential used for external testing.
 
 ---
 
@@ -659,8 +662,8 @@
 **Business Features:** Rapid repeated Fund Transfers raise a security audit log entry.
 **Application Development:**
 - UI: N/A
-- Backend: SecurityAuditService — threshold check on repeated Fund Transfer attempts within a time window
-- Database: (part of `V17__add_otp_lockout_fields_and_security_audit_log.sql`)
+- Backend: SecurityAuditService — threshold check on repeated Fund Transfer attempts within a time window; security events (rapid transfers, lockouts, OTP failures) written to the SAME `audit_log` table (built Sprint 6) with a distinct event class — one audit trail, not two
+- Database: (part of `V17__add_otp_lockout_fields_and_audit_log.sql`)
 - API: N/A
 
 **WebSphere Administration:**
@@ -670,7 +673,7 @@
 **Dependencies:** P02 v15 Fund Transfer, Sprint 4's authenticated endpoints.
 **Deliverables:** Security Event Detection working; `TestCases-v17.md`.
 **TP01 Pipeline (mandatory, per TP01_Test_Pipeline.md):** Sprint 6 executes the full 5-stage test pipeline — DEV (Unit/Component, Developer, Code Quality/Security) → SIT (API, Integration, Database, Middleware, End-to-End, Negative, Regression Pack v1–v<N-1>) → UAT (Business Process, Customer Journey, Financial/Accounting Validation, Business Acceptance) → PRE-PROD (Production-like Smoke, Performance, Security, DR/Recovery, Operational Readiness, Deployment/Rollback) → PROD (Smoke, Sanity, Monitoring Verification, Business Validation). Results recorded in `TestCases-v<N>.md` under "## TP01 Pipeline Results — v<N>" using the TP01 stage table. All Critical/High rows must Pass before Sprint 7 sign-off (TP01 R1–R3).
-**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7; all TP01 pipeline stages Pass (Critical/High) per TP01 R3.
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7; all TP01 pipeline stages Pass (Critical/High) per TP01 R3; TP01 Security stage includes the `audit_log` immutability negative test (UPDATE/DELETE as app DB user must fail).
 **Enterprise Outcome:** Version 17 test coverage complete — MFA/lockout/LTPA/endpoint auth/CSRF-XSS/audit detection all proven.
 
 ---
@@ -696,14 +699,14 @@
 ---
 
 ## Version 17 Deliverables
-- `digistack-bank-v17.ear` (MFA/OTP, lockout, secured REST/SOAP endpoints, CSRF/XSS protection, security audit logging)
-- `V17__add_otp_lockout_fields_and_security_audit_log.sql`
+- `digistack-bank-v17.ear` (MFA/OTP, lockout, secured REST/SOAP endpoints, CSRF/XSS protection, immutable `audit_log`, security event detection)
+- `V17__add_otp_lockout_fields_and_audit_log.sql` (OTP/lockout fields, `audit_log` table, INSERT-only grants)
 - LTPA/LDAP configuration exports, JAAS login module config, Secure Cookie config
 - SetupDoc-v17.md, TestCases-v17.md
 
 ## Version 17 Exit Criteria
 - ✅ Application functionality complete (MFA/lockout/endpoint auth/CSRF-XSS/audit detection)
-- ✅ Database validated (V17 migration applied and verified)
+- ✅ Database validated (V17 migration applied and verified; `audit_log` receiving entries for every balance-affecting operation; INSERT-only grant immutability proven by negative test)
 - ✅ WebSphere deployment successful (Global/Application Security, LTPA/SSO confirmed cluster-wide)
 - ✅ TP01 pipeline passed (all 5 stages, all Critical/High rows Pass in TP01 Pipeline Results table)
 - ✅ Smoke testing passed (unauthenticated endpoint calls rejected, MFA/lockout/CSRF all proven)
@@ -760,11 +763,13 @@
 - API: N/A
 
 **WebSphere Administration:**
-- No new config (consumes Sprint 1's PMI/JMX setup)
+- No new PMI/JMX config (consumes Sprint 1's setup)
+- Map the Operations Dashboard to a dedicated admin-only security role (e.g., OpsDashboard role), consistent with P01 v10's role model and v17's hardening posture — no anonymous access
+- Redeploy over v17 changes
 
 **Dependencies:** Sprint 1's PMI/JMX access.
 **Deliverables:** Working JVM Health panel.
-**Acceptance Criteria:** Panel shows live heap usage that visibly changes under generated load.
+**Acceptance Criteria:** Panel shows live heap usage that visibly changes under generated load; unauthenticated access to the Operations Dashboard URL is redirected to login/rejected, and only users holding the OpsDashboard role can view it.
 **Enterprise Outcome:** First real-time infrastructure view built directly on WAS-native monitoring data.
 
 ---
@@ -780,7 +785,7 @@
 - API: N/A
 
 **WebSphere Administration:**
-- No new config (reuses Sprint 1's PMI/JMX + P02 v15's SIBus)
+- Redeploy over Sprint 2 changes (reuses Sprint 1's PMI/JMX + P02 v15's SIBus — no new config)
 
 **Dependencies:** Sprint 2's dashboard skeleton, P02 v15 SIBus.
 **Deliverables:** Session Count and JMS Queue Depth panels live.
@@ -800,7 +805,7 @@
 - API: N/A
 
 **WebSphere Administration:**
-- No new config (reuses P01 v7's DataSource)
+- Redeploy over Sprint 3 changes (reuses P01 v7's DataSource — no new config)
 
 **Dependencies:** Sprint 3's dashboard, P01 v7 JNDI DataSource.
 **Deliverables:** Complete 4-panel Operations Dashboard (JVM, Session, Queue, DB Pool).
@@ -817,11 +822,12 @@
 **WebSphere Administration:**
 - Trigger a manual thread dump via Admin Console during simulated load
 - Trigger a manual heap dump via Admin Console
-- Review both dumps, correlate against FFDC logs and HPEL viewer output
+- Enable/confirm verbose GC logging on both cluster members; locate the GC log files
+- Review both dumps, correlate against GC log output, FFDC logs, and HPEL viewer output
 
 **Dependencies:** Sprint 1–4's dashboard providing context for when to trigger dumps.
-**Deliverables:** Captured thread dump and heap dump, with a documented review.
-**Acceptance Criteria:** Both dumps are successfully generated and at least one thread/heap observation is documented (e.g., active thread count matches dashboard's session/queue activity at capture time).
+**Deliverables:** Captured thread dump and heap dump, verbose GC logs enabled, with a documented review.
+**Acceptance Criteria:** Both dumps are successfully generated and at least one thread/heap observation is documented (e.g., active thread count matches dashboard's session/queue activity at capture time); GC logs are confirmed active on both cluster members and at least one GC cycle observation (e.g., heap-before/heap-after on a collection) is documented alongside the dump review.
 **Enterprise Outcome:** First hands-on diagnostic capture exercise, directly reusable for later troubleshooting scenarios (P03.1 Interview-4).
 
 ---
@@ -866,7 +872,7 @@
 ## Version 18 Deliverables
 - `digistack-bank-v18.ear` (Operations Dashboard: JVM Health, Session Count, JMS Queue Depth, DB Pool Usage panels)
 - No new SQL migrations this version
-- PMI configuration exports, captured thread dump/heap dump samples
+- PMI configuration exports, captured thread dump/heap dump samples, verbose GC log samples
 - SetupDoc-v18.md, TestCases-v18.md
 
 ## Version 18 Exit Criteria
@@ -874,7 +880,7 @@
 - ✅ Database validated (no schema change; DB pool panel confirmed reading live pool metrics)
 - ✅ WebSphere deployment successful (PMI/JMX enabled and confirmed cluster-wide)
 - ✅ TP01 pipeline passed (all 5 stages, all Critical/High rows Pass in TP01 Pipeline Results table)
-- ✅ Smoke testing passed (all four panels verified live; thread/heap dump captured and reviewed; log rotation confirmed)
+- ✅ Smoke testing passed (all four panels verified live under the admin-only OpsDashboard role; unauthenticated access rejected; thread/heap dump captured and reviewed; GC logs confirmed active; log rotation confirmed)
 - ✅ Ready for Version 19
 
 ## Lessons Learned
@@ -926,10 +932,12 @@
 - Create `BANK.PAYMENT.REQUEST.Q` (local), `BANK.PAYMENT.RESPONSE.Q` (local)
 - Create a transmission queue and remote queue definition simulating the "external payment-leg" endpoint. This simulator represents the external payment-processing leg of the same bank's Customer1 → Customer2 flow; it is not a second bank and does not represent an interbank transfer.
 - Configure a sender/receiver channel pair
+- Create and start the MQ Listener for the Queue Manager, and confirm channels can only run while it is active
+- Enable Triggering on `BANK.PAYMENT.REQUEST.Q` (trigger on first message, tied to the channel-start mechanism) and verify it fires — the topic's Triggering item is exercised here, not deferred
 
 **Dependencies:** Sprint 1's Queue Manager.
-**Deliverables:** Request/response queue pair, channel configuration.
-**Acceptance Criteria:** A test message sent to the request queue is confirmed transmitted across the channel to the simulated external endpoint.
+**Deliverables:** Request/response queue pair, channel configuration, running Listener, working Trigger.
+**Acceptance Criteria:** A test message sent to the request queue is confirmed transmitted across the channel to the simulated external endpoint; the Listener is confirmed running, and placing the test message on the trigger-enabled request queue demonstrably fires the trigger.
 **Enterprise Outcome:** Queue topology proven before any application code depends on it.
 
 ---
@@ -998,19 +1006,19 @@ The `transfer_id` must be used as the correlation identifier between the request
 ### Sprint 5
 **Sprint Goal:** Build the external payment-leg simulator and complete the response leg.
 **Learning Objective:** Simulating an external counterparty system consuming/producing MQ messages.
-**Business Features:** Payment Response received back and applied to the Fund Transfer's status.
+**Business Features:** Payment Response received back and applied to the Fund Transfer's status; Customer2's account credited (balance + transaction history) on PROCESSED.
 **Application Development:**
 - UI: Fund Transfer status reflects response from external simulator (PROCESSED/FAILED)
-- Backend: ExternalPaymentLegSimulatorMDB — consumes from `BANK.PAYMENT.REQUEST.Q`, reads the source customer/account, `destination_customer_id`, destination account number, amount, and transfer correlation ID from the payment message, validates/simulates Customer2 payment-leg processing, credits the destination account, and sends a Payment Response to `BANK.PAYMENT.RESPONSE.Q`; PaymentResponseConsumerMDB — consumes the response, correlates it to the original Fund Transfer, and updates Fund Transfer status.
-- Database: N/A (reuses v15's fund_transfer table)
+- Backend: ExternalPaymentLegSimulatorMDB — consumes from `BANK.PAYMENT.REQUEST.Q`, reads the source customer/account, `destination_customer_id`, destination account number, amount, and transfer correlation ID from the payment message, validates/simulates Customer2 payment-leg processing, credits the destination account, and sends a Payment Response to `BANK.PAYMENT.RESPONSE.Q`; PaymentResponseConsumerMDB — consumes the response, correlates it to the original Fund Transfer, and updates Fund Transfer status. On settlement, an `audit_log` entry is written for the external transfer (actor, timestamp, before/after balances on Customer2's account, correlation ID = transfer_id) — fulfilling v17's forward-commitment that the external-transfer audit hook arrives with external transfers.
+- Database: N/A for schema (reuses v15's fund_transfer table and v17's audit_log table — the external-transfer audit rows are INSERTs, no migration needed)
 - API: N/A
 
 **WebSphere Administration:**
-- Deploy both MDB modules, bound to the Sprint 3 Activation Specs/queues
+- Deploy both MDB modules, bound to the Sprint 3 Activation Specs/queues — both MDBs live inside the same `digistack-bank-v19.ear` (single deployable, per the Part deployment model); the simulator is an internal MDB role-playing the external payment leg, not a separate application
 
 **Dependencies:** Sprint 4's routing, Sprint 3's JNDI bindings.
 **Deliverables:** End-to-end external Fund Transfer (request → simulator → response → status update).
-**Acceptance Criteria:** An external transfer completes with status PROCESSED after round-tripping through the simulator via MQ.
+**Acceptance Criteria:** An external transfer completes with status PROCESSED after round-tripping through the simulator via MQ; Customer2 then logs in and the credited amount is visible in Customer2's account balance AND transaction history — proving the MQ round-trip completed the settlement, not just the status update. A FAILED response (negative path) leaves Customer2's balance unchanged and the Fund Transfer marked FAILED.
 **Enterprise Outcome:** Full external payment integration pattern proven — the same shape a real bank's external clearing/settlement integration would follow.
 
 ---
@@ -1062,10 +1070,10 @@ The `transfer_id` must be used as the correlation identifier between the request
 
 ## Version 19 Exit Criteria
 - ✅ Application functionality complete (internal → SIBus, external → MQ routing both proven)
-- ✅ Database validated (V21 migration applied and verified)
+- ✅ Database validated (V19 migration applied and verified — is_external flag live on beneficiary)
 - ✅ WebSphere deployment successful (MQ Queue Manager, channels, JNDI bindings all operational)
 - ✅ TP01 pipeline passed (all 5 stages, all Critical/High rows Pass in TP01 Pipeline Results table)
-- ✅ Smoke testing passed (end-to-end external transfer completes; DLQ and CHLAUTH/SSL both proven)
+- ✅ Smoke testing passed (end-to-end external transfer completes and Customer2's balance/transaction history reflect the credit; DLQ and CHLAUTH/SSL both proven)
 - ✅ Ready for Version 20
 
 ## Lessons Learned
@@ -1140,9 +1148,10 @@ The `transfer_id` must be used as the correlation identifier between the request
 
 **WebSphere Administration:**
 - Configure IHS routing for the health check path, bypassing maintenance-mode toggle from Sprint 2 (health checks should still respond even during maintenance)
+- Refine plugin-cfg.xml for the new /health servlet path: regenerate plugin-cfg.xml from the WAS admin console, confirm the /health URI is present in the correct URI group and routed to the cluster, and propagate the updated plugin-cfg.xml to IHS
 
 **Dependencies:** Sprint 2's maintenance toggle.
-**Deliverables:** Working health check URL.
+**Deliverables:** Working health check URL; refined plugin-cfg.xml propagated to IHS.
 **Acceptance Criteria:** `/health` returns 200 OK under normal operation; a simulated external monitor (curl loop) confirms consistent reachability.
 **Enterprise Outcome:** Health check foundation established ahead of v21's Load Balancer integration.
 
@@ -1156,6 +1165,7 @@ The `transfer_id` must be used as the correlation identifier between the request
 **WebSphere Administration:**
 - Confirm/reconfigure SSL termination behavior at IHS (building on P01 v11/v12's end-to-end SSL)
 - Document where termination occurs vs. where mTLS continues to WAS
+- Review and document the Virtual Hosts definitions (host aliases, ports 80/443) that carry the SSL termination — confirming the vhost-to-plugin-cfg.xml mapping is still correct
 
 **Dependencies:** P01 v11/v12 SSL configuration.
 **Deliverables:** Documented and verified SSL termination point.
@@ -1170,12 +1180,12 @@ The `transfer_id` must be used as the correlation identifier between the request
 **Business Features:** None (pure middleware).
 **Application Development:** N/A this sprint.
 **WebSphere Administration:**
-- Enable mod_deflate (or equivalent) compression for static assets and text responses
+- Enable mod_deflate (or equivalent) compression for static assets and text responses, excluding the /health path (via SetEnvIf/RequestHeader) so monitor and load-balancer probes receive uncompressed responses
 - Tune KeepAlive settings (timeout, max requests per connection)
 
 **Dependencies:** Sprint 4's SSL configuration.
 **Deliverables:** Compression and KeepAlive tuning applied.
-**Acceptance Criteria:** Response headers confirm compression is active for eligible content types; KeepAlive behavior confirmed via connection reuse in a load test snippet.
+**Acceptance Criteria:** Response headers confirm compression is active for eligible content types; /health responses confirm no compression applied; KeepAlive behavior confirmed via connection reuse in a load test snippet.
 **Enterprise Outcome:** First explicit performance-tuning pass at the web tier, independent of JVM-level tuning already done in P01 v14.
 
 ---
@@ -1189,6 +1199,7 @@ The `transfer_id` must be used as the correlation identifier between the request
 - Redeploy final EAR for this version, `digistack-bank-v20.ear`
 - Confirm plugin-cfg.xml still correctly reflects cluster topology after all Sprint 1–5 changes
 - Final validation pass: URL rewrite, maintenance toggle, health check, SSL termination, compression/KeepAlive all together
+- Export and archive the final IHS configuration (httpd.conf plus any included rewrite/maintenance/health/SSL/compression snippets) as the version's IHS configuration export deliverable
 
 **Dependencies:** Sprints 1–5 complete.
 **Deliverables:** `TestCases-v20.md`.
@@ -1221,7 +1232,7 @@ The `transfer_id` must be used as the correlation identifier between the request
 ## Version 20 Deliverables
 - `digistack-bank-v20.ear` (adds health check servlet; URL rewrite, maintenance mode, health check, SSL termination, compression/KeepAlive all configured at the IHS layer around it)
 - IHS configuration exports (rewrite rules, maintenance toggle, health check routing, SSL termination, compression/KeepAlive settings)
-- SetupDoc-v20.md, TestCases-v20.md
+- SetupDoc-v20.md, TestCases-v20.md, FaultDrill-v20.md (non-gating, per Sprint 8)
 
 ## Version 20 Exit Criteria
 - ✅ Application functionality complete (no new banking functionality; all five IHS features proven)
@@ -1273,16 +1284,18 @@ The `transfer_id` must be used as the correlation identifier between the request
 
 ### Sprint 2
 **Sprint Goal:** Stand up a second IHS instance and configure Layer-4/Layer-7 load balancing across both.
-**Learning Objective:** Distinguishing Layer-4 vs. Layer-7 load balancing decisions.
+**Learning Objective:** Distinguishing Layer-4 vs. Layer-7 load balancing decisions — and demonstrating both: L7 routing for HTTP traffic, plus an L4 (raw TCP stream) configuration on a non-HTTP port to see where each mode is appropriate.
+- Demonstrate Layer-4 mode on a secondary listener (raw TCP proxy to one IHS/WAS path) and record when L4 is preferable to L7
 **Business Features:** None (pure middleware).
 **Application Development:** N/A this sprint.
 **WebSphere Administration:**
 - Provision second IHS instance (mirroring the first)
 - Configure NGINX upstream pool with both IHS instances, using round-robin or least-connections
+- Address the High Availability topic at the LB tier itself: stand up a second NGINX instance with a virtual IP (keepalived/VRRP) — or, if a second NGINX VM is not feasible in the lab, document the F5/Citrix-ADC HA-pair equivalent and mark the live second instance as a v22 follow-up
 
 **Dependencies:** Sprint 1's NGINX config.
 **Deliverables:** Two-IHS-instance load-balanced pool.
-**Acceptance Criteria:** Repeated requests through NGINX are distributed across both IHS instances, confirmed via access logs on each.
+**Acceptance Criteria:** Repeated requests through NGINX are distributed across both IHS instances, confirmed via access logs on each; LB-tier HA either demonstrated (virtual IP failover) or explicitly documented as a designed follow-up, so "High Availability" is not left as an unexercised topic.
 **Enterprise Outcome:** True multi-instance web-tier redundancy proven, not just a single reverse-proxy hop.
 
 ---
@@ -1294,11 +1307,12 @@ The `transfer_id` must be used as the correlation identifier between the request
 **Application Development:** N/A this sprint.
 **WebSphere Administration:**
 - Configure NGINX active health checks against v20's `/health` endpoint
+- Verify the interplay with v20's maintenance-mode toggle: with maintenance mode ON, `/health` must still return 200 to NGINX (so the pool stays up and NGINX itself keeps serving the maintenance page gracefully) — confirm and document this behavior
 - Verify automatic removal of an unhealthy IHS instance from the pool
 
 **Dependencies:** P02 v20's health check URL, Sprint 2's two-instance pool.
 **Deliverables:** Working health-check-driven routing.
-**Acceptance Criteria:** Stopping one IHS instance causes NGINX to stop routing to it within the configured health check interval, and traffic continues uninterrupted via the remaining instance.
+**Acceptance Criteria:** Stopping one IHS instance causes NGINX to stop routing to it within the configured health check interval, and traffic continues uninterrupted via the remaining instance; with v20 maintenance mode toggled ON, both IHS instances remain marked healthy and NGINX serves the maintenance page rather than 502 errors.
 **Enterprise Outcome:** First proven automatic failover at the load balancer tier.
 
 ---
@@ -1348,6 +1362,7 @@ The `transfer_id` must be used as the correlation identifier between the request
 **WebSphere Administration:**
 - Deploy the trivial change to one IHS/WAS path ("green") while the other ("blue") continues serving live traffic
 - Cut over NGINX to the green path, confirm zero customer-visible downtime, keep blue as rollback target
+- Export and archive the final NGINX configuration (nginx.conf plus upstream pool, health check, sticky-session, and SSL offloading blocks) as the version's NGINX configuration export deliverable
 
 **Dependencies:** Sprints 1–5 complete, P01 v4 rollback discipline.
 **Deliverables:** Proven blue-green deployment; `TestCases-v21.md`.
@@ -1380,7 +1395,7 @@ The `transfer_id` must be used as the correlation identifier between the request
 ## Version 21 Deliverables
 - `digistack-bank-v21.ear` (trivial version-label change only, used as the blue-green deployment payload)
 - NGINX configuration exports (upstream pool, health checks, sticky sessions, SSL offloading)
-- SetupDoc-v21.md, TestCases-v21.md
+- SetupDoc-v21.md, TestCases-v21.md, FaultDrill-v21.md (non-gating, per Sprint 8)
 
 ## Version 21 Exit Criteria
 - ✅ Application functionality complete (no new banking functionality; blue-green deployment proven on a trivial change)
@@ -1467,9 +1482,10 @@ The `transfer_id` must be used as the correlation identifier between the request
 - Confirm cluster session replication (P01 v5/v9) holds during load
 - Confirm JDBC pool sizing (P01 v7) doesn't exhaust under combined load
 - Confirm Operations Dashboard (v18) accurately reflects live JVM/session/queue/pool state during the test
+- Under peak load, capture and analyze one thread dump (javacore) and one heapdump per cluster member via wsadmin — confirm no stuck threads, no unexpected heap growth — exercising the Thread/Heap Analysis topic against a live system for the first time in P02
 
 **Dependencies:** P01 v5/v7/v9, P02 v18.
-**Deliverables:** Documented load validation results.
+**Deliverables:** Documented load validation results, including captured javacore/heapdump files with analysis notes.
 **Acceptance Criteria:** No session loss, no pool exhaustion, and dashboard panels track load changes in near-real-time during the combined test.
 **Enterprise Outcome:** Confirms the platform's infrastructure and observability layers scale together under realistic concurrent activity.
 
@@ -1505,7 +1521,7 @@ The `transfer_id` must be used as the correlation identifier between the request
 
 **Dependencies:** STD §Backup, all prior configuration work (v1–v21).
 **Deliverables:** Verified backupConfig + pg_dump backup, confirmed restorable.
-**Acceptance Criteria:** A restore from the backupConfig capture reproduces the cell's configuration correctly, confirmed via a diff/comparison against the pre-backup state.
+**Acceptance Criteria:** A restore from the backupConfig capture reproduces the cell's configuration correctly, confirmed via a diff/comparison against the pre-backup state; after restore, the restored environment is proven live by successfully completing one end-to-end internal Fund Transfer (Sprint 1's trace) through the full stack.
 **Enterprise Outcome:** First full backup/recovery cycle proven — not just "backup exists" but "backup is genuinely restorable."
 
 ---
@@ -1517,7 +1533,8 @@ The `transfer_id` must be used as the correlation identifier between the request
 **Application Development:** Bug-fix only, no new work.
 **WebSphere Administration:**
 - Re-run the full P02 Completion Checklist (Fund Transfer internal/external, REST/SOAP, security hardening, dashboard, MQ, IHS advanced admin, LB) as one combined pass
-- Redeploy final EAR for this version, `digistack-bank-v22.ear`
+- Redeploy final EAR for this version, `digistack-bank-v22.ear`, via a wsadmin/Jython script (not console clicks) — proving the full deploy is repeatable and automation-ready, exercising the Deployment Automation topic
+- Archive the wsadmin deploy script as part of this version's deliverables
 
 **Dependencies:** Sprints 1–5 complete, all of P02 v15–v21.
 **Deliverables:** `TestCases-v22.md`; full P02 Completion Checklist signed off.
@@ -1530,7 +1547,8 @@ The `transfer_id` must be used as the correlation identifier between the request
 **Sprint Goal:** Sign off Version 22.
 **Learning Objective:** SetupDoc discipline (SDD01).
 **WebSphere Administration:** Capture backupConfig baseline; final smoke test.
-**Deliverables:** SetupDoc-v22.md.
+**Change & Release Management:** Raise a formal change record for the v22 release (scope, rollback plan referencing P01 v4/P02 v21 discipline, maintenance window, approval), and produce release notes for `digistack-bank-v22.ear` as the P02 culminating release — exercising the Change & Release Management topic end-to-end.
+**Deliverables:** SetupDoc-v22.md; approved change record and release notes for the v22 release.
 **Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
 **Enterprise Outcome:** Version 22 signed off.
 
@@ -1550,7 +1568,7 @@ The `transfer_id` must be used as the correlation identifier between the request
 - `digistack-bank-v22.ear` (final single-EAR build for Phase-1's middleware-integration stage)
 - backupConfig export, pg_dump backup artifact
 - Consolidated end-to-end trace documentation, mock-incident runbook
-- SetupDoc-v22.md, TestCases-v22.md
+- SetupDoc-v22.md, TestCases-v22.md, FaultDrill-v22.md (non-gating, per Sprint 8)
 
 ## Version 22 Exit Criteria
 - ✅ Application functionality complete (all P01+P02 features validated together, no new functionality added)
@@ -1625,7 +1643,6 @@ init parameters that replace PostgreSQL's max_connections.
   (credentials externalized — never hardcoded, per STD Golden Rules)
 - Confirm PostgreSQL 16 still running independently on dsb-db, port
   5432 — dsb-db is untouched by this sprint
-- Confirm PostgreSQL 16 still running independently on dsb-db, port\n  5432 — dsb-db is untouched by this sprint
 
 **Dependencies:** New dsb-oracle VM provisioned per SOE01.
 **Deliverables:** Oracle 21c XE installed on dsb-oracle; DIGISTACK_CBS PDB created and open; listener on 1521; dsb-db (PostgreSQL) confirmed unaffected and still running independently.
@@ -1678,7 +1695,7 @@ format (thin driver, service name) vs. PostgreSQL's URL format.
 ```python
 # Create Oracle JDBC Provider
 AdminTask.createJDBCProvider(
-    '-scope Cell=devdsbincell01',
+    ['Cell', 'devdsbincell01'],
     ['-databaseType', 'USER_DEFINED',
      '-providerType', 'USER_DEFINED',
      '-implementationType', 'CONNECTION_POOL_DATA_SOURCE',
@@ -1691,9 +1708,9 @@ AdminTask.createJDBCProvider(
 
 # Create JAAS Auth Alias
 AdminTask.createAuthDataEntry(
-    '-alias', 'OracleAlias',
-    '-user', 'DIGISTACK_APP',
-    '-password', '<externalized>'
+    ['-alias', 'OracleAlias',
+     '-user', 'DIGISTACK_APP',
+     '-password', '<externalized>']
 )
 
 # Create DataSource
@@ -1744,7 +1761,7 @@ constraint naming conventions unchanged (per STD).
   - `V3__create_transaction_oracle.sql`
   - `V4__add_frozen_flag_oracle.sql`
   - `V15__create_customer_account_beneficiary_fundtransfer_oracle.sql`
-  - `V17__add_otp_lockout_fields_and_security_audit_log_oracle.sql`
+  - `V17__add_otp_lockout_fields_and_audit_log_oracle.sql`
 
 **Oracle DDL dialect rules applied in every script:**
 
@@ -1790,7 +1807,7 @@ created_at TIMESTAMP DEFAULT SYSTIMESTAMP
 DIGISTACK_CBS.
 **Acceptance Criteria:**
 - All tables present in DIGISTACK_CBS: app_config, users, accounts,
-  beneficiary, fund_transfer, transaction, security_audit_log
+  beneficiary, fund_transfer, transaction, audit_log
 - All constraints verified (PK, FK, CHECK, NOT NULL) via
   `SELECT * FROM USER_CONSTRAINTS WHERE TABLE_NAME = '<TABLE>'`
 - DIGISTACK_APP schema owner confirmed with correct grants
@@ -1866,8 +1883,8 @@ public class MigrationServlet extends HttpServlet {
             "transaction_type, amount, description, created_at) " +
             "VALUES (?, ?, ?, ?, ?, ?)");
 
-        TABLE_MAP.put("security_audit_log",
-            "INSERT INTO security_audit_log (id, user_id, " +
+        TABLE_MAP.put("audit_log",
+            "INSERT INTO audit_log (id, user_id, " +
             "event_type, event_time, details) " +
             "VALUES (?, ?, ?, ?, ?)");
     }
@@ -2032,8 +2049,8 @@ pool load.
 ```bash
 expdp SYSTEM/<pwd>@DIGISTACK_CBS \
   directory=DATA_PUMP_DIR \
-  dumpfile=digistack_cbs_v22.5_%DATE%.dmp \
-  logfile=digistack_cbs_v22.5_%DATE%.log \
+  dumpfile=digistack_cbs_v22.5_$(date +%Y%m%d).dmp \
+  logfile=digistack_cbs_v22.5_$(date +%Y%m%d).log \
   schemas=DIGISTACK_APP \
   compression=ALL
 ```
@@ -2057,7 +2074,7 @@ print AdminControl.getAttribute(poolMBean,
 
 **Dependencies:** Sprint 4 migration complete.
 **Deliverables:** Application validated against Oracle; expdp backup
-captured and restore-tested; dsb-oracle stability confirmed..
+captured and restore-tested; dsb-oracle stability confirmed.
 **Acceptance Criteria:**
 - Fund Transfer, Deposit/Withdraw, Login all function correctly
   with data landing in DIGISTACK_CBS Oracle tables
@@ -2124,7 +2141,7 @@ per STDGAP01 §3.8).
 
 **Deliverables:** `SetupDoc-v22.5.md` — must include:
 - §1 Overview
-- §2 VM Setup (dsb-oracle new VM: 2 vCPU / 4 GB / 60 GB))
+- §2 VM Setup (dsb-oracle new VM: 2 vCPU / 4 GB / 60 GB)
 - §3 Pre-Deployment Checklist (01_Architecture diagram check
   per standing rule)
 - §4 Step-by-Step Configuration (Oracle XE install, PDB creation,

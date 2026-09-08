@@ -323,8 +323,9 @@ Monitoring Coverage
 - Linux: CPU, memory, disk, filesystem, network, process monitoring
 - WebSphere: JVM heap, GC, thread pools, JDBC connection pools, session
   count, cluster health, Node Agent health, DMgr health
-- Application: Internet Banking health, CBS health, ATM Service health,
-  Card Service health, Payment Hub health, Database health (Oracle 21c XE — digistack_cbs)
+- Application: Internet Banking Portal health, CBS health, ATM Simulator
+  health, Card Portal health, Payment Hub health, Database health
+  (Oracle 21c XE — digistack_cbs)
 
 Request Flow
 
@@ -377,11 +378,18 @@ Definition, effective retroactively from P02 v15 (Fund Transfer introduced):
 - Format: FT-{YYYYMMDD}-{5-digit-zero-padded-sequence}, e.g.
   FT-20260825-00192 (matches the example already used in v35.5).
 - Set by: the Internet Banking Portal's Fund Transfer Servlet at the moment
-  the transfer request is accepted (before the JMS message is enqueued).
-- Propagated via: JMS message header (JMSCorrelationID property) from
-  Portal → SIBus/MDB → CBS; HTTP header (X-Correlation-ID) on any REST
-  call leg (Portal → CBS REST, Payment Hub → CBS REST); SOAP header on
-  the Account Statement SOAP call (P02 v16).
+  the transfer request is accepted — post P03 v23 (the Portal no longer
+  enqueues JMS itself; CBS owns all messaging), the Portal sets the ID and
+  hands it to CBS on the service call, and CBS stamps it onto every
+  internal message it produces. For the pre-v23 P02 era (v15–v22), the
+  retrofit applies to the then-current path: Portal enqueues on SIBus with
+  the ID already set.
+- Propagated via: HTTP header (X-Correlation-ID) on any REST call leg
+  (Portal → CBS REST, Payment Hub → CBS REST); SOAP header on the Account
+  Statement SOAP call (P02 v16); JMS message header (JMSCorrelationID
+  property) from CBS → SIBus/MDB (internal transfer processing, relocated
+  to CBS at P03 v23) and CBS → IBM MQ (external/payment leg, incl.
+  Notification Service and Payment Hub consumers).
 - Logged by: every service that touches the transfer (Portal, CBS, Payment
   Hub, Notification Service, MQ) must include the correlation ID in every
   structured log line relating to that transfer.
@@ -432,8 +440,9 @@ introductory pass, deepened in v35; Production Troubleshooting, Audit
 Investigation.
 
 Sprint Deliverable: A single OpenSearch Dashboards view lets you search a
-failed Fund Transfer across CBS, Payment Hub, and Notification Service
-logs by correlation ID (per the Correlation ID Standard defined above),
+failed Fund Transfer across CBS, Notification Service, and — for the
+external/payment leg (P02 v19 / P03 v25) — Payment Hub logs by
+correlation ID (per the Correlation ID Standard defined above),
 without touching any individual VM's log files directly; a manually
 triggered thread dump and heap dump are captured, shipped through the
 pipeline, and located in OpenSearch.
@@ -449,7 +458,7 @@ original draft (Golden Signals, RED, USE, SLO/SLI/SLA/Error Budgets).
 
 Minimum App Needed: Zero new banking functionality. A single Fund Transfer
 request is traced end-to-end: Internet Banking Portal → CBS → IBM MQ →
-Notification Service → PostgreSQL.
+Notification Service → Oracle 21c XE (digistack_cbs).
 
 Enterprise Tools: OpenTelemetry SDK (instrumentation), Jaeger (trace
 storage/UI); Prometheus/Grafana (reused from v31) for the
@@ -487,8 +496,10 @@ thread starvation is a distinct failure mode from Web Container
 exhaustion, and worth distinguishing during this version's load testing).
 
 Load-Test Scale Disclaimer
-This project's infrastructure is sized per doc 01's lab baseline (2–4
-vCPU, 4–8 GB RAM per VM). A JMeter run against this topology validates the
+This project's infrastructure is sized per CAP01's lab baseline (2–4
+vCPU, 4–8 GB RAM per VM) — the sizing-reference doc referenced in this
+Part's glossary note as "doc 01".
+A JMeter run against this topology validates the
 mechanism — that SLO measurement, RED/USE instrumentation, and saturation
 detection actually work end-to-end — not a production-representative
 capacity number. Treat any concurrency figure produced in this version's
@@ -702,8 +713,8 @@ This tests process-level resilience and recovery (a real operational
 concern) without requiring a multi-node cluster that isn't in this
 project's VM inventory. If a multi-node observability cluster is desired
 for a more realistic test, that is new infrastructure scope requiring a
-doc 01 VM inventory update before this scenario can be run as originally
-described.
+CAP01 VM inventory update (and STD §VM Hostnames additions) before this
+scenario can be run as originally described.
 
 Each chaos scenario is run once, its detection time recorded (feeds the
 MTTD figure below), and the outcome — caught vs. missed — becomes an
@@ -801,8 +812,18 @@ duplicate or supersede them.
 
 Minimum App Needed: Zero new banking functionality. The portal itself is
 a new small internal WAS application (digistack-monitoring-portal.ear)
-deployed to dsb-monitor, co-located with the monitoring stack (not a member of the banking cluster, not a new VM — it must remain reachable even if the banking cluster is fully
-down). This is the 10th deployable in the project (the 8th WAS EAR) but
+deployed to dsb-monitor, co-located with the monitoring stack (not a
+member of the banking cluster, not a new VM — it must remain reachable
+even if the banking cluster is fully down). dsb-monitor therefore gains
+one additional component this version: a single standalone (non-federated)
+WebSphere Application Server profile — deliberately NOT a Node Agent /
+DMgr member of the banking cell, admin-console on a restricted local port
+— whose only purpose is hosting this portal EAR. This keeps the portal
+independent of the banking cluster's ND topology (it survives a full
+cell outage) and adds a genuinely useful WAS admin exercise: managing a
+standalone profile alongside an ND cell.
+
+This is the 10th deployable in the project (the 8th WAS EAR) but
 is NOT counted among the 9 banking deployables — it is infrastructure,
 not a banking application, the same way dsb-monitor is a VM
 in the topology but not a banking server. SetupDoc-v35.5.md must document
@@ -1141,7 +1162,11 @@ Completion Checklist
   (v35)
 □ At least one of each Production Reporting artifact generated from real
   data (v35)
-□ digistack-monitoring-portal.ear deployed to dsb-monitor (co-located), context root /monitoring, deployment documented in SetupDoc-v35.5.md (v35.5)
+□ digistack-monitoring-portal.ear deployed to a standalone (non-federated)
+  WAS profile on dsb-monitor (co-located, not part of the banking cell),
+  context root /monitoring, standalone-profile setup + deployment
+  documented in SetupDoc-v35.5.md (v35.5)
+
 □ ServiceNow stub (digistack-servicenow-stub) set up and documented with
   API contract in SetupDoc-v35.5.md (v35.5)
 □ All six versions' TestCases-v31.md–v35.5.md signed off per Test Case
