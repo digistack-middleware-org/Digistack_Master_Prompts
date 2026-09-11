@@ -20,7 +20,7 @@
 | # | Folder | Status | Last Completed Version | Next Version | Current Focus (AI Resume one-liner) |
 |---|---|---|---|---|---|
 | 00 | Core | 🔒 Frozen | — | — | — |
-| 02 | Application_Development | 🔓 In Progress | v5 (P01) | v6 (P01) | v5 (WAS Clustering) signed off 2026-09-01 — 80/80 tests pass. Next: v6 Sprint 1 (Application Administration). dsb-dmgr, dsb-node02, dsb-ihs, dsb-db all ON. Mirrors Multi-Part Folder Detail row below. |
+| 02 | Application_Development | 🔓 In Progress | v8 (P01) | v9 (P01) | v8 (IHS Plugin Configuration) signed off 2026-09-11 — 66 test cases pass, 25 unit tests pass (TEST01). Next: v9 Sprint 1 (Session Management). dsb-dmgr, dsb-node02, dsb-ihs, dsb-db all ON. Mirrors Multi-Part Folder Detail row below. |
 | 03 | Interview_Prep | ⏳ Not Started | — | Interview-1 (P03.1) | Not started — depends on P03 completion |
 | 04 | Observability | ⏳ Not Started | — | v31 (P04) | Not started — depends on P03 completion |
 | 05 | HA_DR | ⏳ Not Started | — | v36 (P05) | Not started — depends on P04 completion |
@@ -58,7 +58,7 @@ Once frozen, a folder is only reopened for a documented correction — never sil
 
 | Part | Status | Last Approved Version | Next Version |
 |---|---|---|---|
-| P01 — Foundation | 🔓 In Progress | v5 | v6 |
+| P01 — Foundation | 🔓 In Progress | v8 | v9 |
 | P02 — Middleware | ⏳ Not Started | — | v15 |
 | P03 — Banking Systems | ⏳ Not Started | — | v23 |
 
@@ -169,7 +169,10 @@ or upload the full Sprint Plan file directly.
 
 | ~~2026-08-11~~ | ~~P01~~ | ~~v3~~ | ~~Basic Transaction (Deposit & Withdraw)~~ | **RESET 2026-08-25** | Entry reset per full project reset #2 — same event as the v2 reset row above. |
 | 2026-09-01 | P01 | v5 | WAS Clustering | Approved | 80/80 test cases pass. 2-member cluster (devdsbinappcluster01), DMgr devdsbindmgr01, both nodes federated/synchronized, memory-to-memory session replication, live failover test passed. digistack-bank-v5.ear deployed to cluster target. Environment corrections applied from this version: WAS path /apps/IBM/WebSphere/AppServer/, DB password Wasadmin@951951. SetupDoc-v5.md + FaultDrill-v5.md complete. |
-| 2026-09-01 | P01 | v5 | WAS Clustering | Not Started |Next version — begins Sprint 1. dsb-node02 VM provisioning required (first new VM since dsb-ihs). |
+| 2026-09-08 | P01 | v6 | Application Administration | Approved | 59/59 test cases pass (38 Critical + 18 High + 3 Medium), 25/25 unit tests pass — TEST01 gating satisfied. Features: Freeze/Unfreeze (UI + wsadmin), Node Sync vs Full Resync drill, is_frozen DB column (V4__add_frozen_flag.sql), EAR packaging (digistack-bank-v6.ear), pre-v6 code refactor (service split, servlet split, JSP split, CSS extraction). Standing rule TEST01 established — unit tests GATING for all future sign-offs. SetupDoc-v6.md + FaultDrill-v6.md complete. Fault drill: Node Agent stopped on dsb-node02 (INC-v6-001). |
+| 2026-09-11 | P01 | v7 | JNDI DataSource Migration | Approved | 47/47 test cases pass (31 Critical + 14 High + 2 Medium), 25/25 unit tests pass — TEST01 gating satisfied. Features: PostgreSQL JDBC Provider at Cell scope (org.postgresql.ds.PGConnectionPoolDataSource), JAAS Auth Alias (BankDS_Alias), jdbc/BankDS DataSource, connection pool min=5/max=20 per member (40 total, 60 headroom against max_connections=100), pre-test validation (SELECT 1), all 7 classes migrated from DriverManager to InitialContext.lookup("jdbc/BankDS"), SeedUsers.java credentials moved to gitignored config/db-local.properties, transaction-boundary traceability note documented, digistack-bank-v7.ear deployed. SetupDoc-v7.md + FaultDrill-v7.md complete. Fault drill: JAAS Auth Alias wrong password (INC-v7-001). |
+| 2026-09-11 | P01 | v8 | IHS Plugin Configuration (Cluster Era) | Approved | 66/66 test cases pass (38 Critical + 24 High + 4 Medium), 25/25 unit tests pass — TEST01 gating satisfied. Features: plugin-cfg.xml regenerated with both cluster members (192.168.10.10:9080 and 192.168.10.11:9081), propagated via IHS Administration Server on port 8008, static assets served from IHS document root (/static/css/ihs-brand.css, /static/images/digistack-logo.svg), custom 404/500 error pages via ErrorDocument directives (self-contained HTML, no external deps), IHS brand banner added to Home.jsp and Login.jsp, digistack-bank-v8.ear deployed. SetupDoc-v8.md + FaultDrill-v8.md complete. Fault drill: plugin-cfg.xml port typo — member 2 port changed to 9999 (INC-v8-001). |
+
 ---
 
 ## Cross-Part Dependency Chain
@@ -187,6 +190,9 @@ VM), not artifacts currently on disk. Re-add un-struck rows once each
 version is actually rebuilt and signed off again.
 
 | V5 | V4 (digistack-bank-v4.ear), V1 (WAS profile) | DMgr devdsbindmgr01, federated nodes devdsbinnode01/02, cluster devdsbinappcluster01, memory-to-memory session replication, digistack-bank-v5.ear | V6 (DMgr/federation deep-dive, Freeze/Unfreeze via wsadmin), V7 (JNDI DataSource across cluster), V8 (plugin-cfg.xml regenerated for cluster) |
+| V6 | V5 (cluster, federation, digistack-bank-v5.ear), V5-DB (accounts table) | is_frozen column (V4__add_frozen_flag.sql), DepositService/WithdrawService/FreezeService, DepositServlet/WithdrawServlet/FreezeServlet/UnfreezeServlet, Deposit.jsp/Withdraw.jsp/Freeze.jsp/Unfreeze.jsp, 9 CSS files, freezeAccount.py wsadmin script, digistack-bank-v6.ear, unit test suite (TEST01 — DepositServiceTest/WithdrawServiceTest/FreezeServiceTest) | V7 (all Services replace direct JDBC with jdbc/BankDS JNDI DataSource — closes v1–v6 JDBC debt) |
+| V7 | V6 (all Services, digistack-bank-v6.ear), V6-WAS (cluster devdsbinappcluster01) | PostgreSQL JDBC Provider (Cell scope), JAAS Auth Alias BankDS_Alias, DataSource jdbc/BankDS, connection pool config (min=5/max=20/EntirePool/SELECT 1 validation), 7 migrated classes (AccountService/DepositService/WithdrawService/FreezeService/HomeServlet/LoginServlet/DashboardServlet), config/db-local.properties (gitignored), digistack-bank-v7.ear | V8 (plugin-cfg.xml regenerated against cluster — jdbc/BankDS pool active on both members during all IHS-routed requests) |
+| V8 | V7 (digistack-bank-v7.ear, jdbc/BankDS DataSource), V4.5 (webserver1 Web Server Definition, IHS install on dsb-ihs) | cluster-aware plugin-cfg.xml (both members: 192.168.10.10:9080 and 192.168.10.11:9081), ihs-brand.css (IHS htdocs), digistack-logo.svg (IHS htdocs), 404.html/500.html (IHS htdocs/errors/), ErrorDocument directives in httpd.conf, Home.jsp/Login.jsp IHS brand banner, digistack-bank-v8.ear | V9 (session management — sticky sessions, M2M replication, DB-backed persistence — all rely on IHS correctly routing to both cluster members) |
 
 ---
 
@@ -218,10 +224,10 @@ version is actually rebuilt and signed off again.
 ## Environment Notes
 
 - **WAS ND version installed:** 9.0.5.28 — confirmed at P01 v5 sign-off (2026-09-01). Install path: /apps/IBM/WebSphere/AppServer/ (corrected this version).
-- **Profile(s) created so far:** None.
-- **Database (PostgreSQL):** 16 — confirmed at P01 v5 sign-off. Runs on dsb-db (192.168.10.30), digistack_app password rotated at v5 (Wasadmin@951951). Active through P02 v22 only; decommissioned at P03 v23 Sprint 4. Runs on dsb-db (192.168.10.30). Active P01 v1 through P02 v22 only; decommissioned at P03 v23 Sprint 4.
+- **Profile(s) created so far:** devdsbindmgr01 (DMgr profile on dsb-dmgr, created at P01 v1).
+- **Database (PostgreSQL):** 16 — confirmed at P01 v5 sign-off. Runs on dsb-db (192.168.10.30), digistack_app password: Wasadmin@951951. V4__add_frozen_flag.sql applied at v6 (is_frozen column added to accounts). Active P01 v1 through P02 v22 only; decommissioned at P03 v23 Sprint 4.
 - **Database (Oracle):** Not yet provisioned — dsb-oracle VM not built. Oracle 21c XE target/placeholder pin (v22.5 sign-off confirms). IP: 192.168.10.32. Powers on at P02 v22.5. NEVER co-hosted with PostgreSQL on dsb-db.
-- **IBM HTTP Server installed:** No — planned v8.
+- **IBM HTTP Server installed:** Yes — IHS 9.0.5.28 on dsb-ihs (192.168.10.20). plugin-cfg.xml regenerated at v8 with both cluster members (port 9080 and 9081). Static assets under /apps/IBM/HTTPServer/htdocs/static/. Custom error pages under /apps/IBM/HTTPServer/htdocs/errors/. ErrorDocument 404/500/503 configured in httpd.conf.
 - **Any deviations from the roadmap so far:** OS confirmed as RHEL 8.x on dsb-dmgr (P01 v1 Sprint 2) — 
 SOE01/CONTEXT_PACK referenced Rocky Linux 8.x as the expected OS; 
 RHEL 8.x is fully compatible, no technical change, 

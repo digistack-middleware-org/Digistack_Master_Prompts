@@ -1,68 +1,67 @@
-# Current Sprint — P01 Version 6 — Application Administration
+# Current Sprint — P01 Version 9 — Session Management
 
 ## Version Overview
-**Objective:** Deep-dive DMgr/federation plumbing from v5; introduce wsadmin scripting alongside Freeze/Unfreeze.
-**Business Scope:** One admin action — Freeze/Unfreeze an account (blocks Deposit/Withdraw when frozen). No dashboard/approval workflow/audit UI.
-**WebSphere Focus:** DMgr, Node Federation/Synchronization, wsadmin Scripting, Application/Server Lifecycle Management.
-**Expected Outcome:** DMgr manages federated nodes; Freeze/Unfreeze toggled via app and verified; at least one action performed via wsadmin script.
-**Prerequisites:** P01 v5 signed off.
+**Objective:** Harden session behavior across the cluster — sticky sessions, persistence/failover, memory-to-memory replication tuning.
+**Business Scope:** Zero new functionality. Session Timeout (auto-logout after N idle minutes).
+**WebSphere Focus:** HTTP Sessions, Sticky Sessions, Session Persistence, Session Failover, Memory-to-Memory Replication.
+**Expected Outcome:** Session timeout enforced; session survives cluster member restart; sticky-session routing confirmed via logs.
+**Prerequisites:** P01 v8 signed off.
 
 ### Sprint 1
-**Goal:** Deep-dive Node Synchronization mechanics.
-**Learning Objective:** Node Sync vs. Full Resynchronization.
-**WebSphere Admin:** Trigger manual Node Sync; deliberately drift node repo, then Full Resync to correct.
-**Acceptance Criteria:** Drift detected and corrected; repos confirmed in agreement.
+**Goal:** Configure sticky session routing at the plugin layer.
+**WebSphere Admin:** Confirm plugin `CloneID`-based affinity active; enable plugin request logging.
+**Acceptance Criteria:** Plugin log shows a session's requests consistently routed to the same member.
 
 ### Sprint 2
-**Goal:** Add the `is_frozen` flag to `accounts`.
-**App Dev:** DB: `accounts.is_frozen` column (`V4__add_frozen_flag.sql`) — V4 in migration numbering because Version 4 introduced no schema change (see v4 "no schema change" deliverables).
-**Acceptance Criteria:** Column added; defaults unfrozen.
+**Goal:** Configure and compare the sticky-only control case and enable memory-to-memory session replication.
+**Learning Objective:** The three persistence strategies (per P01_Foundation.md v9): (c) sticky-only (no replication) as the control case, and (a) memory-to-memory (default).
+**WebSphere Admin:** First configure sticky-only (no replication) and exercise the control case — log in, kill a member, confirm session lost (baseline). Then enable replication domain for `devdsbinappcluster01`; confirm both members registered as partners; observe single-replica vs. multi-replica tuning.
+**Acceptance Criteria:** Sticky-only baseline observed (session lost on member kill); Admin Console shows both members actively replicating; M2M kill-test shows session survives; replica-count tuning observed and documented.
 
 ### Sprint 3
-**Goal:** Build Freeze/Unfreeze logic; gate Deposit/Withdraw against it.
-**Business Features:** Freeze/Unfreeze; Deposit/Withdraw blocked when frozen.
-**App Dev:** UI: Freeze/Unfreeze toggle. Backend: `AccountService.freeze()`/`unfreeze()`.
-**Acceptance Criteria:** Frozen account rejects Deposit/Withdraw; unfreeze restores operation.
+**Goal:** Implement Session Timeout (auto-logout after N minutes idle).
+**Business Features:** Session Timeout.
+**App Dev:** UI: "Session expired" redirect. Backend: configure timeout in `web.xml`/session config.
+**Acceptance Criteria:** Session expires after configured idle period; redirected to Login with message.
 
 ### Sprint 4
-**Goal:** Write a wsadmin script to perform Freeze/Unfreeze outside the UI.
-**Learning Objective:** wsadmin (Jython) scripting fundamentals.
-**WebSphere Admin:** Write and run wsadmin script against the live cluster on the seed account.
-**Acceptance Criteria:** Script successfully freezes/unfreezes, verified via UI.
+**Goal:** Prove session failover via a cluster member restart.
+**WebSphere Admin:** Log in, hold active session on Member 1; restart Member 1 (graceful, distinct from v5's kill test); confirm session survives on Member 2.
+**Acceptance Criteria:** No forced re-login during restart window.
 
 ### Sprint 5
-**Goal:** Package/deploy `digistack-bank-v6.ear` to the cluster.
-**Learning Objective:** Application/Server Lifecycle Management on a clustered deployment.
-**WebSphere Admin:** Deploy v6 to both members; confirm synchronized status.
-**Acceptance Criteria:** Both members serve v6 identically, no drift.
+**Goal:** Package/deploy `digistack-bank-v9.ear`; build and evaluate the DB-backed persistence case; record the three-way comparison.
+**Learning Objective:** Database-backed session persistence (session table in PostgreSQL, dedicated DataSource `jdbc/SessionDS` or reusing `jdbc/BankDS`), persistence frequency tuning, and trade-off analysis (performance vs. reliability vs. DB load).
+**WebSphere Admin:** Deploy v9; configure strategy (b) DB-backed session persistence; kill a member and confirm session survives; observe session table growth and timeout/purge behavior; measure latency difference between (a) M2M and (b) DB-backed under load; assess DB connection-pool impact of (b) reusing the P01 v7 pool-sizing math (per P01_Foundation.md v7 Connection Pool Sizing worked example).
+**Acceptance Criteria:** All three strategies configured and exercised in turn ((c) sticky-only baseline, (a) M2M, (b) DB-backed); comparison recorded in SetupDoc-v9.md covering latency (a) vs (b), pool impact of (b), and a stated ship decision (memory-to-memory, with DB-backed documented as the fallback for non-replicable session state); interview-anchor three-way write-up (when each is appropriate, sizing implications, DR implications) included as a SetupDoc-v9.md section.
 
 ### Sprint 6
-**Goal:** Write and execute test cases for Version 6.
+**Goal:** Write and execute test cases for Version 9.
 **Learning Objective:** Test Case discipline (TCS01/TCS02).
-**WebSphere Admin:** Confirm app status for test execution.
-**Deliverables:** TestCases-v6.md.
-**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7.
-**Enterprise Outcome:** Version 6 test coverage complete.
+**Deliverables:** TestCases-v9.md (including TP01 Pipeline Results section).
+**WebSphere Admin:** Execute TP01_Test_Pipeline.md stages 1–5 (DEV → SIT → UAT → PRE-PROD → PROD) and record every stage in the "TP01 Pipeline Results — v9" table.
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7; all TP01 pipeline stages Pass (Critical/High) per TP01 R3.
+**Enterprise Outcome:** Version 9 test coverage complete.
 
 ### Sprint 7
-**Goal:** Sign off Version 6.
+**Goal:** Sign off Version 9.
 **Learning Objective:** SetupDoc discipline (SDD01).
 **WebSphere Admin:** Capture backupConfig baseline; final smoke test.
-**Deliverables:** SetupDoc-v6.md.
+**Deliverables:** SetupDoc-v9.md.
 **Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
-**Enterprise Outcome:** Version 6 signed off.
+**Enterprise Outcome:** Version 9 signed off.
 
 ### Sprint 8
-**Goal:** Fault Injection + Incident Simulation for Version 6.
+**Goal:** Fault Injection + Incident Simulation for Version 9.
 **Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
 **WebSphere Admin:** Phase 1 — inject a realistic fault tied to this version's topic. Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
-**Deliverables:** FaultDrill-v6.md.
+**Deliverables:** FaultDrill-v9.md.
 **Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
-**Enterprise Outcome:** Version 6 fault drill complete. Non-gating — does not block sign-off.
+**Enterprise Outcome:** Version 9 fault drill complete. Non-gating — does not block sign-off.
 
-**Version 6 Deliverables:** `digistack-bank-v6.ear`, `V4__add_frozen_flag.sql`, SetupDoc-v6.md, TestCases-v6.md, FaultDrill-v6.md, wsadmin script.
+**Version 9 Deliverables:** `digistack-bank-v9.ear`, SetupDoc-v9.md (including three-way persistence comparison + interview-anchor write-up), TestCases-v9.md, FaultDrill-v9.md, replication domain/session timeout config, DB-backed session persistence config (session table + DataSource).
 **Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed; Fault drill complete (Sprint 8, non-gating).
-**Lessons Learned:** Node Sync vs. Full Resync; wsadmin as a genuine operational path; admin features layer cleanly onto Service-layer code.
-**Technical Debt:** Freeze/Unfreeze open to any logged-in user — deferred to Version 10 (role gating).
+**Lessons Learned:** Sticky sessions (routing) and replication (data protection) are distinct mechanisms.
+**Technical Debt:** None introduced.
 
 ---

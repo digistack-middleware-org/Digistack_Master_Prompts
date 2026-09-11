@@ -1,5 +1,5 @@
 ID: SESSION01
-Version: 1.5
+Version: 1.7
 Status: Active
 
 Title: Session State — Global Pointer
@@ -10,10 +10,10 @@ Title: Session State — Global Pointer
 
 Folder:   02_Application_Development/
 Part:     P01 — Foundation
-Version:     v6 — Application Administration
+Version:     v9 — Session Management
 Sprint:   Sprint 1
 Status:   NOT YET STARTED
-VM Status: dsb-ihs → ON (confirmed running, IHS 9.0.5.28)
+VM Status: dsb-dmgr ON | dsb-node02 ON | dsb-ihs ON | dsb-db ON
 
 ---
 
@@ -52,8 +52,11 @@ OS:           RHEL 8.x
 
 ## VM Status
 
-dsb-dmgr:   OFF — not built (reset #2, 2026-08-25)
-dsb-db:     OFF — not built (reset #2, 2026-08-25)
+dsb-dmgr:   ON — built and running
+            WAS ND 9.0.5.28 | DMgr profile: devdsbindmgr01
+            Also hosts devdsbinnode01 (cluster member 1)
+            Install path: /apps/IBM/WebSphere/AppServer/
+dsb-db:     ON — built and running
             Target spec: 2 vCPU / 2 GB RAM (never resized — Oracle
             runs on dsb-oracle, not here)
             PostgreSQL 16 only (P01 v1 through P02 v22)
@@ -66,7 +69,7 @@ dsb-oracle: OFF — powers on at P02 v22.5
 dsb-node02: ON — powered on at P01 v5
             WAS ND 9.0.5.28 running
             (install path corrected: /apps/IBM/WebSphere/AppServer/)
-dsb-ihs:    OFF — powers on at P01 v4.5
+dsb-ihs:    ON — powered on at P01 v4.5, confirmed running IHS 9.0.5.28
 dsb-mq:     OFF — powers on at P02 v19
 dsb-monitor:OFF — powers on at P04 v31
 dsb-elk:    OFF — powers on at P04 v32
@@ -92,4 +95,4 @@ At each version sign-off, change:
 - Status to NOT YET STARTED
 - VM Status if a new VM powered on this version
 
-Last Updated: 2026-08-25
+Last Updated: 2026-09-11
