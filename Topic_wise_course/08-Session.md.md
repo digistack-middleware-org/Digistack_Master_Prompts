@@ -1,7 +1,6 @@
 # 📅 WebSphere Session Management — FULL 56-DAY PLAN (Day Wise)
 ## All 12 Modules Included | 79 Topics + Recaps + 2 Mock Interviews | 1 hr/day
 
-> **Course by:** Ox Alpha (25 Years IBM WAS Admin/Architect — Large MNC Bank)
 > **Environment:** BankCell01 → DMGR → Node01/Node02 → PaymentCluster (PaymentJVM01–04) → IHS01/IHS02 → PaymentApp.ear
 > **Method per topic:** 80% Theory | 15% Real Banking Scenario | 5% Interview
 > **Every topic includes:** Admin Console steps + wsadmin/Jython steps

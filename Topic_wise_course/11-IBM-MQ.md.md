@@ -1,132 +1,197 @@
-# 🔌 Course 7 (Revised) — WebSphere Resources: JMS, MQ, J2C — Zero to Expert
-## ~26 Days @ 1 hr/day | Ox Alpha | WAS 8.5.5/9.0 ND | BankCell01
+# 📅 IBM MQ for Senior WebSphere Admin — 30-Day Plan
 
-> **Note:** JDBC compressed to a 2-day bridge (separate dedicated course exists) — just enough to understand MQ/J2C wiring.
-> **Format:** Theory 80% → Banking Scenario 15% → Interview 5% | **Console + wsadmin every topic**
-> **Lab:** PaymentCluster (payments via MQ + PaymentDB), CustPortalCluster
-
----
-
-## 📗 PHASE 1 — RESOURCE FOUNDATIONS (Days 1–3)
-
-| Day | Topic |
-|---|---|
-| **1** | What is a "resource" in WAS? JNDI tree explained — the bank's internal phone directory |
-| **2** | Resource providers vs instances; scope: cell/node/server (**the scope trap**) |
-| **3** | WebSphere Variables — `${PAYMENT_DB_HOST}` — why hardcoding is a firing offense (console + wsadmin) |
+> **Role:** WebSphere Admin who manages MQ as part of the WAS ecosystem (10-yr level)
+> **Daily commitment:** 2–3 hours (1.5 hr theory + 1 hr hands-on)
+> **Setup:** Linux VM / Docker with IBM MQ Developer Edition (free) + WebSphere Liberty (free)
+> **Daily structure:** Theory → Banking Scenario → Hands-on Lab → 🎤 Interview Point
 
 ---
 
-## 📗 PHASE 2 — JDBC BRIDGE (⚡ Compressed — Days 4–5)
+## 🗓️ WEEK 1: MQ FUNDAMENTALS
 
-| Day | Topic |
-|---|---|
-| **4** | Quick recap: JDBC provider + DataSource + connection pool — concepts & JNDI lookup only (detail → separate course) |
-| **5** | XA vs non-XA in 30 minutes — because MQ/J2C topics reference it constantly (payment+ledger example) |
+### Day 1 – Environment Setup + What is MQ
+- **Theory:** Why MQ exists (guaranteed delivery, async, decoupling); MQ vs REST vs Kafka (bank context)
+- **Lab:** Install MQ Developer edition in Docker/Linux VM; verify with `dspmqver`
+- **Bank lens:** NEFT payment flow — payment server down 1 hour, money never lost
+- 🎤 *Why does a bank use MQ instead of REST?*
 
----
+### Day 2 – Core MQ Objects
+- **Theory:** Queue Manager, Local Queue, Remote Queue, XMITQ, DLQ, Alias Queue, Listener, Channel
+- **Lab:** `crtmqm QM1`, `strmqm`, create QL.TEST, QL.DEAD, run listener
+- **Bank lens:** Salary file queue, payment queue, DLQ — map them on paper
+- 🎤 *Explain Queue Manager in simple words*
 
-## 📗 PHASE 3 — J2C AUTH & CREDENTIALS (Days 6–8)
+### Day 3 – Messages & Message Properties
+- **Theory:** Persistent vs non-persistent, MsgId, CorrelId, Expiry, Priority, Backout count (concept only)
+- **Lab:** `amqsput` / `amqsget` — first messages; browse with `amqsbcg`
+- **Bank lens:** Fund transfer = persistent; stock price feed = non-persistent
+- 🎤 *When would you allow non-persistent messages in a bank?*
 
-| Day | Topic |
-|---|---|
-| **6** | J2C authentication aliases — DB & MQ service accounts (console + wsadmin) |
-| **7** | Mapping alias to resources; container-managed auth; rotation with 2-alias trick |
-| **8** | **LAB: Swap DB service account with zero downtime** |
+### Day 4 – Bindings vs Client Mode ⭐ CRITICAL
+- **Theory:** Bindings mode (same box, shared memory) vs Client mode (network, SVRCONN)
+- **Lab:** Connect a test client in client mode to your QMGR
+- **Bank lens:** WAS+QMGR same server = bindings; WAS cluster → central MQ servers = client mode
+- 🎤 *Bindings vs client mode — #1 WAS admin MQ question*
 
----
+### Day 5 – Daily Commands Every WAS Admin Uses
+- **Theory:** `strmqm`, `endmqm` (-w, -i, -p), `dspmq`; DISPLAY QLOCAL, QMSTATUS, CHSTATUS; `dmpmqcfg` backup
+- **Lab:** Create 5 queues, check depths, stop/start QMGR all 3 ways, backup config
+- **Bank lens:** App says "MQ down" — your 5-minute proof checklist
+- 🎤 *How do you check queue depth and QMGR status?*
 
-## 📗 PHASE 4 — JMS IN WEBSPHERE (Days 9–13)
-
-| Day | Topic |
-|---|---|
-| **9** | Messaging concepts: queues, topics, producers/consumers — bank branch letterbox analogy |
-| **10** | WAS default messaging vs WebSphere MQ as JMS provider — when banks use which |
-| **11** | SIB (Service Integration Bus): bus, bus members, destinations — full setup |
-| **12** | JMS objects: QCF/TCF, queues/topics, activation specs vs listener ports (legacy!) |
-| **13** | **LAB: Build a bus + queue + activation spec; send a test payment message** |
-
----
-
-## 📗 PHASE 5 — WEBSPHERE MQ INTEGRATION (⭐ Bank Gold — Days 14–21, full pace)
-
-| Day | Topic |
-|---|---|
-| **14** | MQ architecture: queue managers, channels (SVRCONN), listeners — mapped to WAS |
-| **15** | Client mode vs bindings mode — performance vs flexibility trade-off |
-| **16** | Creating MQ QCF + queue in WAS pointing to PaymentQM (console walkthrough) |
-| **17** | Same via wsadmin (`AdminTask.createWMQConnectionFactory` etc.) — scripted |
-| **18** | CCDT files & multi-QM failover (client channel definition table) |
-| **19** | MQ SSL from WAS (cipher mapping WAS ↔ MQ names) |
-| **20** | MQ user auth, CHLAEN rules, MCAUSER — the connection-refused trilogy |
-| **21** | **LAB: End-to-end — PaymentApp puts a message → MQ → back-end reads it** |
+### Day 6 – Revision + Mini Test
+- Rewrite all commands from memory; explain QMGR/queue/channel/listener aloud
+- **Lab:** Kill QMGR → restart → verify reconnect, without notes
+- ✅ **Gate:** QMGR + queues + test messages in 30 min flat?
 
 ---
 
-## 📗 PHASE 6 — J2C RESOURCE ADAPTERS & BACKENDS (Days 22–23)
+## 🗓️ WEEK 2: WAS ↔ MQ INTEGRATION (CORE STRENGTH)
 
-| Day | Topic |
-|---|---|
-| **22** | JCA resource adapters: CICS/IMS adapters (mainframe banking!), RAR deployment, connection factories |
-| **23** | Mail/scheduler resources + URL providers (quick coverage) |
+### Day 7 – JMS Resources in WAS Part 1
+- **Theory:** JMS Provider, Queue Connection Factory (QCF), Queue destinations, JNDI lookup flow
+- **Lab:** Install WebSphere Liberty/trial → create JMS resources pointing to Day-1 QMGR
+- **Bank lens:** Internet banking app's QCF → payment queue
+- 🎤 *Walk me through configuring MQ in WAS from scratch*
+
+### Day 8 – JMS Resources in WAS Part 2
+- **Theory:** Activation Spec vs Listener Port (legacy); connection/session pool (maxConnections, agedTimeout, reapTime)
+- **Lab:** Configure activation spec; deploy tiny test app sending messages
+- **Bank lens:** Pool exhaustion on salary day — maxConnections < app threads = customer timeouts
+- 🎤 *Listener port vs activation spec?*
+
+### Day 9 – CCDT & Connection Details
+- **Theory:** Client Channel Definition Table; QCF fields (host/port/channel/QMGR) vs CCDT URL
+- **Lab:** Connect WAS to QMGR via explicit properties, then via CCDT file
+- **Bank lens:** Banks use CCDT so channel changes don't need WAS config changes
+- 🎤 *What is CCDT and why do banks use it?*
+
+### Day 10 – Troubleshooting WAS–MQ Errors Part 1
+- **Theory:** 2059 (QMGR unavailable), 2538 (host not available), 2009 (connection broken); reading SystemOut.log + AMQERR01.log together
+- **Lab:** Break it on purpose — stop listener (2538), stop QMGR (2059) — read, fix
+- **Bank lens:** The 3-way blame game (WAS vs MQ vs Network) — logs end the argument
+- 🎤 *App can't connect to MQ — walk me through your troubleshooting*
+
+### Day 11 – Troubleshooting Part 2: Security Errors
+- **Theory:** JMSWMQ2013, 2035 (not authorized), MQCSP auth, CHLAUTH (BLOCKUSER, address blocks)
+- **Lab:** Enable CONNAUTH, block a user, see failure, fix credentials in QCF
+- **Bank lens:** MQ hardening Sunday → 50 apps fail Monday with 2013 — happens in EVERY bank
+- 🎤 *What is MQCSP? Why did apps break after MQ 8 upgrade?*
+
+### Day 12 – SSL/TLS Between WAS and MQ
+- **Theory:** WAS truststore/keystore vs MQ key repository; CipherSuite vs CipherSpec mismatch
+- **Lab:** Self-signed certs → TLS on SVRCONN channel → connect WAS securely
+- **Bank lens:** Cert expiry outage — AMQ9637, cipher mismatch after patching
+- 🎤 *How do you configure SSL between WAS and MQ?*
+
+### Day 13 – Version Compatibility (RA / Client Jars)
+- **Theory:** WAS MQ Resource Adapter versions; MQ client jar compatibility matrix; updating RA in WAS
+- **Lab:** Document your WAS version → supported MQ client level (make a cheat sheet)
+- **Bank lens:** WAS patching weekend → apps fail → RA version mismatch — 2 AM fix story
+- 🎤 *WAS patched, now MQ connections fail — what do you check first?*
+
+### Day 14 – Revision + Break-Fix Marathon
+- Break setup 5 ways: dead QMGR, wrong password, expired cert, stopped channel, pool exhaustion
+- Fix all 5 without notes; time yourself
+- ✅ **Gate:** End-to-end WAS→MQ config + 5 failure modes fixed?
+
+---
+
+## 🗓️ WEEK 3: MQ OPERATIONS YOU OWN
+
+### Day 15 – Transactions & Message Reliability
+- **Theory:** Syncpoint, JTA, XA/two-phase (conceptual); poison messages — BOTHRESH, BOQNAME
+- **Lab:** Send a "bad" message → watch backout loop → set backout queue → verify
+- **Bank lens:** Loan app redelivery storm → WAS CPU 90% → backout config saves the day
+- 🎤 *What is a poison message and how do you handle it?*
+
+### Day 16 – Channel Operations
+- **Theory:** SVRCONN channels; states RUNNING/RETRYING/STOPPED; START/STOP/RESET; RESOLVE CHL; HBINT, MAXINST
+- **Lab:** Stop/start channels, force RETRYING state, recover it
+- **Bank lens:** Nightly 2 AM channel RETRYING — firewall idle timeout — HBINT fix CR
+- 🎤 *Channel in RETRYING state — what do you do?*
+
+### Day 17 – DLQ Handling (Hands-on Heavy Day)
+- **Theory:** DLQ message structure, dead letter header, reason codes (2085, 2053, 2035); `runmqdlq` rules table
+- **Lab:** Force 3 messages into DLQ, identify reasons, replay one safely
+- **Bank lens:** 500 salary messages in DLQ — reason 2085 — app typo'd queue name — you replay = hero
+- 🎤 *Walk me through a real DLQ incident*
+
+### Day 18 – Monitoring & Health Checks
+- **Theory:** Queue depth alerts, Q_DEPTH_HIGH events, channel status; WAS PMI ↔ MQ correlation
+- **Lab:** Write a health-check script (qdepth + channel + listener) — keep it forever
+- **Bank lens:** 80% depth alert before payments back up — auto-ticket to ServiceNow
+- 🎤 *How do you proactively monitor MQ from the WAS side?*
+
+### Day 19 – HA/DR from WAS Admin Seat
+- **Theory:** Multi-Instance QMGR concept; WAS-side reconnect (clientReconnectTimeout, stale connections)
+- **Lab:** Document/simulate QMGR restart → verify WAS recovers connections
+- **Bank lens:** DR drill — QMGR failover 2 min, WAS held dead connections 10 min — QCF fix = best story
+- 🎤 *QMGR fails over — what happens on the WAS side?*
+
+### Day 20 – Trace & Evidence Gathering
+- **Theory:** `strmqtrc` / `endmqtrc`, `runmqras`; proving client-side vs queue-side with evidence
+- **Lab:** Trace a failing connection, read trace highlights
+- **Bank lens:** Ending WAS-vs-MQ blame game with trace proof
+- 🎤 *How do you collect MQ traces when IBM asks for evidence?*
+
+### Day 21 – Revision + Full Ops Drill
+- Simulate full morning routine: QMGRs, channels, depths, DLQ, WAS logs — daily runbook
+- ✅ **Gate:** DLQ + channel + security scenarios without notes?
 
 ---
 
-## 📗 PHASE 7 — ⭐ TROUBLESHOOTING (Days 24–26)
+## 🗓️ WEEK 4: SENIOR-LEVEL JUDGMENT
 
-| Day | Scenario |
-|---|---|
-| **24** | MQ errors decoded: `2035` (auth), `2059` (QM unavailable), `2538` (listener), `2009` (connection lost) — full investigation flow |
-| **25** | J2C/JMS issues: `J2CA0021E` connection leak, activation spec not consuming, `NameNotFoundException`, message backlog triage |
-| **26** | 🧪 **Gauntlet:** 5 mock incidents from real logs (MQ channel down, alias wrong password, queue full `MQRC 2053`, JNDI lookup fails, messages stuck in flight) |
+### Day 22 – RCA Writing
+- **Theory:** RCA structure: timeline → root cause → impact → fix → preventive actions
+- **Lab:** Pick your best lab failure → write a full professional RCA
+- **Bank lens:** "Payments slow at month-end" — pool undersized — your name on the RCA
+- 🎤 *Tell me about an RCA you wrote*
 
----
+### Day 23 – Change Management & Bank Discipline
+- **Theory:** CR process, CAB, freeze windows (salary days, month/quarter-end); pre-change checklist (dmpmqcfg, WAS backup, rollback plan)
+- **Bank lens:** Why nothing changes in a bank between 25th–5th
+- 🎤 *Describe your change process for a WAS-MQ change*
 
-## 📊 Summary
+### Day 24 – Coordination & Ownership
+- **Theory:** Working with MQ/app/network teams without blame; recurring P3 → permanent fix; WAS↔MQ connection matrix
+- **Lab:** Build the connection matrix for your lab — real artifact
+- 🎤 *How do you handle it when MQ team says it's a WAS issue?*
 
-| Phase | Days | Pace |
-|---|---|---|
-| 1. Foundations | 1–3 | ⚡ |
-| 2. JDBC Bridge | 4–5 | ⚡ Compressed (own course has detail) |
-| 3. J2C Auth | 6–8 | ⚡ |
-| 4. JMS/SIB | 9–13 | 🐢 Full |
-| 5. ⭐ MQ Integration | 14–21 | 🐢 Full — untouched |
-| 6. J2C Adapters | 22–23 | ⚡ |
-| 7. ⭐ Troubleshooting | 24–26 | 🐢 Full |
-| **TOTAL** | **26 days** | |
+### Day 25 – Upgrade Awareness
+- **Theory:** MQ 8 → 9 upgrade: WAS app impact, RA compatibility, phased approach; your validation checklist + rollback
+- **Bank lens:** 300 QMGRs upgraded in waves over 6 months — WAS validation each wave
+- 🎤 *MQ team is upgrading — what do YOU do as WAS admin?*
 
----
+### Day 26 – War Story Building
+- Convert 5 best lab incidents into STAR format (Situation, Task, Action, Result)
+- Stories: 2013 flood, cert expiry, pool exhaustion, DR reconnect, DLQ salary replay
+- Practice each under 2 minutes — these = "recent issues you faced" answers
 
-## 🎯 After Course: Interview Mastery Pack (same structure as other courses)
+### Day 27 – Capstone Lab Day
+- Full rebuild, timed: QMGR → queues → TLS → WAS JMS config → test message → break → fix
+- ✅ Target: under 2 hours total — this lab IS your interview confidence
 
-| # | Pack | Count |
-|---|---|---|
-| 1 | Real interview Q&A (10-yr level) | 20 |
-| 2 | "Recent issues you faced" answers | 5 |
-| 3 | Banking scenario-based questions | 20 |
-| 4 | Troubleshooting-based questions | 20 |
-| 5 | Outage war stories (STAR format) | 5 |
-| 6 | Behavioral/Leadership questions | 5 |
-| 7 | Architecture/Design (Lead level) | 5 |
+### Day 28 – Mock Interview Round 1
+- Answer 20 interview questions aloud; record yourself; note weak areas
+- Redo weak topics same day
 
----
+### Day 29 – Scenario + Troubleshooting Drill
+- Practice scenario + troubleshooting question sets aloud
+- For each: answer → bank scenario → prevention
 
-## ✅ Completion Rule Per Topic
-
-- [ ] Theory understood
-- [ ] Console step done
-- [ ] wsadmin step done
-- [ ] Banking scenario discussed
-- [ ] Interview Qs answered
-- [ ] → Say `NEXT`
-
-## 🔖 Commands
-
-| Command | Action |
-|---|---|
-| `START-C7` / `NEXT` | Move to next topic |
-| `QUIZ` | Get assessed on current topic |
-| `REVIEW <day#>` | Revisit a day |
-| `EXERCISE` | Extra hands-on practice |
+### Day 30 – Final Polish
+- Behavioral (5) + design (5) question sets
+- Review: RCA, connection matrix, runbook, war stories, command cheat sheet
+- ✅ **You're interview-ready**
 
 ---
+
+## 📌 Rules for Success
+
+1. **Never skip labs** — reading without doing = you sound like 2 years, not 10
+2. **Keep 4 artifacts:** RCA sample, connection matrix, health-check script, 5 war stories
+3. **Every day ends:** 🎤 interview point spoken aloud once
+4. **Missed a day?** Shift the plan — consistency beats speed
+5. After Day 30 → ask for **Phase 5 Q&A sets** (20 interview Q&A, 20 scenarios, 20 troubleshooting, 5 war stories, 5 behavioral, 5 design, 5 "recent issues")
