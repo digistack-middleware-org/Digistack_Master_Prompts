@@ -1,6 +1,6 @@
 # 📅 Master Day Plan — WebSphere Authentication & Authorization (User Management)
 ## Zero → Expert | 1 hr/day | Banking Production Focused
-**Ox Alpha | WAS 8.5.5 / 9.0 Traditional ND | BankCell01 (DMGR, Node01/Node02, PaymentCluster)**
+**WAS 8.5.5 / 9.0 Traditional ND | BankCell01 (DMGR, Node01/Node02, PaymentCluster)**
 
 > **Total: ~60–70 days ≈ 11 weeks**
 > **Order:** Foundations → ⭐ Registries (full pace) → Roles → App Users → LTPA → SSO/SSL
@@ -186,4 +186,4 @@
 | `EXERCISE` | Extra hands-on practice |
 
 ---
-*Course by Ox Alpha — WebSphere Authentication & Authorization | Banking Production Training*
+

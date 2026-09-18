@@ -1,6 +1,6 @@
 # ⚡ WebSphere Performance Tuning — Zero to Expert
 ## JVM • Threads • Connection Pools • Memory • GC • Database • PMI • Load Testing
-**Ox Alpha | 25-Yr WAS Admin/Architect @ Global Bank | WAS 8.5.5 / 9.0 ND | BankCell01**
+**25-Yr WAS Admin/Architect @ Global Bank | WAS 8.5.5 / 9.0 ND | BankCell01**
 
 > **Goal:** Crack a 10-yr level interview AND tune production alone without help.
 > **Format:** Theory 80% → Banking Scenario 15% → Interview 5% | **Console + wsadmin every topic**

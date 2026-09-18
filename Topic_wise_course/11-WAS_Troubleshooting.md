@@ -2,7 +2,6 @@
 
 > **Goal:** From absolute zero to expert-level WebSphere Application Server ND (8.5.5 / 9.0) production troubleshooting.
 > **Focus:** Banking / Financial Services production scenarios.
-> **Trainer:** Ox Alpha
 
 ---
 

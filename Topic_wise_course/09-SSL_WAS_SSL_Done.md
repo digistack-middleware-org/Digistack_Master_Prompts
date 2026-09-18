@@ -1,6 +1,6 @@
 # 📅 SSL Course — Day-Wise Plan
 ## WebSphere SSL: Browser → WAS → LDAP → MQ → DB | Zero to Expert | 1 hr/day | ~43 days ≈ 9 weeks
-**Ox Alpha | WAS 8.5.5 / 9.0 ND | BankCell01 (DMGR, Node01/Node02, PaymentCluster, CustPortalCluster)**
+**WAS 8.5.5 / 9.0 ND | BankCell01 (DMGR, Node01/Node02, PaymentCluster, CustPortalCluster)**
 
 > **Goal:** Crack a 10-yr level interview AND run SSL alone in production without help.
 > **Per-topic mix:** Theory 80% → Real Banking Scenario 15% → Interview 5% (Basic→Expert)
