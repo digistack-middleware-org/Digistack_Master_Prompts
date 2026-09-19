@@ -905,6 +905,108 @@ plugin generation from Sprint 1 confirmed against both cluster members.
 
 ---
 
+# Version 8.5 — Transaction Service / XA Recovery
+
+## Version Overview
+**Objective:** Prove atomic, recoverable distributed transactions against
+the existing DigiStack app using a "FundsTransfer" flow (Servlet → EJB
+CMT → two XA DataSources: DEBIT_DS, CREDIT_DS).
+**Business Scope:** No new customer-facing feature — validates
+correctness of the existing Deposit/Withdraw path under two-resource
+transactions.
+**WebSphere Focus:** XA vs non-XA DataSource selection, 2PC, transaction/
+recovery logs, transaction timeouts, heuristic outcomes, WTRN/WSVR error
+codes.
+**Expected Outcome:** Rollback proven on partial failure; XA recovery
+proven after a mid-2PC server kill; heuristic outcome forced and safely
+resolved; `wtrn-error-cheatsheet.md` produced.
+**Prerequisites:** P01 v7 signed off (DataSource/pooling in place).
+
+### Sprint 1
+**Goal:** Stand up DEBIT_DS and CREDIT_DS as XA DataSources; build the
+FundsTransfer Servlet → EJB (CMT) skeleton.
+**WebSphere Admin:** Create both DataSources as XA-capable; verify Test
+Connection on each.
+**Acceptance Criteria:** Both DS connect; EJB CMT deploys and calls both.
+
+### Sprint 2
+**Goal:** Prove ACID via forced partial failure.
+**Business Features:** None.
+**WebSphere Admin:** Force bad SQL on CREDIT_DS after DEBIT_DS succeeds;
+verify rollback leaves both unchanged. Repeat with non-XA + autocommit to
+show an orphaned debit as the negative control.
+**Acceptance Criteria:** XA path rolls back both; non-XA control leaves an
+orphaned debit, confirming why XA matters.
+
+### Sprint 3
+**Goal:** Capture 1PC vs 2PC behavior and locate/size the transaction log.
+**WebSphere Admin:** Enable `Transaction=all` trace; run one successful
+transfer; identify prepare → decision log → commit sequence in trace.
+Locate `<profile>/tranlog/`; document sizing rationale.
+**Acceptance Criteria:** Trace clearly shows 2PC sequence; tranlog
+location and sizing documented.
+
+### Sprint 4
+**Goal:** Configure and test transaction timeouts; force and resolve a
+heuristic outcome.
+**WebSphere Admin:** Set total transaction lifetime, client inactivity,
+and max in-process timeouts (console + wsadmin). Simulate a timeout via a
+sleep servlet, capture the exact WTRN error. Force a heuristic outcome by
+manually committing one DB while the transaction is in-doubt; resolve via
+AdminControl (retry/commit/forget).
+**Acceptance Criteria:** Timeout reproduced with captured WTRN code;
+heuristic outcome forced, correctly diagnosed, and resolved.
+
+### Sprint 5
+**Goal:** XA recovery — the money lab. Kill the server mid-2PC
+(in-doubt: prepared, not committed); restart; verify recovery replay.
+**WebSphere Admin:** `kill -9` the member mid-transfer at the prepared
+stage; restart; watch WTRN recovery messages in SystemOut; verify DB
+state matches expected outcome (zero lost/duplicated funds).
+**Acceptance Criteria:** Recovery log replay confirmed; funds neither lost
+nor duplicated.
+
+### Sprint 6
+**Goal:** Write and execute test cases for Version 8.5.
+**Deliverables:** TestCases-v8.5.md (including TP01 Pipeline Results
+section).
+**WebSphere Admin:** Execute TP01_Test_Pipeline.md stages 1–5.
+**Acceptance Criteria:** All Critical/High test cases pass; all TP01
+stages Pass.
+**Enterprise Outcome:** Version 8.5 test coverage complete.
+
+### Sprint 7
+**Goal:** Sign off Version 8.5.
+**WebSphere Admin:** Capture backupConfig baseline (including tranlog
+backup strategy); final smoke test.
+**Deliverables:** SetupDoc-v8.5.md, `wtrn-error-cheatsheet.md`.
+**Acceptance Criteria:** SetupDoc complete; backupConfig + tranlog backup
+captured; smoke test passes.
+**Enterprise Outcome:** Version 8.5 signed off.
+
+### Sprint 8
+**Goal:** Fault Injection + Incident Simulation — full war-game.
+**WebSphere Admin:** JMeter load on FundsTransfer → `kill -9` mid-flight →
+verify in-doubt state in the DB → restart → recovery replay → zero lost
+transfers → write post-mortem. Time yourself.
+**Deliverables:** FaultDrill-v8.5.md (post-mortem format).
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed,
+zero lost/duplicated funds confirmed, environment restored.
+**Enterprise Outcome:** Version 8.5 fault drill complete. Non-gating.
+
+**Version 8.5 Deliverables:** FundsTransfer app (Servlet/EJB/2 XA DS),
+`wtrn-error-cheatsheet.md`, SetupDoc-v8.5.md, TestCases-v8.5.md,
+FaultDrill-v8.5.md.
+**Exit Criteria (target, not yet verified):** Rollback proven; 2PC traced;
+timeouts configured and tested; heuristic outcome resolved; XA recovery
+proven; fault drill complete (non-gating).
+**Lessons Learned:** Recovery correctness depends entirely on tranlog
+integrity — this is why Sprint 7's backup step is not optional.
+**Technical Debt:** None new — this version exists purely to close a
+correctness gap.
+
+---
+
 # Version 9 — Session Management
 
 ## Version Overview
@@ -970,6 +1072,105 @@ plugin generation from Sprint 1 confirmed against both cluster members.
 **Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed; Fault drill complete (Sprint 8, non-gating).
 **Lessons Learned:** Sticky sessions (routing) and replication (data protection) are distinct mechanisms.
 **Technical Debt:** None introduced.
+
+---
+
+# Version 9.5 — wsadmin Jython Toolkit & Troubleshooting
+
+## Version Overview
+**Objective:** Build a reusable, properties-driven wsadmin Jython
+automation toolkit and prove diagnostic fluency (thread/heap dumps, log/
+trace, JVM tuning) against the existing v1–v9 deployment.
+**Business Scope:** Zero new functionality — pure ops/automation surface
+over the existing app.
+**WebSphere Focus:** AdminControl/AdminConfig/AdminApp/AdminTask,
+properties-file-driven scripting, thread dump and heap dump analysis
+(Eclipse MAT), SystemOut/FFDC/HPEL log viewing, trace strings, GC policy
+comparison, WebContainer thread pool tuning.
+**Expected Outcome:** `wasOps.py` toolkit (start/stop, status, deploy/
+undeploy, pool changes, transaction timeout changes) driven entirely by
+an external properties file; one memory leak identified end-to-end; one
+OOM/thread-exhaustion scenario captured and resolved.
+**Prerequisites:** P01 v8.5 signed off (transaction timeout changes are
+one of the toolkit's scripted actions).
+
+### Sprint 1
+**Goal:** Build the properties-file-driven `wasOps.py` skeleton
+(AdminControl/AdminConfig/AdminApp/AdminTask wrappers).
+**WebSphere Admin:** Write Jython functions for start/stop and status
+listing, reading target env/server names from an external `.properties`
+file — no hardcoded values.
+**Acceptance Criteria:** Same script runs unmodified against a second
+target by swapping only the properties file.
+
+### Sprint 2
+**Goal:** Extend the toolkit: deploy/undeploy, DataSource pool changes,
+and transaction timeout changes (reusing v8.5's timeout settings).
+**WebSphere Admin:** Add `AdminApp.install/update`, pool-size change
+function, and a transaction-timeout-change function.
+**Acceptance Criteria:** Toolkit deploys/undeploys the app and changes
+pool size and timeout values, all properties-driven.
+
+### Sprint 3
+**Goal:** Thread dump analysis — capture and diagnose a stuck-thread
+scenario.
+**WebSphere Admin:** Force a stuck thread (blocking call); capture via
+`kill -3` and the wsadmin equivalent; analyze for deadlock/stuck-thread
+pattern.
+**Acceptance Criteria:** Stuck thread identified from the dump with a
+documented root cause.
+
+### Sprint 4
+**Goal:** Heap dump analysis — hunt a deliberately introduced memory
+leak with Eclipse MAT.
+**WebSphere Admin:** Deploy a build with an intentional leak; capture
+heap dumps over time; identify the leaking class in MAT.
+**Acceptance Criteria:** Leak class correctly identified from dump
+comparison.
+
+### Sprint 5
+**Goal:** JVM tuning under OOM/thread-pool exhaustion.
+**WebSphere Admin:** Run `-Xms`/`-Xmx` experiments; simulate OOM; compare
+GC policies (gencon/optthruput/balanced) via GC log parsing; simulate
+WebContainer thread pool exhaustion and resolve via sizing.
+**Acceptance Criteria:** OOM reproduced and resolved via heap/pool
+tuning; GC policy comparison documented.
+
+### Sprint 6
+**Goal:** Write and execute test cases for Version 9.5.
+**Deliverables:** TestCases-v9.5.md (including TP01 Pipeline Results).
+**WebSphere Admin:** Execute TP01_Test_Pipeline.md stages 1–5.
+**Acceptance Criteria:** All Critical/High test cases pass; all TP01
+stages Pass.
+**Enterprise Outcome:** Version 9.5 test coverage complete.
+
+### Sprint 7
+**Goal:** Sign off Version 9.5.
+**WebSphere Admin:** Capture backupConfig baseline; final smoke test.
+**Deliverables:** SetupDoc-v9.5.md, `wasOps.py` (committed toolkit).
+**Acceptance Criteria:** SetupDoc complete; toolkit runs clean against a
+second environment; smoke test passes.
+**Enterprise Outcome:** Version 9.5 signed off.
+
+### Sprint 8
+**Goal:** Fault Injection + Incident Simulation.
+**WebSphere Admin:** Phase 1 — inject an OOM or stuck-thread fault. Phase
+2 — incident ticket raised from real symptoms. Phase 3 — diagnose live
+using the toolkit and dump-analysis skills from Sprints 3–5, RCA, restore.
+**Deliverables:** FaultDrill-v9.5.md.
+**Acceptance Criteria:** Fault diagnosed using the toolkit itself (not ad
+hoc commands); RCA completed; environment restored.
+**Enterprise Outcome:** Version 9.5 fault drill complete. Non-gating.
+
+**Version 9.5 Deliverables:** `wasOps.py`, SetupDoc-v9.5.md,
+TestCases-v9.5.md, FaultDrill-v9.5.md.
+**Exit Criteria (target, not yet verified):** Toolkit functional and
+properties-driven; leak identified; OOM/thread exhaustion resolved; fault
+drill complete (non-gating).
+**Lessons Learned:** A dump is only useful if you already know what
+"normal" looks like — baseline captured here feeds every later version's
+troubleshooting.
+**Technical Debt:** None new.
 
 ---
 
@@ -1195,7 +1396,7 @@ plugin generation from Sprint 1 confirmed against both cluster members.
 ### Sprint 3
 **Goal:** Build email-sending logic; wire it to successful Withdraw.
 **Business Features:** Withdraw triggers confirmation email.
-**App Dev:** Backend: `NotificationService.sendWithdrawEmail()` via JavaMail/JNDI, called from `AccountService.withdraw()`. UI: notification/alert bell icon on Dashboard header showing Withdraw email event count (per P01_Foundation.md v13 UI note; extended at P0215).
+**App Dev:** Backend: `NotificationService.sendWithdrawEmail()` via JavaMail/JNDI, called from `AccountService.withdraw()`. UI: notification/alert bell icon on Dashboard header showing Withdraw email event count (per P01_Foundation.md v13 UI note; extended at P02 v15).
 **Acceptance Criteria:** Successful Withdraw triggers real, delivered email with correct details.
 
 ### Sprint 4

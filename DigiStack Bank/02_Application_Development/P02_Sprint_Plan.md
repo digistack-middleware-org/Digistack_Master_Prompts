@@ -2,7 +2,7 @@
 ## Consolidated Sprint Plan (Versions 15–22)
 
 **Part:** P02 — WebSphere / Enterprise Middleware Integration
-**Versions Covered:** 15, 16, 16.5, 17, 18, 19, 20, 21, 22, 22.5
+**Versions Covered:** 15, 16, 16.5, 17, 18, 18.5, 19, 20, 21, 22, 22.5, 22.7
 **Status:** ⏳ Not Started — planning document only, no versions built or signed off
 **Prerequisite:** P01 Completion Checkpoint satisfied (`digistack-bank-v14.ear`, 2-member cluster, IHS, SSL end-to-end, JNDI DataSource, Customer/Administrator roles, JNDI Mail Session)
 **Next:** P03 — Enterprise Banking Systems (CBS, Payments, Channel Simulators, Loans)
@@ -889,6 +889,131 @@
 - **Technical debt:** None new — this custom dashboard is explicitly a stepping-stone; per P04 v31's note, it is formally superseded and retired once Prometheus/Grafana reaches equivalent coverage. This is a planned, documented retirement, not oversight.
 
 ---
+---
+
+# Version 18.5 — DynaCache (Dynamic Caching)
+
+## Version Overview
+
+**Version Objective:** Introduce WebSphere Dynamic Cache (DynaCache) — servlet caching for the Dashboard's Recent Transactions fragment and an object cache instance for Beneficiary lookups — proving cache invalidation and cluster-wide cache replication.
+
+**Business Scope:** Zero new banking functionality. Servlet cache on the Dashboard Recent Transactions fragment; object cache instance for Beneficiary lookups. Deliberate cache invalidation test on a successful Fund Transfer.
+
+**WebSphere Focus:** Dynamic Cache Service, Object Cache Instances, Servlet Caching (cachespec.xml), Cache Replication (cluster-wide via memory-to-memory infrastructure from P01 v9), Cache Invalidation Rules, DynaCache MBeans / PMI monitoring.
+
+**Expected Outcome:** cachespec.xml drives servlet caching on the Recent Transactions fragment; a dedicated cache instance holds Beneficiary lookups; a balance-affecting transfer triggers visible invalidation; cache replication confirmed across both cluster members; hit/miss ratios visible via the PMI/JMX Operations Dashboard (v18).
+
+**Prerequisites:** P02 Version 18 Completion Checkpoint satisfied — Operations Dashboard live with PMI/JMX monitoring.
+
+---
+
+### Sprint 1
+**Sprint Goal:** Enable the Dynamic Cache Service and configure a dedicated object cache instance for Beneficiary lookups.
+**Learning Objective:** Object Cache Instance configuration; the "never cache per-user data into shared instances" security guardrail.
+**Business Features:** None.
+**WebSphere Administration:**
+- Enable Dynamic Cache Service on the cluster
+- Create a dedicated DynaCache object cache instance for Beneficiary lookup results
+- Configure cache size and time-to-live
+**Acceptance Criteria:** DynaCache service enabled; Beneficiary cache instance visible in Admin Console; a lookup populates the cache (confirmed via Admin Console CacheMonitor or PMI stats).
+**Enterprise Outcome:** Object caching foundation exists before servlet caching is layered on top.
+
+---
+
+### Sprint 2
+**Sprint Goal:** Author cachespec.xml to cache the Dashboard's Recent Transactions fragment.
+**Learning Objective:** cachespec.xml authoring; cache ID rules; invalidation by dependency ID.
+**Business Features:** None.
+**Application Development:**
+- Backend: `cachespec.xml` — cache the Recent Transactions servlet/JSP fragment with an invalidation rule keyed on the customer's account dependency ID
+**WebSphere Administration:**
+- Package `cachespec.xml` into the EAR; redeploy
+- Confirm cache is populating via CacheMonitor
+**Acceptance Criteria:** A second request to the Recent Transactions fragment is served from cache (cache hit visible in logs/CacheMonitor).
+**Enterprise Outcome:** Servlet caching operational on the highest-read hot path.
+
+---
+
+### Sprint 3
+**Sprint Goal:** Prove cache invalidation on a successful Fund Transfer.
+**Learning Objective:** Why invalidation rules matter — stale balance risk without them.
+**Business Features:** None (reuses existing Fund Transfer).
+**Application Development:**
+- Backend: FundTransferService emits a DynaCache invalidation event on PROCESSED status; deliberately show stale balance without invalidation first (negative control), then add the invalidation and confirm it corrects the view.
+**WebSphere Administration:** Redeploy; observe invalidation in CacheMonitor
+**Acceptance Criteria:** Without invalidation rule — cached stale balance observable. With invalidation rule — next read reflects new balance immediately.
+**Enterprise Outcome:** Cache correctness under write traffic proven, not assumed.
+
+---
+
+### Sprint 4
+**Sprint Goal:** Verify cache replication across both cluster members.
+**Learning Objective:** Cluster-wide cache replication via the existing memory-to-memory infrastructure (P01 v9).
+**WebSphere Administration:**
+- Configure cache replication domain
+- Hit cached entry on Member 1; switch to Member 2 via direct port; confirm same cached entry serves (not a cache miss)
+**Acceptance Criteria:** Cache hit on Member 2 for an entry populated on Member 1 — confirmed via CacheMonitor on each member.
+**Enterprise Outcome:** Caching is genuinely cluster-aware, not siloed per JVM.
+
+---
+
+### Sprint 5
+**Sprint Goal:** Document the security guardrail: Balance Inquiry deliberately NOT cached.
+**Learning Objective:** Knowing what NOT to cache is the interview-grade skill.
+**WebSphere Administration:** Add a written section to SetupDoc-v18.5.md explaining why `GET /api/accounts/{id}/balance` is excluded from the object/servlet cache: per-user financial data in a shared cache instance = data-leak risk. Prove no balance response is cached (negative test — request twice, confirm two cache misses, zero cache hits in PMI counters).
+**Acceptance Criteria:** Negative test confirms Balance Inquiry never cache-hits; SetupDoc-v18.5.md includes the security-guardrail rationale.
+**Enterprise Outcome:** Security-aware caching decision documented — a real bank's equivalent of a PCI-DSS data classification control.
+
+---
+
+### Sprint 6
+**Sprint Goal:** Write and execute test cases for Version 18.5.
+**Learning Objective:** Test Case discipline (TCS01/TCS02).
+**Deliverables:** TestCases-v18.5.md (including TP01 Pipeline Results section).
+**WebSphere Administration:** Execute TP01_Test_Pipeline.md stages 1–5 (DEV → SIT → UAT → PRE-PROD → PROD) and record every stage in the "TP01 Pipeline Results — v18.5" table.
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7; all TP01 pipeline stages Pass (Critical/High) per TP01 R3.
+**Enterprise Outcome:** Version 18.5 test coverage complete.
+
+---
+
+### Sprint 7
+**Sprint Goal:** Sign off Version 18.5.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Administration:** Capture backupConfig baseline; final smoke test.
+**Deliverables:** SetupDoc-v18.5.md.
+**Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
+**Enterprise Outcome:** Version 18.5 signed off.
+
+---
+
+### Sprint 8
+**Sprint Goal:** Fault Injection + Incident Simulation for Version 18.5.
+**Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
+**WebSphere Administration:** Phase 1 — inject a realistic fault tied to this version's topic (e.g., disable the DynaCache invalidation rule so a completed Fund Transfer leaves the Dashboard showing a stale balance; symptoms: balance visible in DB does not match balance shown on screen). Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
+**Deliverables:** FaultDrill-v18.5.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
+**Enterprise Outcome:** Version 18.5 fault drill complete. Non-gating — does not block sign-off.
+
+---
+
+## Version 18.5 Deliverables
+- `digistack-bank-v18.5.ear` (includes `cachespec.xml`)
+- DynaCache object cache instance configuration export
+- SetupDoc-v18.5.md (including security-guardrail section), TestCases-v18.5.md, FaultDrill-v18.5.md
+
+## Version 18.5 Exit Criteria
+- ✅ DynaCache service enabled; object cache instance for Beneficiary lookups operational
+- ✅ Servlet caching confirmed on Recent Transactions fragment (cache hit/miss visible in PMI)
+- ✅ Cache invalidation on Fund Transfer proven (stale-before / correct-after)
+- ✅ Cache replication confirmed cluster-wide
+- ✅ Balance Inquiry confirmed NOT cached (negative test passing)
+- ✅ TP01 pipeline passed (all 5 stages, all Critical/High rows Pass)
+- ✅ Ready for Version 19
+
+## Lessons Learned
+- **Key learnings:** The "never cache per-user financial data into a shared instance" rule is what separates a correct caching design from a PCI/data-leak incident — knowing the exclusion is as important as knowing the inclusion.
+- **Technical debt:** None new.
+
 ---
 
 # Version 19 — IBM MQ Integration
@@ -2322,9 +2447,135 @@ Non-gating — does not block sign-off.
 
 ---
 
+# Version 22.7 — Liberty Profile Migration Drill
+
+## Version Overview
+
+**Version Objective:** Run a binaryScanner + Transformation Advisor assessment and migrate one self-contained module (Notification Service) from traditional WAS to a Liberty server — side-by-side, without decommissioning the traditional deployment.
+
+**Business Scope:** Zero new banking functionality. The Notification Service (P01 v13) is the migration candidate — smallest, cleanest module with a single DataSource and JMS dependency.
+
+**WebSphere Focus:** Liberty server lifecycle, server.xml (featureManager, endpoints, keystore, datasource, JMS), `<include>`/server.env/bootstrap.properties, binaryScanner report interpretation, Transformation Advisor migration report, Liberty server dump/javacore/pause.
+
+**Expected Outcome:** binaryScanner run against the traditional Notification module; Transformation Advisor report reviewed; module redeployed and running standalone on Liberty with equivalent DataSource/JMS config; functional parity confirmed against the traditional deployment; a short write-up on what changed (config model, footprint, startup time) and when a bank would actually move a workload to Liberty vs keep it on traditional WAS ND.
+
+**Prerequisites:** P02 Version 22.5 Completion Checkpoint satisfied — Oracle 21c XE on dsb-oracle, jdbc/OracleDS live, all tables migrated.
+
+---
+
+### Sprint 1
+**Sprint Goal:** Run binaryScanner against the traditional Notification module EAR; review the Transformation Advisor report.
+**Learning Objective:** What binaryScanner flags and why — the difference between a blocker and a warning in Liberty migration.
+**Business Features:** None.
+**WebSphere Administration:**
+- Run `binaryScanner.sh` against `digistack-notificationservice-v22.5.ear` (or v22 equivalent)
+- Open the Transformation Advisor HTML report; categorize each finding (blocker / warning / info)
+- Record findings in SetupDoc-v22.7.md
+**Acceptance Criteria:** binaryScanner runs without error; report reviewed and findings categorized; at least one finding explained (its reason and resolution).
+**Enterprise Outcome:** Pre-migration assessment discipline established — mirrors the first step in every real Liberty migration engagement.
+
+---
+
+### Sprint 2
+**Sprint Goal:** Create a Liberty server instance; author server.xml for the Notification module.
+**Learning Objective:** server.xml feature/endpoint/datasource/JMS configuration — how Liberty's declarative model differs from traditional WAS Admin Console configuration.
+**WebSphere Administration:**
+- Create Liberty server: `./server create digistack-notification-liberty`
+- Author `server.xml`: featureManager (servlet-4.0, javaee-8.0 or explicit features), endpoints (httpEndpoint port 9090), keystore, datasource (Oracle jdbc/NotificationDS, OracleAlias), JMS connection factory binding
+- Add `server.env` and `bootstrap.properties` for environment-specific values (no hardcoded credentials per STD Golden Rules)
+**Acceptance Criteria:** Liberty server starts (`./server start digistack-notification-liberty`) without error; server.xml validated against featureManager requirements.
+**Enterprise Outcome:** Config-as-code Liberty server ready to receive the module.
+
+---
+
+### Sprint 3
+**Sprint Goal:** Deploy the Notification module to Liberty; confirm functional parity.
+**Learning Objective:** Dropins vs apps directory; Liberty hot-deployment; classloader differences from traditional WAS.
+**Application Development:**
+- Deploy `digistack-notificationservice-v22.5.ear` (or repackaged WAR) into Liberty `dropins/` or `apps/` directory
+- Trigger a test Withdraw to confirm the notification email is still sent
+**WebSphere Administration:**
+- Monitor Liberty `messages.log` and `console.log` for startup errors
+- Confirm DataSource connection and JMS listener both operational
+**Acceptance Criteria:** Notification email triggered from Liberty server matches output from the traditional WAS deployment; Liberty `messages.log` shows no ClassNotFoundException or ConfigurationException.
+**Enterprise Outcome:** Zero-regression migration proven at the functional level.
+
+---
+
+### Sprint 4
+**Sprint Goal:** Capture and compare: footprint, startup time, config model delta vs traditional WAS.
+**Learning Objective:** Liberty server dump and javacore; the `<include>` pattern for config reuse; the "when would a bank actually migrate" decision framework.
+**WebSphere Administration:**
+- Run `./server dump digistack-notification-liberty` — capture a Liberty server dump and javacore
+- Record startup time (Liberty vs traditional WAS member startup)
+- Record JVM heap at idle (Liberty vs traditional)
+- Write a one-page comparison section in SetupDoc-v22.7.md: config model, footprint, startup, `<include>` pattern for shared config, and a stated answer to "when would a real bank move a workload to Liberty vs keep it on traditional WAS ND?"
+**Acceptance Criteria:** Server dump captures successfully; comparison section includes concrete numbers (startup time in seconds, heap at idle in MB); the "when to migrate" answer names at least two scenarios where Liberty is the right choice and at least one where traditional WAS ND is still required.
+**Enterprise Outcome:** Interview-grade Liberty vs traditional WAS comparison built from lab evidence, not marketing copy.
+
+---
+
+### Sprint 5
+**Sprint Goal:** Package/deploy final state; confirm traditional WAS deployment is retained alongside Liberty.
+**WebSphere Administration:** Confirm both the traditional `digistack-notificationservice-v22.5.ear` on WAS and the Liberty-hosted equivalent are running simultaneously; confirm the traditional deployment is NOT decommissioned.
+**Acceptance Criteria:** Two instances of the Notification module coexist (WAS and Liberty); a test Withdraw triggers the email via the WAS instance (unchanged); the Liberty instance handles a second manual test trigger independently.
+**Enterprise Outcome:** Side-by-side existence proven — the traditional deployment remains the authoritative runtime for the rest of the roadmap.
+
+---
+
+### Sprint 6
+**Sprint Goal:** Write and execute test cases for Version 22.7.
+**Learning Objective:** Test Case discipline (TCS01/TCS02).
+**Deliverables:** TestCases-v22.7.md (including TP01 Pipeline Results section).
+**WebSphere Administration:** Execute TP01_Test_Pipeline.md stages 1–5 and record every stage in the "TP01 Pipeline Results — v22.7" table.
+**Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7; all TP01 pipeline stages Pass (Critical/High) per TP01 R3.
+**Enterprise Outcome:** Version 22.7 test coverage complete.
+
+---
+
+### Sprint 7
+**Sprint Goal:** Sign off Version 22.7.
+**Learning Objective:** SetupDoc discipline (SDD01).
+**WebSphere Administration:** Capture backupConfig baseline (traditional WAS cell); Liberty server config backed up separately; final smoke test on both runtimes.
+**Deliverables:** SetupDoc-v22.7.md (with Liberty vs traditional comparison section).
+**Acceptance Criteria:** SetupDoc complete; backupConfig (WAS) and Liberty server dump both captured; smoke test passes on both runtimes.
+**Enterprise Outcome:** Version 22.7 signed off.
+
+---
+
+### Sprint 8
+**Sprint Goal:** Fault Injection + Incident Simulation for Version 22.7.
+**Learning Objective:** Real fault diagnosis on a Liberty runtime vs a traditional WAS runtime.
+**WebSphere Administration:** Phase 1 — inject a fault into the Liberty server's server.xml (e.g., misconfigure the datasource element so the Liberty-hosted Notification module cannot reach Oracle). Phase 2 — incident ticket raised from real symptoms (Liberty `messages.log` shows connection errors). Phase 3 — investigate live, perform RCA, restore Liberty server.xml.
+**Deliverables:** FaultDrill-v22.7.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, Liberty server restored to known-good state.
+**Enterprise Outcome:** Version 22.7 fault drill complete. Non-gating — does not block sign-off.
+
+---
+
+## Version 22.7 Deliverables
+- Liberty server config directory (`digistack-notification-liberty/`) — server.xml, server.env, bootstrap.properties
+- binaryScanner report artifact
+- Transformation Advisor report artifact
+- SetupDoc-v22.7.md (with Liberty vs traditional comparison section), TestCases-v22.7.md, FaultDrill-v22.7.md
+
+## Version 22.7 Exit Criteria
+- ✅ binaryScanner run and Transformation Advisor report reviewed
+- ✅ Liberty server created and Notification module functional on Liberty
+- ✅ Traditional WAS deployment retained alongside — NOT decommissioned
+- ✅ Comparison section (footprint, startup, config model, when-to-migrate decision) in SetupDoc
+- ✅ TP01 pipeline passed (all 5 stages, all Critical/High rows Pass)
+- ✅ Ready for P03 v23 (CBS split)
+
+## Lessons Learned
+- **Key learnings:** Liberty's config-as-code model (server.xml) is fundamentally different from traditional WAS's runtime-mutation model (Admin Console) — the migration is not just a repackage, it's a config philosophy shift.
+- **Technical debt:** Traditional WAS remains the authoritative runtime for the rest of the roadmap; Liberty is a parallel skill exercise, not a platform migration.
+
+---
+
 # P02 — Overall Completion Summary
 
-**All 10 versions (15–22, plus suffix-slot versions v16.5 and v22.5), 80 sprints total, planned.**
+**All 12 versions (15–22, plus suffix-slot versions v16.5, v18.5, v22.5, and v22.7), 96 sprints total, planned.**
 
 ## P02 Target Final Application State
 - Modules: Customer (multi-account), Account, Beneficiary, Fund Transfer (internal via SIBus/MDB, external via IBM MQ), Transaction History/Account Statement (REST + SOAP), MFA/OTP, account lockout, Security Event Detection, Operations Dashboard (JVM/Session/Queue/DB Pool)

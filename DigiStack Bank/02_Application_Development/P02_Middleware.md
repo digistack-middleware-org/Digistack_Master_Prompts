@@ -634,6 +634,11 @@ Sprint Deliverable: URL rewrite rule demonstrated on an existing path;
 maintenance page toggled on/off without a WAS restart; health check URL
 confirmed usable by an external monitor.
 
+Comparison artifact (added): a one-page IHS/mod_proxy vs mod_jk vs NGINX
+(v21) comparison table is produced here — routing model, session affinity
+handling, config surface, and the licensing/EoS reason many shops moved
+off IHS toward NGINX. This is the 30-second interview answer artifact.
+
 ---
 
 Version 21 — Enterprise Load Balancer (NGINX/HAProxy as F5/Citrix ADC stand-in)
@@ -712,7 +717,10 @@ Transfer) completes successfully through every layer (LB → IHS → WAS
 Cluster → App/JMS/MQ/Notifications → PostgreSQL); a mock production
 incident is worked through a documented runbook (detect via monitoring →
 diagnose → resolve → document); a full backup/recovery of WAS configuration
-is performed and restored.
+is performed and restored; the P01 v14 capacity report methodology is
+re-run against the full end-to-end stack (LB through DB) and the sizing
+justification updated with the new topology's headroom and scale-out
+trigger.
 
 What was deliberately dropped from the original Capstone scope: Fixed
 Deposits, Recurring Deposits, and Loan Management were listed in the
@@ -932,10 +940,43 @@ Technical Debt Introduced
 
 ---
 
+Version 22.7 — Liberty Profile Migration Drill
+--------------------------------------------------
+WebSphere Topic: Liberty server create/start, server.xml (featureManager,
+endpoints, keystore, datasource, JMS), <include>/server.env/
+bootstrap.properties, binaryScanner + Transformation Advisor,
+traditional-to-Liberty migration.
+
+Minimum App Needed
+Zero new banking functionality. One already-built, self-contained module
+(the Notification Service from P01 v13 is the smallest clean candidate)
+is migrated end-to-end from traditional WAS to a Liberty server as a
+side-by-side exercise — the traditional deployment is NOT decommissioned.
+
+Topics Covered: Liberty server lifecycle, server.xml feature/endpoint/
+datasource/JMS configuration, config fragments via <include>, environment
+vs bootstrap config, binaryScanner report interpretation, Transformation
+Advisor migration report, Liberty server dump/javacore/pause.
+
+Sprint Deliverable: binaryScanner run against the traditional Notification
+module; Transformation Advisor report reviewed; module redeployed and
+running standalone on Liberty with equivalent datasource/JMS config;
+functional parity confirmed against the traditional deployment; a short
+write-up on what changed (config model, footprint, startup time) and
+when a bank would actually move a workload to Liberty vs keep it on
+traditional WAS ND.
+
+---
+
 Completion Checklist
 ------------------------
 □ Customer/Account model supports multiple accounts per customer
   (introduced v15)
+□ Liberty Profile Migration Drill complete: binaryScanner run,
+  Transformation Advisor report reviewed, Notification module
+  redeployed on Liberty with equivalent DataSource/JMS config,
+  functional parity confirmed against traditional deployment,
+  traditional WAS deployment retained alongside (v22.7)
 □ Beneficiary registration and Fund Transfer proven on both routing paths:
   internal (own Account1 → Account2 via SIBus) and external (Customer1 →
   Customer2 via IBM MQ, credit visible on Customer2's login), with DLQ

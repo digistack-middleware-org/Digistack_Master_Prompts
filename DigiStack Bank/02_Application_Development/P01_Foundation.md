@@ -466,6 +466,37 @@ executes the TP01_Test_Pipeline.md multi-environment pipeline
 "TP01 Pipeline Results" section of TestCases-v<N>.md. Versions v1–v7
 are unaffected (pipeline applies from v8 onward).
 
+Version 8.5 — Transaction Service / XA Recovery
+------------------------------------------------
+WebSphere Topic: JTA transaction service, XA vs non-XA datasources, 2-phase
+commit, transaction/recovery logs, timeouts, heuristic outcomes, WTRN/WSVR
+error codes.
+
+Minimum App: "FundsTransfer" — Servlet → EJB (CMT) → two XA DataSources
+(DEBIT_DS, CREDIT_DS) against the existing DigiStack schema. No new
+business feature beyond proving atomic debit/credit across two resources.
+
+Topics Covered: ACID via a live funds-transfer (rollback proof), Local vs
+Global (XA) transactions, 1PC vs 2PC trace analysis, transaction/recovery
+log location and sizing, transaction timeouts (total lifetime, client
+inactivity, max in-process), XA recovery after `kill -9` mid-2PC (in-doubt
+transaction replay), heuristic hazard/committed/rolledback outcomes and
+safe resolution via AdminControl, WTRN/WSVR error code cheatsheet.
+
+Sprint Deliverable: Debit succeeds / credit fails on bad SQL → verify
+rollback leaves both DBs unchanged. Convert both DS to XA, capture 1PC vs
+2PC in trace. Kill the server mid-2PC (prepared, not committed) → restart
+→ confirm recovery log replay commits correctly, zero lost/duplicated
+funds. Force a heuristic outcome, resolve it correctly, document the
+"never resolve heuristic hazard without the DBA" rule. Build
+`wtrn-error-cheatsheet.md`.
+
+Interview-anchor note: "Server died mid-payment — what happens to the
+money?" and "Explain 2PC and the coordinator's role" are standard 10-year
+admin interview questions; this version's SetupDoc section is written to
+answer both from lived lab evidence, not theory.
+
+
 Version 9 — Session Management
 -------------------------------
 WebSphere Topic: Sticky sessions, session persistence/failover across the
@@ -500,6 +531,37 @@ sizing implications, DR implications) is explicitly written up as a
 SetupDoc section — this is a standard admin interview question and the
 documented reasoning is the deliverable, not just the config.
   
+
+Version 9.5 — wsadmin Jython Toolkit & Troubleshooting
+---------------------------------------------------------
+WebSphere Topic: wsadmin scripting (AdminControl, AdminConfig, AdminApp,
+AdminTask), thread/heap dump analysis, log & trace subsystems, JVM tuning.
+
+Minimum App: Zero new functionality. All work targets the existing
+DigiStack deployment (V1–V9) as the automation and diagnostic surface.
+
+Topics Covered: wsadmin Jython fundamentals across all four Admin objects;
+properties-file-driven scripts (no hardcoded environment values); thread
+dumps (`kill -3` and wsadmin equivalent) analyzed for stuck threads/
+deadlocks; heap dumps analyzed with Eclipse MAT for a deliberately
+introduced memory leak; SystemOut/SystemErr, FFDC, activity.log, HPEL
+(`logViewer.sh`), and trace strings (`com.ibm.ws.webcontainer=all`,
+`Transaction=all` — ties back to V8.5's WTRN codes); JVM heap tuning
+(-Xms/-Xmx experiments, OOM simulation), GC policy comparison (gencon vs
+optthruput vs balanced) via GC log parsing; WebContainer thread pool
+sizing under simulated exhaustion.
+
+Sprint Deliverable: A `wasOps.py` toolkit covering start/stop, status
+listing, deploy/undeploy, pool changes, and — reusing V8.5 — transaction
+timeout changes, all driven by an external properties file (no
+hardcoded env). Separately: one intentionally leaky build analyzed end
+to end (heap dump → MAT → leak class identified) and one OOM/thread-pool
+exhaustion scenario captured via thread dump and resolved by tuning.
+
+Interview-anchor note: "How do you size a JVM? Prove it" and "walk me
+through diagnosing a stuck server" are answered from this version's
+captured dumps and GC log comparisons, not from memorized theory.
+
 
 Version 10 — Users & Groups
 --------------------------------
@@ -601,6 +663,30 @@ Thread Pool Tuning, Performance Monitoring, GC, Memory Analysis.
 Sprint Deliverable: Report generates without OutOfMemoryError on a large
 synthetic dataset; JVM heap tuned and improvement verified via PMI/GC logs
 before/after.
+
+Capacity Engineering Drill (added)
+--------------------------------------
+Beyond the single-report OOM fix above, this version also runs a
+structured capacity exercise against the whole v14 stack:
+
+- JMeter test plan ramped 50 → 200 → 500 concurrent users against the
+  Report endpoint and existing Deposit/Withdraw paths; baseline
+  throughput, p95 latency, and error rate captured at each step, with
+  nmon/GC logs/PMI counters watched live.
+- Tuning cycle, one lever at a time with a re-test after each: heap
+  size, GC policy, WebContainer thread pool, DS pool size — same knobs
+  as the OOM fix above, but now measured under sustained load rather
+  than a single large report.
+- Breaking point found deliberately (push past the last stable ramp
+  step); a heap dump/thread dump captured mid-failure and analyzed to
+  confirm what actually broke first (CPU, heap, or connection pool).
+- One-page capacity report produced: baseline vs tuned numbers, resource
+  usage at target load, headroom remaining, and the specific
+  scale-out trigger (e.g. "add a cluster member at X req/sec").
+- Standup rehearsal: a 3-minute spoken summary ("changed Y, improved Z
+  by N%") is recorded/written, plus prepared answers to "prove we need
+  4 more vCPUs" and "what breaks first — CPU, heap, or connections?" —
+  this is the artifact, not the tuning itself; managers buy numbers.
 
 ---
 

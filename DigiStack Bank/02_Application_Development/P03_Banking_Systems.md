@@ -1330,6 +1330,53 @@ that only CBS writes to digistack_cbs.
 
 ---
 
+Version 30.5 — Expert War-Game & Final Exam
+------------------------------------------------
+Objective: Close the roadmap with unscripted, timed failure drills across
+the full 9-application estate, plus a from-bare-VMs final build. No new
+banking features — this version validates and stress-tests everything
+built across P01–P03.
+
+Memory Leak Hunt: a deliberately leaky build (any one of the 9 apps) is
+deployed; heap dumps captured over time and analyzed in Eclipse MAT to
+identify the leaking class — reusing the V9.5 toolkit, now against a
+multi-app, multi-cluster topology.
+
+Outage War-Game (11 induced failures, timed, fix-and-document each):
+expired cert; port conflict; DataSource down; corrupted config; dead node
+agent; full log disk; stopped MQ channel; MQ queue full; hung thread;
+wrong virtual host; in-doubt transaction requiring XA recovery (V8.5).
+Each is broken deliberately across the real topology (not a toy app) and
+resolved against the runbooks built in V19 and V22.
+
+Core Groups / HA Manager: core group bridge configuration and DRS
+(Data Replication Service) settings reviewed and tuned across the full
+cluster topology carrying all 9 applications.
+
+Final Exam — Build From Bare VMs (one day, fully scripted):
+- WAS ND 2-node cluster
+- IHS/NGINX front end with plugin routing (V20/V21)
+- LDAP security + console role mapping (V10–V12)
+- SSL/TLS end-to-end (V11/V12)
+- Oracle XA DataSource (V22.5, V8.5)
+- IBM MQ with the external payment leg live (V19)
+- FundsTransfer-style XA proof: kill server mid-2PC → recovery replay →
+  zero lost/duplicated transactions (V8.5)
+- End-to-end message flow: Portal → WAS → JMS/MQ → CBS → reply
+- JMeter capacity report with sizing justification (V14 methodology)
+
+Sprint Deliverable: All 11 outage scenarios fixed and documented with
+root-cause/fix/prevention writeups; leak identified and root-caused; the
+one-day final build completed from bare VMs with every final-exam
+checklist item verifiable live, not just documented.
+
+Interview-anchor note: "Walk me through your worst production outage" is
+answered directly from this version's 11 post-mortems plus the V8.5/T.8
+war-game — this is the single version an interviewer's toughest scenario
+question gets pulled from.
+
+---
+
 Completion Checklist
 ------------------------
 □ Governing Rule enforced: only CBS writes to digistack_cbs; Payment Hub,
