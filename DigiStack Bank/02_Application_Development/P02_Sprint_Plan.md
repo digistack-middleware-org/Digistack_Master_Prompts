@@ -2468,7 +2468,7 @@ Non-gating — does not block sign-off.
 **Learning Objective:** What binaryScanner flags and why — the difference between a blocker and a warning in Liberty migration.
 **Business Features:** None.
 **WebSphere Administration:**
-- Run `binaryScanner.sh` against `digistack-notificationservice-v22.5.ear` (or v22 equivalent)
+- Run `binaryScanner.sh` against the notification module contained in `digistack-bank-v22.5.ear`
 - Open the Transformation Advisor HTML report; categorize each finding (blocker / warning / info)
 - Record findings in SetupDoc-v22.7.md
 **Acceptance Criteria:** binaryScanner runs without error; report reviewed and findings categorized; at least one finding explained (its reason and resolution).
@@ -2492,7 +2492,7 @@ Non-gating — does not block sign-off.
 **Sprint Goal:** Deploy the Notification module to Liberty; confirm functional parity.
 **Learning Objective:** Dropins vs apps directory; Liberty hot-deployment; classloader differences from traditional WAS.
 **Application Development:**
-- Deploy `digistack-notificationservice-v22.5.ear` (or repackaged WAR) into Liberty `dropins/` or `apps/` directory
+- Deploy the extracted notification module from `digistack-bank-v22.5.ear` into the Liberty `dropins/` or `apps/` directory for the migration drill; do not treat it as an independent production EAR
 - Trigger a test Withdraw to confirm the notification email is still sent
 **WebSphere Administration:**
 - Monitor Liberty `messages.log` and `console.log` for startup errors
@@ -2517,7 +2517,7 @@ Non-gating — does not block sign-off.
 
 ### Sprint 5
 **Sprint Goal:** Package/deploy final state; confirm traditional WAS deployment is retained alongside Liberty.
-**WebSphere Administration:** Confirm both the traditional `digistack-notificationservice-v22.5.ear` on WAS and the Liberty-hosted equivalent are running simultaneously; confirm the traditional deployment is NOT decommissioned.
+**WebSphere Administration:** Confirm the notification module inside the traditional `digistack-bank-v22.5.ear` and the Liberty-hosted equivalent are running simultaneously; confirm the traditional WAS deployment remains part of the single `digistack-bank-v22.5.ear` and is NOT decommissioned.
 **Acceptance Criteria:** Two instances of the Notification module coexist (WAS and Liberty); a test Withdraw triggers the email via the WAS instance (unchanged); the Liberty instance handles a second manual test trigger independently.
 **Enterprise Outcome:** Side-by-side existence proven — the traditional deployment remains the authoritative runtime for the rest of the roadmap.
 

@@ -1,4 +1,4 @@
-# P01 — Foundation: Consolidated Sprint Plan (Versions 1–14)
+# P01 — Foundation: Consolidated Sprint Plan (Versions 1-4, 4.5, 5-8, 8.5, 9, 9.5, 10-14)
 
 **Part:** P01 — Foundation
 **Status:** ⏳ Not Started
@@ -164,7 +164,7 @@
 **Enterprise Outcome:** Version 2 fault drill complete. Non-gating — does not block sign-off.
 
 **Version 2 Deliverables:** `digistack-bank-v2.ear`, `V2__create_users.sql`, SetupDoc-v2.md, TestCases-v2.md, FaultDrill-v2.md.
-**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed; Fault drill complete (Sprint 8, non-gating).
+**Exit Criteria (target, not yet verified):** Login and Logout functional against PostgreSQL; session created on successful login; lastLogin session attribute displayed correctly; v2 EAR redeployed cleanly over v1 using the same context root/virtual host; Smoke passed; Fault drill complete (Sprint 8, non-gating).
 **Lessons Learned:** HTTP session lifecycle; redeploy-over-running-app mechanics.
 **Technical Debt:** App-layer auth only (no WAS security roles) — deferred to Version 10.
 
@@ -235,7 +235,7 @@
 **Enterprise Outcome:** Version 3 fault drill complete. Non-gating — does not block sign-off.
 
 **Version 3 Deliverables:** `digistack-bank-v3.ear`, `V3__create_accounts.sql`, SetupDoc-v3.md, TestCases-v3.md, FaultDrill-v3.md.
-**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed; Fault drill complete (Sprint 8, non-gating).
+**Exit Criteria (target, not yet verified):** Balance Inquiry, Deposit and Withdraw functional end-to-end; accounts schema validated; Controller → Service → DAO → DB layering verified; v3 EAR deployed successfully; Smoke passed; Fault drill complete (Sprint 8, non-gating).
 **Lessons Learned:** Controller→Service→DAO→DB layering; ClassLoader behavior.
 **Technical Debt:** No concurrency/locking on balance updates — acceptable pre-clustering; revisited at v5 and P05 v38.
 
@@ -304,7 +304,7 @@
 **Enterprise Outcome:** Version 4 fault drill complete. Non-gating — does not block sign-off.
 
 **Version 4 Deliverables:** `digistack-bank-v4.ear`, SetupDoc-v4.md, TestCases-v4.md, FaultDrill-v4.md (no schema change).
-**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed; Fault drill complete (Sprint 8, non-gating).
+**Exit Criteria (target, not yet verified):** v4 EAR deployed successfully; application lifecycle Start/Stop/Restart behavior verified; rollback from v4 to v3 completed successfully; v4 redeployed and verified; Smoke passed; Fault drill complete (Sprint 8, non-gating).
 **Lessons Learned:** Update Application vs. Uninstall+Install; rollback is real and testable.
 **Technical Debt:** None introduced.
 
@@ -687,7 +687,7 @@ changes (standalone → cluster).
 **Enterprise Outcome:** Version 6 fault drill complete. Non-gating — does not block sign-off.
 
 **Version 6 Deliverables:** `digistack-bank-v6.ear`, `V4__add_frozen_flag.sql`, SetupDoc-v6.md, TestCases-v6.md, FaultDrill-v6.md, wsadmin script.
-**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed; Fault drill complete (Sprint 8, non-gating).
+**Exit Criteria (target, not yet verified):** DMgr/node federation and synchronization verified; deliberate repository drift corrected through Full Resynchronization; Freeze/Unfreeze functional and role-independent at this stage; at least one Freeze/Unfreeze action executed successfully through wsadmin; Smoke passed; Fault drill complete (Sprint 8, non-gating).
 **Lessons Learned:** Node Sync vs. Full Resync; wsadmin as a genuine operational path; admin features layer cleanly onto Service-layer code.
 **Technical Debt:** Freeze/Unfreeze open to any logged-in user — deferred to Version 10 (role gating).
 
@@ -756,7 +756,7 @@ changes (standalone → cluster).
 **Enterprise Outcome:** Version 7 fault drill complete. Non-gating — does not block sign-off.
 
 **Version 7 Deliverables:** `digistack-bank-v7.ear`, SetupDoc-v7.md, TestCases-v7.md, FaultDrill-v7.md, JDBC Provider/DataSource/JAAS Alias config.
-**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed; Fault drill complete (Sprint 8, non-gating).
+**Exit Criteria (target, not yet verified):** PostgreSQL JDBC Provider and jdbc/BankDS operational; all existing application database operations use the JNDI DataSource and connection pool; JAAS Auth Alias works; no hardcoded JDBC credentials remain; Smoke passed; Fault drill complete (Sprint 8, non-gating).
 **Lessons Learned:** Pool sizing math prevents DB exhaustion at scale; JAAS Auth Alias is the correct credential-externalization point.
 **Technical Debt:** None — closes prior debt.
 
@@ -1012,8 +1012,8 @@ correctness gap.
 ## Version Overview
 **Objective:** Harden session behavior across the cluster — sticky sessions, persistence/failover, memory-to-memory replication tuning.
 **Business Scope:** Zero new functionality. Session Timeout (auto-logout after N idle minutes).
-**WebSphere Focus:** HTTP Sessions, Sticky Sessions, Session Persistence, Session Failover, Memory-to-Memory Replication.
-**Expected Outcome:** Session timeout enforced; session survives cluster member restart; sticky-session routing confirmed via logs.
+**WebSphere Focus:** HTTP Sessions, Sticky Sessions, Session Persistence, Session Failover, Memory-to-Memory Replication, Database-Backed Session Persistence (session table in PostgreSQL, dedicated DataSource `jdbc/SessionDS` or reusing `jdbc/BankDS`), Session Persistence Frequency/tuning, Trade-off Analysis (performance vs. reliability vs. DB load).
+**Expected Outcome:** Session timeout enforced; session survives cluster member restart; sticky-session routing confirmed via logs; all three persistence strategies ((c) sticky-only, (a) M2M, (b) DB-backed) configured, exercised, and compared in SetupDoc-v9.md.
 **Prerequisites:** P01 v8 signed off.
 
 ### Sprint 1
@@ -1181,7 +1181,7 @@ troubleshooting.
 **Business Scope:** Zero new functionality beyond role enforcement. Freeze/Unfreeze gated to Administrator; Customer role limited to Deposit/Withdraw.
 **WebSphere Focus:** Administrative Security, File Registry (or LDAP), Users, Groups, Roles, Authorization.
 **Expected Outcome:** File-based registry configured; Customer/Administrator roles defined; Freeze/Unfreeze unreachable by Customer role.
-**Prerequisites:** P01 v9 signed off.
+**Prerequisites:** P01 v9.5 signed off.
 **Clarification:** Only two roles are built in P01: Customer and Administrator (this version). Auditor is not built anywhere in P01–P10. Branch Operator is not built in P01–P02 — P03 v29's Branch Portal (Teller Login) introduces a Teller role there. Until that version, only Customer and Administrator exist; no role is assumed to already exist (per P01_Foundation.md v10 "Roles Actually Built").
 
 ### Sprint 1
@@ -1236,7 +1236,7 @@ troubleshooting.
 **Enterprise Outcome:** Version 10 fault drill complete. Non-gating — does not block sign-off.
 
 **Version 10 Deliverables:** `digistack-bank-v10.ear`, SetupDoc-v10.md, TestCases-v10.md, FaultDrill-v10.md, File Registry/groups/role mapping/web.xml constraints.
-**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed; Fault drill complete (Sprint 8, non-gating).
+**Exit Criteria (target, not yet verified):** File-based Federated Repository operational; Customer and Administrator groups/users authenticate successfully; security roles mapped correctly; Customer cannot invoke Freeze/Unfreeze; Administrator can perform Freeze/Unfreeze; Smoke passed; Fault drill complete (Sprint 8, non-gating).
 **Lessons Learned:** Container-managed security constraints enforce authorization independent of UI.
 **Technical Debt:** File registry only — LDAP federation is a deliberate future step (P06 v42).
 
@@ -1301,7 +1301,7 @@ troubleshooting.
 **Enterprise Outcome:** Version 11 fault drill complete. Non-gating — does not block sign-off.
 
 **Version 11 Deliverables:** `digistack-bank-v11.ear`, SetupDoc-v11.md, TestCases-v11.md, FaultDrill-v11.md, IHS SSL config.
-**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed; Fault drill complete (Sprint 8, non-gating).
+**Exit Criteria (target, not yet verified):** IHS HTTPS on port 443 operational; certificate and truststore configuration verified; HTTP → HTTPS redirect working with path preservation; all existing application features function over HTTPS; Smoke passed; Fault drill complete (Sprint 8, non-gating).
 **Lessons Learned:** Web-tier SSL is distinct from end-to-end SSL (deferred to v12).
 **Technical Debt:** Self-signed cert only; internal hops beyond IHS unencrypted until v12.
 
@@ -1366,7 +1366,7 @@ troubleshooting.
 **Enterprise Outcome:** Version 12 fault drill complete. Non-gating — does not block sign-off.
 
 **Version 12 Deliverables:** `digistack-bank-v12.ear`, SetupDoc-v12.md, TestCases-v12.md, FaultDrill-v12.md, plugin SSL/SSL Repertoires/mTLS config.
-**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed; Fault drill complete (Sprint 8, non-gating).
+**Exit Criteria (target, not yet verified):** IHS → plugin → AppServer → DB SSL path verified; NodeDefaultSSLSettings and CellDefaultSSLSettings correctly configured; mTLS enforced on the selected internal hop; deliberate SSL failure diagnosed; certificate renewal tested; Smoke passed; Fault drill complete (Sprint 8, non-gating).
 **Lessons Learned:** SSL Repertoires provide explicit, reusable scoping; mTLS requires client authentication too.
 **Technical Debt:** Only one internal hop carries mTLS, per NFR matrix's "≥1 internal hop" requirement — intentional scope.
 
@@ -1434,7 +1434,7 @@ troubleshooting.
 **Enterprise Outcome:** Version 13 fault drill complete. Non-gating — does not block sign-off.
 
 **Version 13 Deliverables:** `digistack-bank-v13.ear`, SetupDoc-v13.md, TestCases-v13.md, FaultDrill-v13.md, SMTP Mail Provider/JNDI Mail Session/Resource Environment Entry.
-**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed; Fault drill complete (Sprint 8, non-gating).
+**Exit Criteria (target, not yet verified):** JNDI Mail Session operational; successful Withdraw delivers the expected email; deliberately broken SMTP configuration produces actionable logs; recovery verified; cluster-wide mail trigger tested; Smoke passed; Fault drill complete (Sprint 8, non-gating).
 **Lessons Learned:** JNDI Mail Session mirrors the DataSource externalization pattern; breaking a working integration is the fastest way to learn its failure mode.
 **Technical Debt:** Single channel (email only) — SMS/push explicitly out of scope for this Part.
 
@@ -1468,7 +1468,7 @@ troubleshooting.
 
 ### Sprint 4
 **Goal:** Tune JVM heap sizing per CAP01 §2.1's lab-adjusted table.
-**WebSphere Admin:** Apply CAP01 §2.1's lab-adjusted values (Xms=Xmx, fixed heap): Node1/App member (combined DMgr+Node1 VM) = 1 GB within its 3 GB VM; Node2/CBS-equivalent member = 1.25 GB within its 2 GB VM. Re-run report, capture GC/PMI logs again.
+**WebSphere Admin:** Apply CAP01 §2.1's lab-adjusted values (Xms=Xmx, fixed heap): Node1/App member (combined DMgr+Node1 VM) = 1 GB within its 3 GB VM; Node2/App member = 1.25 GB within its 2 GB VM. Re-run report, capture GC/PMI logs again.
 **Acceptance Criteria:** Report completes with no OOM; GC behavior measurably improved vs. Sprint 3 baseline.
 
 ### Sprint 5
@@ -1501,7 +1501,7 @@ troubleshooting.
 **Enterprise Outcome:** Version 14 fault drill complete. Non-gating — does not block sign-off.
 
 **Version 14 Deliverables:** `digistack-bank-v14.ear`, SetupDoc-v14.md, TestCases-v14.md, FaultDrill-v14.md, tuned JVM heap/thread pool config.
-**Exit Criteria (target, not yet verified):** Home + DB read functional; DB validated; Deployment successful; Smoke passed; Fault drill complete (Sprint 8, non-gating).
+**Exit Criteria (target, not yet verified):** Multi-thousand-row Transaction Report generates successfully; baseline heap pressure/OOM captured; JVM Xms/Xmx tuning applied; GC/PMI comparison shows improvement; Web Container thread-pool behavior under report load validated; Smoke passed; Fault drill complete (Sprint 8, non-gating).
 **Lessons Learned:** Reproducing a real performance problem before tuning validates the fix against evidence, not a guess.
 **Technical Debt:** None — P01 closes clean.
 
@@ -1511,7 +1511,7 @@ troubleshooting.
 
 **Modules:** Home, Login/Logout, Balance, Deposit, Withdraw, Freeze/Unfreeze, one Transaction Report, one Withdraw email.
 
-**Infrastructure:** DMGR, Node, Cluster, DataSource, JNDI, IHS (incl. custom 404/500), SSL (end-to-end, mTLS on one hop), Security (roles/registry), JVM (heap-tuned), Mail (JNDI Mail Session), Reports.
+**Infrastructure:** DMGR, Node, Cluster, DataSource, JNDI, IHS (incl. custom 404/500), SSL (end-to-end, mTLS on one hop), Security (roles/registry), JVM (heap-tuned), Mail (JNDI Mail Session), Reports, XA Transaction Service (2PC/recovery, tranlog — v8.5), wsadmin Jython Toolkit (wasOps.py, properties-driven — v9.5).
 
 **Technical Debt Plan (introduced and resolved within P01, per schedule):**
 | Debt Introduced At | Planned Resolution At | Item |

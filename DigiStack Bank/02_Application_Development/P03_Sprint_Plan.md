@@ -500,14 +500,14 @@ another customer of the same bank.
 **Business Features:** NEFT Transfer.
 **Application Development:**
 - UI: NEFT option added to the Transfer Money screen's "Transfer Type" selector — now exactly two options: IMPS and NEFT (RTGS is deliberately excluded and never offered, per the Dashboard UI Note); NEFT transfer form (amount, beneficiary) shows "processed in next batch window" messaging
-- Backend: `PaymentRoutingService.routeNEFT()` — queues request, `NEFTBatchProcessor` (EJB Timer-driven) processes accumulated requests in a scheduled window
-- Database: `V25__create_neft_batch_queue.sql` (staging table for queued NEFT requests, status: QUEUED/PROCESSED/FAILED) — version-scoped to v25, consistent with the v24 numbering fix (V24 / V24.1)
+- Backend: `PaymentRoutingService.routeNEFT()` — validates the request through CBS, publishes the NEFT request to a dedicated SIBus/JMS batch queue, and returns the batch-window acceptance response. `NEFTBatchProcessor` (EJB Timer-driven) opens the scheduled batch window and drains/processes the queued requests through CBS settlement services.
+- Database: N/A. Payment Hub has no writable database schema and no DataSource. NEFT queue state is held by the durable SIBus/JMS queue; final payment status and financial state remain owned by CBS.
 - API: REST endpoint for NEFT transfer submission
 
 **WebSphere Administration:**
-- Configuration: EJB Timer Service scheduled job configured for the batch window
+- Configuration: EJB Timer Service scheduled job configured for the NEFT batch window; dedicated SIBus/JMS queue configured for durable NEFT batch staging
 - Deployment: Redeploy `digistack-paymenthub-v25.ear`
-- JDBC / JMS / JNDI: N/A this sprint
+- JDBC / JMS / JNDI: Reuse the existing CBS SIBus/JMS infrastructure; Payment Hub receives no DataSource and performs no direct database access
 - Security: N/A this sprint
 
 **Dependencies:** Sprint 3's routing infrastructure.
@@ -523,9 +523,9 @@ another customer of the same bank.
 **Business Features:** Failed Payment Handling.
 **Application Development:**
 - UI: Failed Payments review screen (internal/ops use)
-- Backend: `RetryPolicy` (max attempts, exponential backoff — shared constant, reused later by P08's shared retry constants), `FailedPaymentQueue` for exhausted retries
-- Database: `V25.1__create_failed_payment_queue.sql` (version-scoped to v25)
-- API: REST endpoint to list/review failed payments
+- Backend: `RetryPolicy` (max attempts, exponential backoff — shared constant, reused later by P08's shared retry constants), `FailedPaymentQueue` backed by a durable JMS/SIBus review queue for exhausted payment attempts
+- Database: N/A. Exhausted-payment messages remain in the durable review queue; Payment Hub has no local writable database. Any final financial/payment state remains recorded by CBS through its service contract.
+- API: REST endpoint to list/review failed payments by consuming/browsing the Payment Hub review queue
 
 **WebSphere Administration:**
 - Configuration: N/A this sprint
@@ -555,7 +555,7 @@ another customer of the same bank.
 **Deliverables:** SetupDoc-v25.md, TestCases-v25.md (including the Payment-Hub-never-writes negative test).
 **TP01 Pipeline (mandatory, per TP01_Test_Pipeline.md):** Sprint 6 executes the full 5-stage test pipeline — DEV (Unit/Component, Developer, Code Quality/Security) → SIT (API, Integration, Database, Middleware, End-to-End, Negative, Regression Pack v1–v<N-1>) → UAT (Business Process, Customer Journey, Financial/Accounting Validation, Business Acceptance) → PRE-PROD (Production-like Smoke, Performance, Security, DR/Recovery, Operational Readiness, Deployment/Rollback) → PROD (Smoke, Sanity, Monitoring Verification, Business Validation). Results recorded in `TestCases-v<N>.md` under "## TP01 Pipeline Results — v<N>" using the TP01 stage table. All Critical/High rows must Pass before Sprint 7 sign-off (TP01 R1–R3).
 
-**Acceptance Criteria:** IMPS/NEFT/retry/failed-payment flows all pass together; the Transfer Money screen's Transfer Type selector offers exactly IMPS and NEFT and never RTGS; negative test confirms zero direct write path from Payment Hub; full regression pack (v1–v24) passes.
+**Acceptance Criteria:** IMPS/NEFT/retry/failed-payment flows all pass together; the Transfer Money screen's Transfer Type selector offers exactly IMPS and NEFT and never RTGS; NEFT requests persist durably in the SIBus/JMS batch queue until the scheduled processor handles them; exhausted retries land in the reviewable JMS/SIBus failed-payment queue; negative test confirms Payment Hub has no DataSource, JDBC, SQL, or direct database write path to digistack_cbs; full regression pack (v1–v24) passes.
 **Enterprise Outcome:** Version 25 signed off — Payment Hub proven as a genuine Saga-pattern coordinator, the deliberate architectural counterpoint to CBS's single-writer design.
 
 ---
@@ -1305,7 +1305,7 @@ another customer of the same bank.
 **Application Development:**
 - UI: Reconciliation Report view (internal ops), flags any mismatch; Branch Portal's Operations side menu finalized per the Admin Portal merge note — Teller functions plus exactly four Operations entries: Cash Deposit/Withdrawal (Sprint 2), BOD/EOD status (Sprints 3–4), Reconciliation Report (this sprint), and Unlock User. No System Overview infrastructure tiles (P02 v18's Operations Dashboard stays the live-infra view), no general Customers/Accounts/Reports/Configuration admin menu, no Audit Log UI (the immutable `audit_log` table stays live since P02 v17 — viewed via SQL only, preserving P01 v6's exact boundary)
 - Backend: `UnlockUserService` flow via CBS's Operations Service — Teller looks up a locked account (locked per P02 v17's lockout-after-N-attempts rule) and clears the lock; the customer Login screen's "Coming soon — v29" Unlock User placeholder (P01 v2) is retired WITHOUT the customer gaining a working self-unlock control
-- Backend: ReconciliationService (within Reporting Service, P03 v23) — reads CBS's ledger through explicitly approved read-only access and Payment Hub's settled NEFT/IMPS records via Payment Hub's REST query endpoint (Payment Hub holds no database of its own per v25), ties them out, and flags discrepancies without modifying CBS business data
+- Backend: ReconciliationService (within Reporting Service, P03 v23) — reads CBS's ledger through the explicitly approved read-only Reporting Service access path that remains valid until the P09 v64 read-replica migration; reads Payment Hub's settled NEFT/IMPS records via Payment Hub's REST query endpoint (Payment Hub holds no database of its own per v25); ties the two sources out and flags discrepancies without modifying CBS business data
 - Database: N/A (read-only, per Reporting Service's accepted OLTP-read tradeoff)
 - API: REST endpoint to retrieve the reconciliation report
 
@@ -1588,7 +1588,9 @@ must not perform business-data writes. They either invoke CBS services,
 consume CBS-published events, or use explicitly approved read-only access
 where this roadmap defines a direct-read requirement. Verified via negative tests at every version from v23 onward.
 
-CBS internal modules (single EAR, per v23's architectural decision): CIF, Account, Transaction, Card, Operations, Loan.
+CBS internal modules (single EAR, per v23's architectural decision):
+CIF, Account, Transaction, Card, Operations, Loan. These are internal CBS
+modules and do not become separately deployable applications in P03.
 
 ## Carried Forward to P03.2 / P03.1
 CBS as system of record, Payment Hub, Notification Service, Reporting Service, the two Tomcat-based channel simulators (Mobile/ATM), the WAS-hosted Card Portal, Branch Portal, and Loan Servicing all become subjects of Interview Preparation's Project Walkthrough, WebSphere Administration Q&A, Production Support, Troubleshooting Scenarios, and Banking Production Environment Q&A — followed by P04's observability instrumentation (APM, distributed tracing, chaos testing) once P03.1 is complete.

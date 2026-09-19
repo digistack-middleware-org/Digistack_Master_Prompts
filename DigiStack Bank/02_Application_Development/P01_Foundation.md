@@ -11,7 +11,7 @@ ARCH01
 
 
 Exports:
-Versions 1-4, 4.5, 5-14 (15 versions total; v4.5 = Basic IHS Standalone Era)
+Versions 1-4, 4.5, 5-8, 8.5, 9, 9.5, 10-14 (17 versions total; v4.5 = Basic IHS Standalone Era; v8.5 = Transaction Service/XA Recovery; v9.5 = wsadmin Jython Toolkit & Troubleshooting)
 First EAR deployment
 Login/session
 Basic transactions
@@ -82,7 +82,7 @@ untouched until a later Part's own start-of-Part diagram unlocks them.
  01_Network_       02_VM_          08_Deployment_
  Diagram.md         Layout.md       Architecture.md
  (v1 basic,        (v1 dsb-dmgr,   (v1 first EAR,
-  v8 IHS,           v5 Node2,       extended every
+   v4.5/v8 IHS,      v5 Node2,       extended every
   v11/v12 SSL)       v8 IHS)        packaging change)
        |
        v
@@ -326,10 +326,10 @@ AppServer directly.
 Topics Covered: IBM HTTP Server, Web Server Definition (standalone),
 Plugin Generation, Plugin Propagation, Reverse Proxy (basic).
 
-Sprint Deliverable: IHS installed and defined in the cell; plugin-cfg.xml
-generated and propagated for the standalone AppServer; Home page and one
-static asset confirmed served via IHS, with AppServer-direct access
-compared against IHS-proxied access in the SetupDoc.
+Sprint Deliverable: IHS installed and defined against the standalone
+AppServer; plugin-cfg.xml generated and propagated for the standalone
+AppServer; Home page and one static asset confirmed served via IHS, with
+AppServer-direct access compared against IHS-proxied access in the SetupDoc.
 
 Continuity note: v8 supersedes this setup once the cluster exists — the
 web server definition is re-pointed at the cluster, and v8's deliverable
@@ -354,8 +354,8 @@ session/login exactly as-is as test subjects.
 
 Topics Covered: DMgr Profile Creation & Node Federation (operational only —
 deep dive is v6), Cluster Creation, Horizontal/Vertical Scaling, Plugin
-Routing (prep only — IHS itself is v8), Failover, Session Replication,
-Cluster Members.
+Routing (cluster-target preparation — cluster-fronted IHS is finalized in
+v8), Failover, Session Replication, Cluster Members.
 
 Sprint Deliverable: 2-member cluster runs v5 (same app as v4, unchanged);
 logging in, then killing one cluster member mid-session, proves session and
@@ -472,19 +472,21 @@ WebSphere Topic: JTA transaction service, XA vs non-XA datasources, 2-phase
 commit, transaction/recovery logs, timeouts, heuristic outcomes, WTRN/WSVR
 error codes.
 
-Minimum App: "FundsTransfer" — Servlet → EJB (CMT) → two XA DataSources
-(DEBIT_DS, CREDIT_DS) against the existing DigiStack schema. No new
-business feature beyond proving atomic debit/credit across two resources.
+Minimum App: "XA Transfer Test" — Servlet → EJB (CMT) → two XA DataSources
+(DEBIT_DS, CREDIT_DS) against the existing DigiStack schema. This is a
+synthetic infrastructure test only; it is NOT the customer-facing Fund
+Transfer feature. No new banking business module is introduced.
 
-Topics Covered: ACID via a live funds-transfer (rollback proof), Local vs
-Global (XA) transactions, 1PC vs 2PC trace analysis, transaction/recovery
-log location and sizing, transaction timeouts (total lifetime, client
-inactivity, max in-process), XA recovery after `kill -9` mid-2PC (in-doubt
-transaction replay), heuristic hazard/committed/rolledback outcomes and
-safe resolution via AdminControl, WTRN/WSVR error code cheatsheet.
+Topics Covered: ACID via a live synthetic XA transfer test (rollback proof),
+Local vs Global (XA) transactions, 1PC vs 2PC trace analysis,
+transaction/recovery log location and sizing, transaction timeouts (total
+lifetime, client inactivity, max in-process), XA recovery after `kill -9`
+mid-2PC (in-doubt transaction replay), heuristic hazard/committed/rolledback
+outcomes and safe resolution via AdminControl, WTRN/WSVR error code
+cheatsheet.
 
-Sprint Deliverable: Debit succeeds / credit fails on bad SQL → verify
-rollback leaves both DBs unchanged. Convert both DS to XA, capture 1PC vs
+Sprint Deliverable: Synthetic XA Transfer Test debit succeeds / credit fails
+on bad SQL → verify rollback leaves both DB resources unchanged. Convert both DS to XA, capture 1PC vs
 2PC in trace. Kill the server mid-2PC (prepared, not committed) → restart
 → confirm recovery log replay commits correctly, zero lost/duplicated
 funds. Force a heuristic outcome, resolve it correctly, document the
@@ -510,8 +512,8 @@ replication/timeout behavior across cluster members.
 
 Topics Covered: HTTP Sessions, Sticky Sessions, Session Persistence,
 Session Failover, Memory-to-Memory Replication, Database-Backed Session
-Persistence (session table in PostgreSQL, dedicated DataSource/jdbc/
-SessionDS or reusing jdbc/BankDS), Session Persistence Frequency/tuning,
+Persistence (session table in PostgreSQL using the dedicated
+jdbc/SessionDS DataSource), Session Persistence Frequency/tuning,
 Trade-off Analysis (performance vs. reliability vs. DB load).
 
 Sprint Deliverable: All three strategies configured and exercised in turn:
@@ -565,19 +567,21 @@ captured dumps and GC log comparisons, not from memorized theory.
 
 Version 10 — Users & Groups
 --------------------------------
-WebSphere Topic: Administrative security, file registry (or LDAP), users,
-groups, roles, authorization.
+WebSphere Topic: Administrative security, file-based federated repository,
+users, groups, roles, authorization.
 
 Minimum App: Zero new functionality. Gate v6's Freeze/Unfreeze behind a real
 "Administrator" role instead of open to any logged-in user; regular users
 get a "Customer" role limited to Deposit/Withdraw.
 
-Topics Covered: Administrative Security, File Registry, LDAP, Users, Groups,
-Roles, Authorization.
+Topics Covered: Administrative Security, File-Based Federated Repository,
+Users, Groups, Roles, Authorization.
 
-Sprint Deliverable: File-based (or LDAP) user registry configured; Customer
-and Administrator roles/groups defined; Freeze/Unfreeze unreachable by a
+Sprint Deliverable: File-based Federated Repository configured; Customer and
+Administrator roles/groups defined; Freeze/Unfreeze unreachable by a
 Customer-role user, proving role enforcement (not just UI hiding).
+
+LDAP federation is deliberately deferred to P06 and is not part of P01.
 
 Roles Actually Built (clarification)
 -------------------------------------
@@ -701,6 +705,8 @@ Completion Checklist
 □ DMgr + federated nodes operational, wsadmin fluency demonstrated
 □ Email notification working via WAS Mail Session/JNDI
 □ Large report generates under tuned JVM heap without OOM
+□ XA transaction recovery proven — in-doubt transaction replayed correctly after server kill (v8.5)
+□ wsadmin Jython toolkit (wasOps.py) built and properties-driven; thread/heap dump analysis demonstrated (v9.5)
 □ App itself stayed intentionally tiny — every other topic practiced on
   infrastructure around this same small app
 
@@ -711,7 +717,9 @@ one Transaction Report, one Withdraw email.
 
 Infrastructure: DMGR, Node, Cluster, DataSource, JNDI, IHS (incl. custom
 404/500), SSL (end-to-end, mTLS on one hop), Security (roles/registry), JVM
-(heap-tuned), Mail (JNDI Mail Session), Reports.
+(heap-tuned), Mail (JNDI Mail Session), Reports, XA Transaction Service
+(2PC/recovery, tranlog — v8.5), wsadmin Jython Toolkit (wasOps.py,
+properties-driven — v9.5).
 
 Carried Forward to P02
 ---------------------------

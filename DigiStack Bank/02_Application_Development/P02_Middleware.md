@@ -12,7 +12,7 @@ RACI01
 
 
 Exports:
-Versions 15-22 (incl. suffix-slot v16.5 Transaction History Pagination and v22.5 Database Migration)
+Versions 15-22 (incl. suffix-slot v16.5 Transaction History Pagination, v18.5 DynaCache, v22.5 Database Migration, and v22.7 Liberty Profile Migration Drill)
 JMS / SIBus / MDB / DLQ
 Web Services (REST/SOAP)
 Security Hardening
@@ -412,10 +412,12 @@ zero new WebSphere administration work.
 
 Rationale: The SOAP Account Statement / Transaction History service
 introduced at v16 returns all matching records in one response. The
-Transaction History screen (Statement sidebar) needs client-side
-pagination for usability — the backend already supports date-range
-filtering (the SOAP contract's dateRange parameter), but a long result
-set needs page-by-page navigation. This is
+Transaction History screen (Statement sidebar) needs presentation-layer
+pagination for usability — the existing SOAP response is fetched once,
+then the Servlet slices the result in memory for page-by-page navigation.
+The backend already supports date-range filtering through the SOAP
+contract's dateRange parameter, but a long result set needs page-by-page
+navigation. This is
 filed as v16.5 rather than inside v16 (to keep v16 a clean single-topic
 SOAP/REST sprint) and before v17 (so the UI is complete before security
 hardening locks down the endpoints).
@@ -745,8 +747,9 @@ visible to end users. The two databases never share a host: Oracle runs on its o
 migration window; dsb-db is fully decommissioned and deleted at
 P03 v23 Sprint 4.
 
-This version follows the established suffix-slot convention (v4.5, v16.5,
-v35.5) — it does not shift any existing version number.
+This version follows the established suffix-slot convention (v4.5, v8.5,
+v9.5, v16.5, v18.5, v22.5, v22.7) — it does not shift any existing version
+number.
 
 Deployment Model (revised 2026-08-25 — separate-VM design)
 Oracle 21c XE is installed on a NEW, dedicated VM: dsb-oracle. It is NEVER
@@ -948,10 +951,11 @@ bootstrap.properties, binaryScanner + Transformation Advisor,
 traditional-to-Liberty migration.
 
 Minimum App Needed
-Zero new banking functionality. One already-built, self-contained module
-(the Notification Service from P01 v13 is the smallest clean candidate)
-is migrated end-to-end from traditional WAS to a Liberty server as a
-side-by-side exercise — the traditional deployment is NOT decommissioned.
+Zero new banking functionality. One already-built, self-contained
+notification module from P01 v13 is migrated end-to-end from traditional
+WAS to a Liberty server as a side-by-side exercise — the traditional
+deployment is NOT decommissioned. The module becomes the independent
+Notification Service only after the P03 v23 application split.
 
 Topics Covered: Liberty server lifecycle, server.xml feature/endpoint/
 datasource/JMS configuration, config fragments via <include>, environment

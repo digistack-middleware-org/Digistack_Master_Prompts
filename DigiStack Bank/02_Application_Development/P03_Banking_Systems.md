@@ -13,7 +13,7 @@ CONTEXT_PACK
 
 
 Exports:
-Versions 23-30
+Versions 23-30 (incl. suffix-slot v30.5 Expert War-Game & Final Exam)
 Core Banking System (CBS) — sole writer of digistack_cbs
 CIF & Account Lifecycle
 Payment Hub (NEFT/IMPS)
@@ -57,9 +57,10 @@ integrating against it.
 
 Two-App Architecture (Evolves in This Part)
 ------------------------------------------------
-- DigiStack Banking Portal — presentation layer ONLY. From Version 23
-  onward, it no longer touches the database directly — it calls CBS
-  services exclusively.
+- DigiStack Internet Banking Portal — presentation layer ONLY. Its canonical
+  WebSphere application/artifact name is digistack-portal-v<N>.ear. From
+  Version 23 onward, it no longer touches the database directly — it calls
+  CBS services exclusively.
 - DigiStack CBS (Core Banking System) — becomes the single system of
   record. All customer/account/transaction data is owned and updated only
   through CBS.
@@ -84,8 +85,19 @@ all operational).
 Part-Start Architecture Diagram (generate first, before Version 23 work begins)
 ----------------------------------------------------------------------------------
 Pruned to what P03 (v23-v30) adds or extends. This is the Part with the
-biggest topology change — single EAR becomes 9 deployables — so more of
-the tree gets touched than in P02.
+biggest topology change — the single P01/P02 EAR is progressively split
+and extended into 9 deployable applications by the end of P03 — so more
+of the architecture tree gets touched than in P02.
+
+Topology progression:
+v23 = 4 deployables,
+v25 = 5,
+v26 = 6,
+v27 = 7,
+v28 = 8,
+v29 = 9;
+v30 adds internal CBS functionality without creating another deployable
+application.
 
                  DIGISTACK BANK — P03 (v23-v30)
                        |
@@ -143,9 +155,9 @@ the tree gets touched than in P02.
 
 Still not in scope this Part: 09_DR_Architecture.md (P05).
 
-The One Governing Rule (Introduced at Version 23, Applies for the Rest of the Roadmap)
+The One Governing Write Rule (Introduced at Version 23, Applies for the Rest of the Roadmap)
 -------------------------------------------------------------------------------------------
-Only CBS writes to digistack_cbs. Every other application either invokes
+Only CBS performs business-data writes to digistack_cbs. Every other application either invokes
 CBS services (synchronously, via REST/SOAP/EJB), consumes CBS-published
 events (asynchronously, via JMS/MQ), or has explicitly approved read-only
 access where this roadmap states that direct reads are required. No
@@ -418,10 +430,16 @@ Architectural Decision: CBS Stays a Single Application (resolved)
 A senior-architect review of this roadmap flagged that every satellite
 service introduced from this version forward (Payment Hub, Notification
 Service, Reporting Service, and later Branch Portal, Card Portal) gets
-split into its own independently deployable EAR — but CBS itself, which
-internally spans CIF, Accounts, Transactions, Products, and (from v30)
-Loans, never gets decomposed the same way, for the entire life of this
-roadmap.
+split into its own independently deployable EAR — but CBS itself remains
+one independently deployable application.
+
+Internally, CBS spans the CIF, Account, Transaction, Card, Operations,
+and Loan service modules across the roadmap. These modules remain inside
+the same CBS EAR rather than becoming independently deployable applications.
+Products remain a business-domain concept within CBS rather than a separate
+deployable application.
+
+CBS never gets decomposed the same way for the life of this roadmap.
 
 This is a deliberate decision, not an oversight: CBS remains a single
 application throughout this roadmap. The reasons:
@@ -579,10 +597,21 @@ direct SIBus/MQ configuration.
 4. Notification & Reporting Relocation
 The Withdraw-triggered email (v13) and Transaction Report (v14) — later
 joined by v16's SOAP Account Statement — are extracted from the single EAR
-into two new independent applications, Notification Service and Reporting
-Service, each consuming CBS-published events/data rather than querying the
-database directly. See "Satellite Services" note below; these are built out
-fully starting this version and referenced again through v25.
+into two new independent applications: Notification Service and Reporting
+Service.
+
+Notification Service consumes CBS-published transaction events and never
+queries or writes the CBS database directly.
+
+Accepted tradeoff: Reporting Service reads digistack_cbs directly,
+read-only, from Version 23 until P09 v64 introduces the RDS read replica.
+Report generation (especially the large Transaction Report from P01 v14,
+deliberately designed to stress the heap with multi-thousand rows) running
+against the same database instance serving live Fund Transfers is a genuine
+OLTP/OLAP contention risk.
+
+See "Satellite Services" note below; both services are built out fully
+starting this version and referenced again through v25.
 
 Ownership Matrix (before/after this version):
 
@@ -597,21 +626,81 @@ Ownership Matrix (before/after this version):
 | Reporting | Portal module (v14, v16 SOAP) | Reporting Service (own EAR) |
 | Payment Processing (from v25) | — | Payment Hub (own EAR), routes only — never writes balances |
 
-EAR Naming (cross-reference)
-From this version onward there are multiple independent deployables, not
-one EAR. Use the standing naming convention: digistack-cbs-v<N>.ear,
-digistack-portal-v<N>.ear, etc., where <N> is the version that last touched
-that deployable — not a per-app independent counter.
+EAR Naming Convention
+---------------------
+From Version 23 onward there are multiple independently deployable
+applications. Every WebSphere EAR uses the following canonical format:
+
+  digistack-<application>-v<N>.ear
+
+where <N> is the roadmap version that last changed that application.
+Version numbers are NOT independent per application.
+
+Canonical application names:
+
+  Internet Banking Portal  → digistack-portal-v<N>.ear
+  Core Banking System      → digistack-cbs-v<N>.ear
+  Payment Hub              → digistack-paymenthub-v<N>.ear
+  Notification Service     → digistack-notification-v<N>.ear
+  Reporting Service        → digistack-reporting-v<N>.ear
+  Card Portal              → digistack-cardportal-v<N>.ear
+  Branch Portal            → digistack-branch-v<N>.ear
+
+Examples:
+
+  v23:
+    digistack-portal-v23.ear
+    digistack-cbs-v23.ear
+    digistack-notification-v23.ear
+    digistack-reporting-v23.ear
+
+  v25:
+    digistack-paymenthub-v25.ear
+
+  v28:
+    digistack-cardportal-v28.ear
+
+  v29:
+    digistack-branch-v29.ear
+
+The application name remains stable in WebSphere across updates; the EAR
+artifact version changes according to the version that last modified that
+application. Do not use vN in an executed deployment document — vN is only
+a placeholder when defining the convention.
+
+Tomcat Application Naming Convention
+-------------------------------------
+Tomcat channel simulators do not use EAR naming because they are not
+deployed on WebSphere.
+
+Canonical application/repository names:
+
+  Mobile Banking → digistack-mobile
+  ATM Simulator  → digistack-atm-sim
+
+Canonical DNS names:
+
+  Mobile Banking → mobile.digistack.cloud
+  ATM Simulator  → atm.digistack.cloud
+
+The repository/application name and DNS name are stable across versions;
+the deployment version is tracked by the roadmap version and release tag,
+not by changing the DNS name.
 
 Database Migration Scope (cross-reference, updated)
 Beginning Version 24, all schema changes occur only inside digistack_cbs.
-The legacy Portal/shared database (used by P01–P02) is frozen at the
-moment of this migration and is never targeted by any migration script
-numbered V24 or higher — retained read-only only as long as needed for
-verification/rollback, then formally decommissioned (capture the
-decommission step in SetupDoc-v23.md, not silently assumed). A daily
-pg_dump + weekly restore-test baseline is required for every database in
-use, from Version 1 onward — not deferred to a later Part.
+The legacy Portal/shared PostgreSQL database (used by P01–P02) is frozen
+at the moment of the v23 migration and is never targeted by any migration
+script numbered V24 or higher — retained read-only only as long as needed
+for verification/rollback, then formally decommissioned (capture the
+decommission step in SetupDoc-v23.md, not silently assumed).
+
+Backup discipline remains engine-specific from v22.5 onward:
+PostgreSQL uses pg_dump through the v23 cutover, while Oracle uses expdp
+(Oracle Data Pump) after the v22.5 migration. Each active database requires
+a scheduled full backup and periodic restore verification according to its
+engine-specific procedure; backup and restore evidence must be retained
+for every version.
 
 Satellite Services Introduced Here
 
@@ -630,24 +719,37 @@ v64's RDS read replica — until then, it's a known, accepted risk, not a
 silent gap.
 
 Notification Service and Reporting Service become independent WebSphere
-applications in this version — not modules inside CBS. CBS publishes
-transaction events (directly or via IBM MQ); Notification Service consumes
-these events to deliver SMS/Email alerts; Reporting Service consumes
-transaction data to generate operational and customer reports. Neither
-service performs core banking transactions or updates account balances —
-CBS remains the sole system of record, per the Governing Rule above. This
-split is chosen deliberately for independent deployment, scaling, and
+applications in this version — not modules inside CBS.
+
+CBS publishes transaction events (directly or via IBM MQ), which
+Notification Service consumes to deliver SMS/Email alerts.
+
+Reporting Service generates operational and customer reports using its
+approved read-only access to digistack_cbs from Version 23 until the P09
+v64 read-replica migration closes the direct-read exception.
+It does not perform core banking transactions or update account balances.
+
+Neither satellite service performs business-data writes. CBS remains the
+sole system of record, per the Governing Rule above.
+
+This split is chosen deliberately for independent deployment, scaling, and
 maintenance — and for the additional WAS administration practice of
 managing two more distinct EARs with their own lifecycles.
 
 CBS
 │
-▼
-IBM MQ (event publish)
+├──────────────────────────────► IBM MQ / Events
+│                                      │
+│                                      ▼
+│                              Notification Service
+│                                  (own EAR)
 │
-├──────────────► Notification Service (own EAR)
-│
-└──────────────► Reporting Service (own EAR)
+└──────────────────────────────► Reporting Service
+                                    (own EAR)
+                                    │
+                                    │ read-only
+                                    ▼
+                              digistack_cbs
 
 
 Documentation Requirement for This Version
@@ -662,9 +764,13 @@ Transfer" section (in addition to the standard SetupDoc template) covering:
   directly (e.g., DataSource unbound/removed from Portal's JNDI, verified
   via a deliberate failed lookup test)
 - Confirmation steps proving Notification Service and Reporting Service
-  cannot write to digistack_cbs (e.g., their DB users, if any, are granted
-  read-only or no direct grants at all — they only consume events/
-  CBS-exposed data)
+  cannot write to digistack_cbs:
+    * Notification Service must have no direct business-data database
+      write access and consumes CBS-published events only.
+    * Reporting Service may have an explicitly approved read-only database
+      identity for digistack_cbs during v23-P08, but must have no INSERT,
+      UPDATE, DELETE, MERGE, DDL, or other business-data write privileges.
+      Its read-only access must be documented and tested.
 - A rollback note specific to this version: since this isn't just an EAR
   redeploy but a data + ownership migration, the rollback procedure must
   explicitly state whether rolling back means restoring the old shared-DB
@@ -790,7 +896,7 @@ Objective: Develop DigiStack Payment Hub responsible for routing all
 electronic payments.
 
 Deployment Model
-Payment Hub is deployed as its own EAR (digistack-paymenthub-vN.ear),
+Payment Hub is deployed as its own EAR (digistack-paymenthub-v25.ear),
 separate from CBS, communicating with CBS via internal REST/SOAP or EJB
 calls. This gives an additional distinct deployable unit for WAS admin
 practice — its own application lifecycle, classloader, and
@@ -1019,7 +1125,7 @@ depending on how you want to frame it) a portal for card lifecycle
 operations — calling CBS exclusively via REST/SOAP.
 
 Deployment Model
-Card Portal is deployed as its own EAR (digistack-cardportal-vN.ear) on the
+Card Portal is deployed as its own EAR (digistack-cardportal-v28.ear) on the
 existing WAS ND cluster, fronted by IHS via a virtual host rule for
 card.digistack.cloud that routes to the WAS plugin (not Tomcat, unlike
 Mobile and ATM). It remains presentation-only: zero direct database
@@ -1093,8 +1199,8 @@ Objective: Implement day-to-day banking operations performed by branch
 staff and operations teams.
 
 Deployment Model
-Branch Portal is a separate WebSphere application deployed on the existing
-ND cluster and communicates only with CBS services — it does not access
+Branch Portal is a separate WebSphere application
+(digistack-branch-v29.ear) deployed on the existing ND cluster and communicates only with CBS services — it does not access
 digistack_cbs directly, following the same presentation-only rule as the
 Internet Banking Portal, Card Portal, and the two Tomcat simulators.
 
@@ -1107,7 +1213,7 @@ Request Flow
 Branch Teller
 │
 ▼
-Branch Portal (own EAR)
+Branch Portal (digistack-branch-v29.ear)
 │
 ▼
 Operations Service (within CBS)
@@ -1326,7 +1432,7 @@ Total deployable applications by end of this Part: Internet Banking
 Portal, CBS, Payment Hub, Notification Service, Reporting Service, Branch
 Portal, Card Portal (7 WAS EARs) + Mobile Banking, ATM Simulator (2 Tomcat
 apps) = 9 distinct deployable applications, all governed by a single rule
-that only CBS writes to digistack_cbs.
+that Only CBS performs business-data writes to digistack_cbs.
 
 ---
 
@@ -1360,8 +1466,8 @@ Final Exam — Build From Bare VMs (one day, fully scripted):
 - SSL/TLS end-to-end (V11/V12)
 - Oracle XA DataSource (V22.5, V8.5)
 - IBM MQ with the external payment leg live (V19)
-- FundsTransfer-style XA proof: kill server mid-2PC → recovery replay →
-  zero lost/duplicated transactions (V8.5)
+- XA Transfer Test proof: kill server mid-2PC → recovery replay → zero
+  lost/duplicated transactions (P01 v8.5)
 - End-to-end message flow: Portal → WAS → JMS/MQ → CBS → reply
 - JMeter capacity report with sizing justification (V14 methodology)
 
