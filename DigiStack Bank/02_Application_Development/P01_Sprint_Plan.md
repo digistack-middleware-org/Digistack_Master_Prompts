@@ -1,7 +1,7 @@
-# P01 — Foundation: Consolidated Sprint Plan (Versions 1-4, 4.5, 5-8, 8.5, 9, 9.5, 10-14)
+# P01 — Foundation: Consolidated Sprint Plan (Versions 1-4, 4.5, 5-8, 8.5, 9, 10-14, 14.5)
 
 **Part:** P01 — Foundation
-**Status:** ⏳ Not Started
+**Status:** 🔓 In Progress — v1–v9 signed off (v1–v4.5 sign-off rows still to be back-filled in Progress_Log.md); next: v10 Sprint 1
 **Deployment Model:** ONE deployable EAR for this entire Part — `digistack-bank-vN.ear`. No Portal/CBS split (that happens in P03).
 **Sprint Structure:** 8 sprints per version — Sprint 1–4 Build, Sprint 5 Package and Deploy, Sprint 6 Test Cases, Sprint 7 Sign-off, Sprint 8 Fault Injection + Incident.
 
@@ -14,7 +14,7 @@
 **Business Scope:** Static Home page + one live DB read (`app_config` table). No transactions, no login yet.
 **WebSphere Focus:** EAR/WAR structure, deployment layout, context root, virtual host, first EAR deployment via Admin Console.
 **Expected Outcome:** `digistack-bank-v1.ear` deployed to WAS, reachable via context root/virtual host, Home page renders and confirms a live PostgreSQL read.
-**Prerequisites:** WebSphere ND = 9.0.5.28 (target/placeholder pin per STD, to be confirmed against the actual install during this Sprint), Rocky Linux 8.x VM (`dsb-dmgr`), PostgreSQL 16 (target pin per STD §Version Pins and SOE01 §9 — confirm actual installed version during this Sprint and promote pin to CONFIRMED in STD/SOE01 once verified), SOE01 Golden Image checklist passed.
+**Prerequisites:** WebSphere ND = 9.0.5.28 (target/placeholder pin per STD, to be confirmed against the actual install during this Sprint), RHEL 8.x VM (`dsb-dmgr`; OS confirmed as RHEL 8.x at v1 Sprint 2 — Rocky reference in SOE01/CONTEXT_PACK was corrected), PostgreSQL 16 (target pin per STD §Version Pins and SOE01 §9 — confirm actual installed version during this Sprint and promote pin to CONFIRMED in STD/SOE01 once verified), SOE01 Golden Image checklist passed.
 
 ### Sprint 1
 **Goal:** Provision the base VM and validate the WebSphere ND install.
@@ -1012,7 +1012,7 @@ correctness gap.
 ## Version Overview
 **Objective:** Harden session behavior across the cluster — sticky sessions, persistence/failover, memory-to-memory replication tuning.
 **Business Scope:** Zero new functionality. Session Timeout (auto-logout after N idle minutes).
-**WebSphere Focus:** HTTP Sessions, Sticky Sessions, Session Persistence, Session Failover, Memory-to-Memory Replication, Database-Backed Session Persistence (session table in PostgreSQL, dedicated DataSource `jdbc/SessionDS` or reusing `jdbc/BankDS`), Session Persistence Frequency/tuning, Trade-off Analysis (performance vs. reliability vs. DB load).
+**WebSphere Focus:** HTTP Sessions, Sticky Sessions, Session Persistence, Session Failover, Memory-to-Memory Replication, Database-Backed Session Persistence (session table in PostgreSQL, dedicated DataSource `jdbc/SessionDS` (decided at v9 — not reusing `jdbc/BankDS`)), Session Persistence Frequency/tuning, Trade-off Analysis (performance vs. reliability vs. DB load).
 **Expected Outcome:** Session timeout enforced; session survives cluster member restart; sticky-session routing confirmed via logs; all three persistence strategies ((c) sticky-only, (a) M2M, (b) DB-backed) configured, exercised, and compared in SetupDoc-v9.md.
 **Prerequisites:** P01 v8 signed off.
 
@@ -1040,7 +1040,7 @@ correctness gap.
 
 ### Sprint 5
 **Goal:** Package/deploy `digistack-bank-v9.ear`; build and evaluate the DB-backed persistence case; record the three-way comparison.
-**Learning Objective:** Database-backed session persistence (session table in PostgreSQL, dedicated DataSource `jdbc/SessionDS` or reusing `jdbc/BankDS`), persistence frequency tuning, and trade-off analysis (performance vs. reliability vs. DB load).
+**Learning Objective:** Database-backed session persistence (session table in PostgreSQL, dedicated DataSource `jdbc/SessionDS` (decided at v9 — not reusing `jdbc/BankDS`)), persistence frequency tuning, and trade-off analysis (performance vs. reliability vs. DB load).
 **WebSphere Admin:** Deploy v9; configure strategy (b) DB-backed session persistence; kill a member and confirm session survives; observe session table growth and timeout/purge behavior; measure latency difference between (a) M2M and (b) DB-backed under load; assess DB connection-pool impact of (b) reusing the P01 v7 pool-sizing math (per P01_Foundation.md v7 Connection Pool Sizing worked example).
 **Acceptance Criteria:** All three strategies configured and exercised in turn ((c) sticky-only baseline, (a) M2M, (b) DB-backed); comparison recorded in SetupDoc-v9.md covering latency (a) vs (b), pool impact of (b), and a stated ship decision (memory-to-memory, with DB-backed documented as the fallback for non-replicable session state); interview-anchor three-way write-up (when each is appropriate, sizing implications, DR implications) included as a SetupDoc-v9.md section.
 
@@ -1075,141 +1075,45 @@ correctness gap.
 
 ---
 
-# Version 9.5 — wsadmin Jython Toolkit & Troubleshooting
-
-## Version Overview
-**Objective:** Build a reusable, properties-driven wsadmin Jython
-automation toolkit and prove diagnostic fluency (thread/heap dumps, log/
-trace, JVM tuning) against the existing v1–v9 deployment.
-**Business Scope:** Zero new functionality — pure ops/automation surface
-over the existing app.
-**WebSphere Focus:** AdminControl/AdminConfig/AdminApp/AdminTask,
-properties-file-driven scripting, thread dump and heap dump analysis
-(Eclipse MAT), SystemOut/FFDC/HPEL log viewing, trace strings, GC policy
-comparison, WebContainer thread pool tuning.
-**Expected Outcome:** `wasOps.py` toolkit (start/stop, status, deploy/
-undeploy, pool changes, transaction timeout changes) driven entirely by
-an external properties file; one memory leak identified end-to-end; one
-OOM/thread-exhaustion scenario captured and resolved.
-**Prerequisites:** P01 v8.5 signed off (transaction timeout changes are
-one of the toolkit's scripted actions).
-
-### Sprint 1
-**Goal:** Build the properties-file-driven `wasOps.py` skeleton
-(AdminControl/AdminConfig/AdminApp/AdminTask wrappers).
-**WebSphere Admin:** Write Jython functions for start/stop and status
-listing, reading target env/server names from an external `.properties`
-file — no hardcoded values.
-**Acceptance Criteria:** Same script runs unmodified against a second
-target by swapping only the properties file.
-
-### Sprint 2
-**Goal:** Extend the toolkit: deploy/undeploy, DataSource pool changes,
-and transaction timeout changes (reusing v8.5's timeout settings).
-**WebSphere Admin:** Add `AdminApp.install/update`, pool-size change
-function, and a transaction-timeout-change function.
-**Acceptance Criteria:** Toolkit deploys/undeploys the app and changes
-pool size and timeout values, all properties-driven.
-
-### Sprint 3
-**Goal:** Thread dump analysis — capture and diagnose a stuck-thread
-scenario.
-**WebSphere Admin:** Force a stuck thread (blocking call); capture via
-`kill -3` and the wsadmin equivalent; analyze for deadlock/stuck-thread
-pattern.
-**Acceptance Criteria:** Stuck thread identified from the dump with a
-documented root cause.
-
-### Sprint 4
-**Goal:** Heap dump analysis — hunt a deliberately introduced memory
-leak with Eclipse MAT.
-**WebSphere Admin:** Deploy a build with an intentional leak; capture
-heap dumps over time; identify the leaking class in MAT.
-**Acceptance Criteria:** Leak class correctly identified from dump
-comparison.
-
-### Sprint 5
-**Goal:** JVM tuning under OOM/thread-pool exhaustion.
-**WebSphere Admin:** Run `-Xms`/`-Xmx` experiments; simulate OOM; compare
-GC policies (gencon/optthruput/balanced) via GC log parsing; simulate
-WebContainer thread pool exhaustion and resolve via sizing.
-**Acceptance Criteria:** OOM reproduced and resolved via heap/pool
-tuning; GC policy comparison documented.
-
-### Sprint 6
-**Goal:** Write and execute test cases for Version 9.5.
-**Deliverables:** TestCases-v9.5.md (including TP01 Pipeline Results).
-**WebSphere Admin:** Execute TP01_Test_Pipeline.md stages 1–5.
-**Acceptance Criteria:** All Critical/High test cases pass; all TP01
-stages Pass.
-**Enterprise Outcome:** Version 9.5 test coverage complete.
-
-### Sprint 7
-**Goal:** Sign off Version 9.5.
-**WebSphere Admin:** Capture backupConfig baseline; final smoke test.
-**Deliverables:** SetupDoc-v9.5.md, `wasOps.py` (committed toolkit).
-**Acceptance Criteria:** SetupDoc complete; toolkit runs clean against a
-second environment; smoke test passes.
-**Enterprise Outcome:** Version 9.5 signed off.
-
-### Sprint 8
-**Goal:** Fault Injection + Incident Simulation.
-**WebSphere Admin:** Phase 1 — inject an OOM or stuck-thread fault. Phase
-2 — incident ticket raised from real symptoms. Phase 3 — diagnose live
-using the toolkit and dump-analysis skills from Sprints 3–5, RCA, restore.
-**Deliverables:** FaultDrill-v9.5.md.
-**Acceptance Criteria:** Fault diagnosed using the toolkit itself (not ad
-hoc commands); RCA completed; environment restored.
-**Enterprise Outcome:** Version 9.5 fault drill complete. Non-gating.
-
-**Version 9.5 Deliverables:** `wasOps.py`, SetupDoc-v9.5.md,
-TestCases-v9.5.md, FaultDrill-v9.5.md.
-**Exit Criteria (target, not yet verified):** Toolkit functional and
-properties-driven; leak identified; OOM/thread exhaustion resolved; fault
-drill complete (non-gating).
-**Lessons Learned:** A dump is only useful if you already know what
-"normal" looks like — baseline captured here feeds every later version's
-troubleshooting.
-**Technical Debt:** None new.
-
----
-
 # Version 10 — Users & Groups
 
 ## Version Overview
 **Objective:** Introduce administrative security — real user registry, roles, groups — closing v6's Freeze/Unfreeze open-access debt.
 **Business Scope:** Zero new functionality beyond role enforcement. Freeze/Unfreeze gated to Administrator; Customer role limited to Deposit/Withdraw.
-**WebSphere Focus:** Administrative Security, File Registry (or LDAP), Users, Groups, Roles, Authorization.
+**WebSphere Focus:** Administrative Security, File-based Federated Repository (LDAP deferred to P06 v42), Users, Groups, Roles, Authorization.
 **Expected Outcome:** File-based registry configured; Customer/Administrator roles defined; Freeze/Unfreeze unreachable by Customer role.
-**Prerequisites:** P01 v9.5 signed off.
+**Prerequisites:** P01 v9 signed off.
 **Clarification:** Only two roles are built in P01: Customer and Administrator (this version). Auditor is not built anywhere in P01–P10. Branch Operator is not built in P01–P02 — P03 v29's Branch Portal (Teller Login) introduces a Teller role there. Until that version, only Customer and Administrator exist; no role is assumed to already exist (per P01_Foundation.md v10 "Roles Actually Built").
 
 ### Sprint 1
 **Goal:** Configure a file-based user registry in WAS.
 **WebSphere Admin:** Enable Administrative Security (Global Security); configure File-based Federated Repository.
-**Acceptance Criteria:** DMgr Admin Console requires login; registry test succeeds.
+**Operational Steps (gap fill 2026-09-30):** Take `backupConfig` first. In Global Security enable BOTH Administrative Security AND Application Security (without the latter, `web.xml` constraints are not enforced). Create a dedicated console admin ID (e.g. `wasadmin`), separate from app users. Save, full resync, then restart DMgr, both node agents and both cluster members (planned outage). Afterwards every `wsadmin` call needs credentials (`-user`/`-password` or `soap.client.props` with `com.ibm.SOAP.securityEnabled=true`) — re-run v6's `freezeAccount.py` with credentials; never hardcode them (STD Golden Rule).
+**Acceptance Criteria:** DMgr Admin Console requires login; registry test succeeds; `wsadmin` connects with credentials and is refused without them; both cluster members Started after restart and IHS still routes to both.
 
 ### Sprint 2
 **Goal:** Define Customer and Administrator groups; assign test users.
 **WebSphere Admin:** Create `Customer`/`Administrator` groups; assign seed users to each.
-**Acceptance Criteria:** Both users authenticate against the new registry.
+**Note (gap fill):** Keep app groups separate from WAS console roles. The app role named `Administrator` is an APPLICATION role — a Customer or app-Administrator user must NOT be given the WAS console `administrator` role.
+**Acceptance Criteria:** Both users authenticate against the new registry; neither app user can log in to the Admin Console.
 
 ### Sprint 3
 **Goal:** Define security roles and map them to groups.
 **App Dev:** Backend: declare `Customer`/`Administrator` roles in `web.xml`.
 **WebSphere Admin:** Map roles → groups via Admin Console.
-**Acceptance Criteria:** Role mapping visible and correct.
+**App Dev (gap fill):** Decide and implement how the app logs users in under container security — default proposal: `<login-config>` with FORM auth (`j_security_check`), `LoginServlet` sets `lastLogin`/username from `request.getRemoteUser()` after authentication; the v2 `users` table stays for account data. Record the decision in SetupDoc-v10.md.
+**Acceptance Criteria:** Role mapping visible and correct; login works via the chosen mechanism.
 
 ### Sprint 4
 **Goal:** Gate Freeze/Unfreeze behind the Administrator role.
 **Business Features:** Freeze/Unfreeze restricted to Administrator.
 **App Dev:** Backend: `<security-constraint>` in `web.xml`.
-**Acceptance Criteria:** Customer-role direct URL access to Freeze/Unfreeze rejected (403).
+**Acceptance Criteria:** Customer-role direct URL access to Freeze/Unfreeze rejected (403); unauthenticated access redirected to login (not 403); Administrator succeeds.
 
 ### Sprint 5
 **Goal:** Package/deploy `digistack-bank-v10.ear`; validate both role paths.
 **WebSphere Admin:** Deploy v10; log in as each role and confirm access boundaries.
-**Acceptance Criteria:** Customer can Deposit/Withdraw but not Freeze/Unfreeze; Administrator can do both.
+**Acceptance Criteria:** Customer can Deposit/Withdraw but not Freeze/Unfreeze; Administrator can do both; authenticated session survives a Member 1 kill (v9 M2M + LTPA/SSO) with no forced re-login; v9 session-timeout behaviour unchanged.
 
 ### Sprint 6
 **Goal:** Write and execute test cases for Version 10.
@@ -1448,7 +1352,7 @@ troubleshooting.
 **WebSphere Focus:** JVM Heap Management, Heap Sizing, Large Report Generation, Thread Pool Tuning, Performance Monitoring, GC, Memory Analysis.
 **Expected Outcome:** Report generates without OOM on a large dataset; JVM heap tuned, improvement verified via before/after PMI/GC logs.
 **Prerequisites:** P01 v13 signed off.
-**Note:** Final version of P01 — completion triggers consolidation.
+**Note:** v14.5 (wsadmin Jython Toolkit & Troubleshooting) follows; P01 consolidation is triggered after v14.5 sign-off.
 
 ### Sprint 1
 **Goal:** Generate synthetic transaction data at scale.
@@ -1503,7 +1407,112 @@ troubleshooting.
 **Version 14 Deliverables:** `digistack-bank-v14.ear`, SetupDoc-v14.md, TestCases-v14.md, FaultDrill-v14.md, tuned JVM heap/thread pool config.
 **Exit Criteria (target, not yet verified):** Multi-thousand-row Transaction Report generates successfully; baseline heap pressure/OOM captured; JVM Xms/Xmx tuning applied; GC/PMI comparison shows improvement; Web Container thread-pool behavior under report load validated; Smoke passed; Fault drill complete (Sprint 8, non-gating).
 **Lessons Learned:** Reproducing a real performance problem before tuning validates the fix against evidence, not a guess.
-**Technical Debt:** None — P01 closes clean.
+**Technical Debt:** None.
+
+---
+
+# Version 14.5 — wsadmin Jython Toolkit & Troubleshooting
+
+## Version Overview
+**Objective:** Build a reusable, properties-driven wsadmin Jython
+automation toolkit and prove diagnostic fluency (thread/heap dumps, log/
+trace, JVM tuning) against the existing v1–v14 deployment.
+**Business Scope:** Zero new functionality — pure ops/automation surface
+over the existing app.
+**WebSphere Focus:** AdminControl/AdminConfig/AdminApp/AdminTask,
+properties-file-driven scripting, thread dump and heap dump analysis
+(Eclipse MAT), SystemOut/FFDC/HPEL log viewing, trace strings, GC policy
+comparison, WebContainer thread pool tuning.
+**Expected Outcome:** `wasOps.py` toolkit (start/stop, status, deploy/
+undeploy, pool changes, transaction timeout changes) driven entirely by
+an external properties file; one memory leak identified end-to-end; one
+OOM/thread-exhaustion scenario captured and resolved.
+**Prerequisites:** P01 v14 signed off (v8.5's transaction timeout settings
+are reused as one of the toolkit's scripted actions).
+**Note (moved 2026-09-30):** Relocated from v9.5 to v14.5 — v10–v14 are
+configured manually first (Admin Console + single wsadmin commands); this
+version packages those known commands into automation. Sprint 5 reuses
+v14's heap/GC baselines instead of re-creating them.
+
+### Sprint 1
+**Goal:** Build the properties-file-driven `wasOps.py` skeleton
+(AdminControl/AdminConfig/AdminApp/AdminTask wrappers).
+**WebSphere Admin:** Write Jython functions for start/stop and status
+listing, reading target env/server names from an external `.properties`
+file — no hardcoded values.
+**Acceptance Criteria:** Same script runs unmodified against a second
+target by swapping only the properties file.
+
+### Sprint 2
+**Goal:** Extend the toolkit: deploy/undeploy, DataSource pool changes,
+and transaction timeout changes (reusing v8.5's timeout settings).
+**WebSphere Admin:** Add `AdminApp.install/update`, pool-size change
+function, and a transaction-timeout-change function.
+**Acceptance Criteria:** Toolkit deploys/undeploys the app and changes
+pool size and timeout values, all properties-driven.
+
+### Sprint 3
+**Goal:** Thread dump analysis — capture and diagnose a stuck-thread
+scenario.
+**WebSphere Admin:** Force a stuck thread (blocking call); capture via
+`kill -3` and the wsadmin equivalent; analyze for deadlock/stuck-thread
+pattern.
+**Acceptance Criteria:** Stuck thread identified from the dump with a
+documented root cause.
+
+### Sprint 4
+**Goal:** Heap dump analysis — hunt a deliberately introduced memory
+leak with Eclipse MAT.
+**WebSphere Admin:** Deploy a build with an intentional leak; capture
+heap dumps over time; identify the leaking class in MAT.
+**Acceptance Criteria:** Leak class correctly identified from dump
+comparison.
+
+### Sprint 5
+**Goal:** JVM tuning under OOM/thread-pool exhaustion.
+**WebSphere Admin:** Run `-Xms`/`-Xmx` experiments; simulate OOM; compare
+GC policies (gencon/optthruput/balanced) via GC log parsing; simulate
+WebContainer thread pool exhaustion and resolve via sizing.
+**Acceptance Criteria:** OOM reproduced and resolved via heap/pool
+tuning; GC policy comparison documented.
+
+### Sprint 6
+**Goal:** Write and execute test cases for Version 14.5.
+**Deliverables:** TestCases-v14.5.md (including TP01 Pipeline Results).
+**WebSphere Admin:** Execute TP01_Test_Pipeline.md stages 1–5.
+**Acceptance Criteria:** All Critical/High test cases pass; all TP01
+stages Pass.
+**Enterprise Outcome:** Version 14.5 test coverage complete.
+
+### Sprint 7
+**Goal:** Sign off Version 14.5.
+**WebSphere Admin:** Capture backupConfig baseline; final smoke test.
+**Deliverables:** SetupDoc-v14.5.md, `wasOps.py` (committed toolkit).
+**Acceptance Criteria:** SetupDoc complete; toolkit runs clean against a
+second environment; smoke test passes.
+**Enterprise Outcome:** Version 14.5 signed off.
+
+### Sprint 8
+**Goal:** Fault Injection + Incident Simulation.
+**WebSphere Admin:** Phase 1 — inject an OOM or stuck-thread fault. Phase
+2 — incident ticket raised from real symptoms. Phase 3 — diagnose live
+using the toolkit and dump-analysis skills from Sprints 3–5, RCA, restore.
+**Deliverables:** FaultDrill-v14.5.md.
+**Acceptance Criteria:** Fault diagnosed using the toolkit itself (not ad
+hoc commands); RCA completed; environment restored.
+**Enterprise Outcome:** Version 14.5 fault drill complete. Non-gating.
+
+**Version 14.5 Deliverables:** `wasOps.py`, SetupDoc-v14.5.md,
+TestCases-v14.5.md, FaultDrill-v14.5.md.
+**Exit Criteria (target, not yet verified):** Toolkit functional and
+properties-driven; leak identified; OOM/thread exhaustion resolved; fault
+drill complete (non-gating).
+**Lessons Learned:** A dump is only useful if you already know what
+"normal" looks like — v14's heap/GC baselines are the
+reference for reading the dumps captured here.
+**Technical Debt:** None new — P01 closes clean.
+
+---
 
 ---
 
@@ -1511,7 +1520,7 @@ troubleshooting.
 
 **Modules:** Home, Login/Logout, Balance, Deposit, Withdraw, Freeze/Unfreeze, one Transaction Report, one Withdraw email.
 
-**Infrastructure:** DMGR, Node, Cluster, DataSource, JNDI, IHS (incl. custom 404/500), SSL (end-to-end, mTLS on one hop), Security (roles/registry), JVM (heap-tuned), Mail (JNDI Mail Session), Reports, XA Transaction Service (2PC/recovery, tranlog — v8.5), wsadmin Jython Toolkit (wasOps.py, properties-driven — v9.5).
+**Infrastructure:** DMGR, Node, Cluster, DataSource, JNDI, IHS (incl. custom 404/500), SSL (end-to-end, mTLS on one hop), Security (roles/registry), JVM (heap-tuned), Mail (JNDI Mail Session), Reports, XA Transaction Service (2PC/recovery, tranlog — v8.5), wsadmin Jython Toolkit (wasOps.py, properties-driven — v14.5).
 
 **Technical Debt Plan (introduced and resolved within P01, per schedule):**
 | Debt Introduced At | Planned Resolution At | Item |
@@ -1528,7 +1537,7 @@ troubleshooting.
 
 ---
 
-*This is the consolidated P01_Sprint_Plan.md — the planning document for P01, not a completion record. No versions have been built or signed off yet. This file is the single source of truth for P01's plan going forward; actual progress is tracked in Progress_Log.md.*
+*This is the consolidated P01_Sprint_Plan.md — the planning document for P01. Sprint text below is plan-of-record; actual sign-offs (v1–v9 done as of 2026-09-30) are tracked in Progress_Log.md. This file is the single source of truth for P01's plan going forward; actual progress is tracked in Progress_Log.md.*
 
 *Correction (2026-07-28 cross-file audit): Version 1's Prerequisites line previously listed "WebSphere ND = 9.0.5.28 installed (per STD)" — this matched a since-reverted STD version-pin edit that had prematurely claimed an actual install before any Sprint work existed. Updated to reference STD's then-current placeholder pin (9.0.3, unconfirmed), consistent with Sprint 1's own goal of provisioning and validating that install for the first time.*
 

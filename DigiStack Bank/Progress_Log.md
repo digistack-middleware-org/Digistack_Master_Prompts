@@ -20,7 +20,7 @@
 | # | Folder | Status | Last Completed Version | Next Version | Current Focus (AI Resume one-liner) |
 |---|---|---|---|---|---|
 | 00 | Core | 🔒 Frozen | — | — | — |
-| 02 | Application_Development | 🔓 In Progress | v8 (P01) | v9 (P01) | v8 (IHS Plugin Configuration) signed off 2026-09-11 — 66 test cases pass, 25 unit tests pass (TEST01). Next: v9 Sprint 1 (Session Management). dsb-dmgr, dsb-node02, dsb-ihs, dsb-db all ON. Mirrors Multi-Part Folder Detail row below. |
+| 02 | Application_Development | 🔓 In Progress | v9 (P01) | v10 (P01) | v9 (Session Management) signed off 2026-09-30 — 32 test cases pass (17 Critical + 12 High + 3 Medium), 25 unit tests pass (TEST01). Sticky sessions via CloneID confirmed, sticky-only baseline proven, M2M replication (DigiStackSessionReplication, single replica) — session survives kill -9 and graceful restart, DRSV0003I + DRSV0019I confirmed. Session timeout 30 min, SessionTimeoutListener, Login page expired message. DB-backed persistence evaluated — sessions table + jdbc/SessionDS, ship decision = M2M. Fault drill INC-v9-001: silent replication failure (wrong domain name), MTTD + MTTR recorded. Next: v10 Sprint 1 (v9.5 relocated to v14.5 on 2026-09-30). dsb-dmgr, dsb-node02, dsb-ihs, dsb-db all ON. Mirrors Multi-Part Folder Detail row below. |
 | 03 | Interview_Prep | ⏳ Not Started | — | Interview-1 (P03.1) | Not started — depends on P03 completion |
 | 04 | Observability | ⏳ Not Started | — | v31 (P04) | Not started — depends on P03 completion |
 | 05 | HA_DR | ⏳ Not Started | — | v36 (P05) | Not started — depends on P04 completion |
@@ -52,13 +52,13 @@ Once frozen, a folder is only reopened for a documented correction — never sil
 
 ## Multi-Part Folder Detail
 
-> The Folder Tracker above shows one row per folder. Folders `01_Application_Development` and `02_Interview_Prep` each contain multiple Parts with independent lifecycles — tracked in full detail inside that folder's own README, summarized here for a project-wide glance.
+> The Folder Tracker above shows one row per folder. Folders `02_Application_Development` and `03_Interview_Prep` each contain multiple Parts with independent lifecycles — tracked in full detail inside that folder's own README, summarized here for a project-wide glance.
 
 ### 02_Application_Development
 
 | Part | Status | Last Approved Version | Next Version |
 |---|---|---|---|
-| P01 — Foundation | 🔓 In Progress | v8 | v9 |
+| P01 — Foundation | 🔓 In Progress | v9 | v10 |
 | P02 — Middleware | ⏳ Not Started | — | v15 |
 | P03 — Banking Systems | ⏳ Not Started | — | v23 |
 
@@ -140,7 +140,7 @@ Numbering Freeze. Updated in place (with a version bump + change note,
 per STD's Metadata Block Standard) when their content changes.
 
 Sprint Plan Files (not reference standards — no ID/version block):
-  P01_Sprint_Plan.md — all 8 sprints for v1–v14 (P01)
+  P01_Sprint_Plan.md — all 8 sprints for v1–v14.5 (P01)
   P02_Sprint_Plan.md — all 8 sprints for v15–v22 (P02)
   P03_Sprint_Plan.md — all 8 sprints for v23–v30 (P03)
 SESSION_STATE.md's Load Instructions refer to "CURRENT_SPRINT.md"
@@ -156,23 +156,24 @@ or upload the full Sprint Plan file directly.
 
 | Date | Part | Version | Feature | Status (Started / Dev Done / Deployed to WAS / Tested / Approved) | Notes / Issues |
 |---|---|---|---|---|---|
-
 | ~~2026-07-30~~ | ~~P01~~ | ~~v1~~ | ~~Project Setup & Enterprise Architecture~~ | **RESET 2026-08-04** | Entry reset per project owner request — P01 v1 is not started. Original row (Approved 2026-07-30) struck through rather than deleted, per this project's "never silently edit" discipline. See Open Questions section below for the full reset decision log. |
 | 2026-08-07 | P01 | v1 | Project Setup & Enterprise Architecture | Approved | Signed off per TCS01 §2.7 — 13/13 test cases pass. WAS ND 9.0.5.28 confirmed on dsb-dmgr; PostgreSQL 16 confirmed on dsb-db (digistack_bank DB, digistack_app user). SetupDoc-v1.md is the source record. |
 | 2026-08-08 | P01 | v2 | Login & Session | Approved | Signed off per TCS01 §2.7 — 14/14 test cases pass. users table created (SHA-256+salt hashing), Login/Logout with HttpSession working, digistack-bank-v2.ear redeployed over v1. SetupDoc-v2.md is the source record. |
-
 | 2026-08-09 | P01 | v3 | Basic Transaction (Deposit & Withdraw) | Approved | Signed off per TCS01 §2.7 — 17/17 test cases pass. accounts table (FK to users), full Controller->Service->DAO->DB layering, overdraft rejection enforced, ClassLoader policy documented. SetupDoc-v3.md is the source record. |
-
 | ~~2026-08-07~~ | ~~P01~~ | ~~v1~~ | ~~Project Setup & Enterprise Architecture~~ | **RESET 2026-08-11** | Full project reset per project owner request — both lab VM and chat context lost. Entry struck through rather than deleted, per this project's "never silently edit" discipline. WAS ND/PostgreSQL version pins in STD reverted to placeholder. |
-
 | ~~2026-08-11~~ | ~~P01~~ | ~~v2~~ | ~~Login & Session~~ | **RESET 2026-08-25** | Entry reset per full project reset #2 — lab VM + chat context lost again, confirmed with project owner 2026-08-25. Struck through rather than deleted, per this project's "never silently edit" discipline. |
-
 | ~~2026-08-11~~ | ~~P01~~ | ~~v3~~ | ~~Basic Transaction (Deposit & Withdraw)~~ | **RESET 2026-08-25** | Entry reset per full project reset #2 — same event as the v2 reset row above. |
-| 2026-09-01 | P01 | v5 | WAS Clustering | Approved | 80/80 test cases pass. 2-member cluster (devdsbinappcluster01), DMgr devdsbindmgr01, both nodes federated/synchronized, memory-to-memory session replication, live failover test passed. digistack-bank-v5.ear deployed to cluster target. Environment corrections applied from this version: WAS path /apps/IBM/WebSphere/AppServer/, DB password Wasadmin@951951. SetupDoc-v5.md + FaultDrill-v5.md complete. |
+| FILL | P01 | v1 | Project Setup & Enterprise Architecture | Approved | ⚠ BACK-FILL from SetupDoc-v1.md / TestCases-v1.md: sign-off date, test-case counts, key features. Row missing since Reset #2 (2026-08-25); v5 (2026-09-01) already assumes v1–v4.5 done. |
+| FILL | P01 | v2 | Login & Session | Approved | ⚠ BACK-FILL from SetupDoc-v2.md / TestCases-v2.md: sign-off date, test-case counts, key features. Row missing since Reset #2 (2026-08-25); v5 (2026-09-01) already assumes v1–v4.5 done. |
+| FILL | P01 | v3 | Basic Transaction (Deposit & Withdraw) | Approved | ⚠ BACK-FILL from SetupDoc-v3.md / TestCases-v3.md: sign-off date, test-case counts, key features. Row missing since Reset #2 (2026-08-25); v5 (2026-09-01) already assumes v1–v4.5 done. |
+| FILL | P01 | v4 | EAR Update, Rollback & Application Lifecycle | Approved | ⚠ BACK-FILL from SetupDoc-v4.md / TestCases-v4.md: sign-off date, test-case counts, key features. Row missing since Reset #2 (2026-08-25); v5 (2026-09-01) already assumes v1–v4.5 done. |
+| FILL | P01 | v4.5 | Basic IHS Standalone Era | Approved | ⚠ BACK-FILL from SetupDoc-v4.5.md / TestCases-v4.5.md: sign-off date, test-case counts, key features. Row missing since Reset #2 (2026-08-25); v5 (2026-09-01) already assumes v1–v4.5 done. |
+| 2026-09-01 | P01 | v5 | WAS Clustering | Approved | 80/80 test cases pass. 2-member cluster (devdsbinappcluster01), DMgr devdsbindmgr01, both nodes federated/synchronized, memory-to-memory session replication, live failover test passed. digistack-bank-v5.ear deployed to cluster target. Environment corrections applied from this version: WAS path /apps/IBM/WebSphere/AppServer/, DB credential removed from this log (kept only in gitignored config/db-local.properties / JAAS alias BankDS_Alias). SetupDoc-v5.md + FaultDrill-v5.md complete. |
 | 2026-09-08 | P01 | v6 | Application Administration | Approved | 59/59 test cases pass (38 Critical + 18 High + 3 Medium), 25/25 unit tests pass — TEST01 gating satisfied. Features: Freeze/Unfreeze (UI + wsadmin), Node Sync vs Full Resync drill, is_frozen DB column (V4__add_frozen_flag.sql), EAR packaging (digistack-bank-v6.ear), pre-v6 code refactor (service split, servlet split, JSP split, CSS extraction). Standing rule TEST01 established — unit tests GATING for all future sign-offs. SetupDoc-v6.md + FaultDrill-v6.md complete. Fault drill: Node Agent stopped on dsb-node02 (INC-v6-001). |
 | 2026-09-11 | P01 | v7 | JNDI DataSource Migration | Approved | 47/47 test cases pass (31 Critical + 14 High + 2 Medium), 25/25 unit tests pass — TEST01 gating satisfied. Features: PostgreSQL JDBC Provider at Cell scope (org.postgresql.ds.PGConnectionPoolDataSource), JAAS Auth Alias (BankDS_Alias), jdbc/BankDS DataSource, connection pool min=5/max=20 per member (40 total, 60 headroom against max_connections=100), pre-test validation (SELECT 1), all 7 classes migrated from DriverManager to InitialContext.lookup("jdbc/BankDS"), SeedUsers.java credentials moved to gitignored config/db-local.properties, transaction-boundary traceability note documented, digistack-bank-v7.ear deployed. SetupDoc-v7.md + FaultDrill-v7.md complete. Fault drill: JAAS Auth Alias wrong password (INC-v7-001). |
-| 2026-09-11 | P01 | v8 | IHS Plugin Configuration (Cluster Era) | Approved | 66/66 test cases pass (38 Critical + 24 High + 4 Medium), 25/25 unit tests pass — TEST01 gating satisfied. Features: plugin-cfg.xml regenerated with both cluster members (192.168.10.10:9080 and 192.168.10.11:9081), propagated via IHS Administration Server on port 8008, static assets served from IHS document root (/static/css/ihs-brand.css, /static/images/digistack-logo.svg), custom 404/500 error pages via ErrorDocument directives (self-contained HTML, no external deps), IHS brand banner added to Home.jsp and Login.jsp, digistack-bank-v8.ear deployed. SetupDoc-v8.md + FaultDrill-v8.md complete. Fault drill: plugin-cfg.xml port typo — member 2 port changed to 9999 (INC-v8-001). |
-
+| 2026-09-11 | P01 | v8 | IHS Plugin Configuration (Cluster Era) | Approved | 66/66 test cases pass (38 Critical + 24 High + 4 Medium), 25/25 unit tests pass — TEST01 gating satisfied. Features: plugin-cfg.xml regenerated with both cluster members (192.168.10.10:9080 and 192.168.10.11:9081), propagated via IHS Administration Server on port 8008, static assets served from IHS document root (/static/css/ihs-brand.css, /static/images/digistack-logo.svg), custom 404/500 error pages via ErrorDocument directives (self-contained HTML, no external deps), IHS brand banner added to Home.jsp and Login.jsp, digistack-bank-v8.ear deployed. SetupDoc-v8.md + FaultDrill-v8.md complete. Fault drill: plugin-cfg.xml port typo — member 2 port changed to 9999 (INC-v8-001). Post-sign-off pre-v9 CSS extraction applied — all inline style="" attributes and <style> blocks removed from all 8 JSPs (Home, Login, Dashboard, Account, Deposit, Withdraw, Freeze, Unfreeze). All styles moved to dedicated CSS files. common.css updated with shared utility classes (icon-gold, icon-navy, icon-green, navbar-user-label, alert-icon). Two intentional inline style exceptions documented: display:none on balance toggle elements (JS-controlled at runtime) and dbConnStatus colour in Home.jsp (JSP EL expression — cannot be static CSS). Project structure confirmed and documented post-extraction. |
+| 2026-09-29 | P01 | v8.5 | Transaction Service / XA Recovery | Approved | 32 test cases pass (14 Critical + 15 High + 3 Medium). 25/25 unit tests pass (TEST01). XA DataSources jdbc/DebitDS and jdbc/CreditDS at Cell scope under PostgreSQL XA JDBC Provider (org.postgresql.xa.PGXADataSource). EJB CMT FundsTransferBean proves atomic rollback across two XA resources (DEBIT_DS + CREDIT_DS). NonXaControlBean (NOT_SUPPORTED + autocommit=true) negative control proves orphaned debit without XA. 2PC trace captured in trace.log: enlist ×2 → prepare ×2 → tranlog write → commit ×2. WTRN0006E timeout proven via SleepTransactionServlet (ut.setTransactionTimeout(15), RollbackException caught). Heuristic outcome forced by ROLLBACK PREPARED mid-recovery — resolved via TransactionAdmin.forget(). XA recovery proven: kill -9 mid-2PC, no manual DB intervention, WTRN0017I → WTRN0057I ×2 → WTRN0100I, zero funds lost or duplicated (total funds invariant held). Sprint 8 fault drill (INC-v8.5-001): JMeter 5-thread load on /XATransfer + kill -9, MTTD and MTTR recorded, total funds invariant confirmed post-recovery. SetupDoc-v8.5.md, TestCases-v8.5.md, FaultDrill-v8.5.md, wtrn-error-cheatsheet.md all complete. backupConfig + tranlog backup taken on both nodes. digistack-bank-v8.5.ear deployed to devdsbinappcluster01. |
+| 2026-09-30 | P01 | v9 | Session Management | Approved | 32 test cases pass (17 Critical + 12 High + 3 Medium). 25/25 unit tests pass (TEST01). Sticky sessions via CloneID in plugin-cfg.xml confirmed — five consecutive requests routed to same member (http_plugin.log). Sticky-only control case proven (session lost on kill -9 with no replication). M2M replication configured (DigiStackSessionReplication, numberOfReplicas=1) — session survives kill -9 and graceful restart (ADMU0512I confirmed), DRSV0003I + DRSV0019I on both members. Session timeout 30 minutes (web.xml + server-level invalidationTimeout), http-only cookie, COOKIE tracking mode. SessionTimeoutListener logs SESSION CREATED (maxInactiveInterval=1800s) and SESSION DESTROYED. Login page shows amber "session expired" and green "logged out" messages. DB-backed persistence evaluated — V5__create_sessions.sql, jdbc/SessionDS, sessions table row written on login, session retrieved by Member 2 after kill. Three-way comparison recorded: ship decision = M2M (zero DB load, very low latency). Fault drill INC-v9-001: BrokenDomain name injected on Member 1 — silent failure, DRSV0019I absent, session lost on crash. Fix: correct domain name restored, DRSV0019I confirmed, session survived kill after fix. SetupDoc-v9.md, TestCases-v9.md, FaultDrill-v9.md complete. backupConfig taken. digistack-bank-v9.ear deployed to devdsbinappcluster01. |
 ---
 
 ## Cross-Part Dependency Chain
@@ -189,10 +190,14 @@ describe artifacts from the pre-reset build (lost along with the lab
 VM), not artifacts currently on disk. Re-add un-struck rows once each
 version is actually rebuilt and signed off again.
 
+| Version | Depends On | Produces | Used By |
+|---|---|---|---|
 | V5 | V4 (digistack-bank-v4.ear), V1 (WAS profile) | DMgr devdsbindmgr01, federated nodes devdsbinnode01/02, cluster devdsbinappcluster01, memory-to-memory session replication, digistack-bank-v5.ear | V6 (DMgr/federation deep-dive, Freeze/Unfreeze via wsadmin), V7 (JNDI DataSource across cluster), V8 (plugin-cfg.xml regenerated for cluster) |
 | V6 | V5 (cluster, federation, digistack-bank-v5.ear), V5-DB (accounts table) | is_frozen column (V4__add_frozen_flag.sql), DepositService/WithdrawService/FreezeService, DepositServlet/WithdrawServlet/FreezeServlet/UnfreezeServlet, Deposit.jsp/Withdraw.jsp/Freeze.jsp/Unfreeze.jsp, 9 CSS files, freezeAccount.py wsadmin script, digistack-bank-v6.ear, unit test suite (TEST01 — DepositServiceTest/WithdrawServiceTest/FreezeServiceTest) | V7 (all Services replace direct JDBC with jdbc/BankDS JNDI DataSource — closes v1–v6 JDBC debt) |
 | V7 | V6 (all Services, digistack-bank-v6.ear), V6-WAS (cluster devdsbinappcluster01) | PostgreSQL JDBC Provider (Cell scope), JAAS Auth Alias BankDS_Alias, DataSource jdbc/BankDS, connection pool config (min=5/max=20/EntirePool/SELECT 1 validation), 7 migrated classes (AccountService/DepositService/WithdrawService/FreezeService/HomeServlet/LoginServlet/DashboardServlet), config/db-local.properties (gitignored), digistack-bank-v7.ear | V8 (plugin-cfg.xml regenerated against cluster — jdbc/BankDS pool active on both members during all IHS-routed requests) |
-| V8 | V7 (digistack-bank-v7.ear, jdbc/BankDS DataSource), V4.5 (webserver1 Web Server Definition, IHS install on dsb-ihs) | cluster-aware plugin-cfg.xml (both members: 192.168.10.10:9080 and 192.168.10.11:9081), ihs-brand.css (IHS htdocs), digistack-logo.svg (IHS htdocs), 404.html/500.html (IHS htdocs/errors/), ErrorDocument directives in httpd.conf, Home.jsp/Login.jsp IHS brand banner, digistack-bank-v8.ear | V9 (session management — sticky sessions, M2M replication, DB-backed persistence — all rely on IHS correctly routing to both cluster members) |
+| V8 | V7 (digistack-bank-v7.ear, jdbc/BankDS DataSource), V4.5 (webserver1 Web Server Definition, IHS install on dsb-ihs) | cluster-aware plugin-cfg.xml (both members: 192.168.10.10:9080 and 192.168.10.11:9081), ihs-brand.css (IHS htdocs), digistack-logo.svg (IHS htdocs), 404.html/500.html (IHS htdocs/errors/), ErrorDocument directives in httpd.conf, Home.jsp/Login.jsp IHS brand banner, digistack-bank-v8.ear | V8.5 (XA DataSources and EJB CMT FundsTransferBean built on top of the IHS-routed cluster confirmed at v8) |
+| V8.5 | V7 (jdbc/BankDS, all Services migrated to JNDI), V8 (digistack-bank-v8.ear, IHS plugin-cfg.xml, cluster devdsbinappcluster01 fully operational) | PostgreSQL XA JDBC Provider at Cell scope (org.postgresql.xa.PGXADataSource), jdbc/DebitDS XA DataSource, jdbc/CreditDS XA DataSource, FundsTransferBean (@Stateless EJB, @TransactionAttribute REQUIRED), NonXaControlBean (@Stateless EJB, @TransactionAttribute NOT_SUPPORTED), FundsTransferServlet (/XATransfer), NonXaControlServlet (/XAControl), SleepTransactionServlet (/XASleep), XATransfer.jsp, XASleep.jsp, alert-warning class in common.css, wtrn-error-cheatsheet.md, digistack-bank-v8.5.ear, enableLoggingForHeuristicReporting=true on both cluster members | V9 (Session Management — cluster-aware sessions built on top of the fully operational IHS-routed cluster and XA-capable DataSources confirmed at v8.5) |
+| V9 | V8.5 (digistack-bank-v8.5.ear, XA DataSources), V5 (cluster devdsbinappcluster01, M2M base) | Replication domain DigiStackSessionReplication (numberOfReplicas=1), CloneID sticky routing verified in http_plugin.log, SessionTimeoutListener, 30-min timeout (web.xml + server invalidationTimeout), http-only COOKIE tracking, V5__create_sessions.sql, jdbc/SessionDS + sessions table (evaluated, not shipped), Login expired/logged-out messages, digistack-bank-v9.ear | V10 (next — identity/roles must survive failover; fill retroactively once built) |
 
 ---
 
@@ -224,8 +229,8 @@ version is actually rebuilt and signed off again.
 ## Environment Notes
 
 - **WAS ND version installed:** 9.0.5.28 — confirmed at P01 v5 sign-off (2026-09-01). Install path: /apps/IBM/WebSphere/AppServer/ (corrected this version).
-- **Profile(s) created so far:** devdsbindmgr01 (DMgr profile on dsb-dmgr, created at P01 v1).
-- **Database (PostgreSQL):** 16 — confirmed at P01 v5 sign-off. Runs on dsb-db (192.168.10.30), digistack_app password: Wasadmin@951951. V4__add_frozen_flag.sql applied at v6 (is_frozen column added to accounts). Active P01 v1 through P02 v22 only; decommissioned at P03 v23 Sprint 4.
+- **Profile(s) created so far:** devdsbindmgr01 (DMgr, dsb-dmgr, P01 v5); nodes devdsbinnode01 (dsb-dmgr) and devdsbinnode02 (dsb-node02); cluster devdsbinappcluster01. Standalone profile devdsbinappserver01 (v1–v4.5 era) — FILL: retained or removed at v5?
+- **Database (PostgreSQL):** 16 — confirmed at P01 v5 sign-off. Runs on dsb-db (192.168.10.30), digistack_app password: NOT recorded here — see gitignored config/db-local.properties. V4__add_frozen_flag.sql applied at v6 (is_frozen column added to accounts). Active P01 v1 through P02 v22 only; decommissioned at P03 v23 Sprint 4.
 - **Database (Oracle):** Not yet provisioned — dsb-oracle VM not built. Oracle 21c XE target/placeholder pin (v22.5 sign-off confirms). IP: 192.168.10.32. Powers on at P02 v22.5. NEVER co-hosted with PostgreSQL on dsb-db.
 - **IBM HTTP Server installed:** Yes — IHS 9.0.5.28 on dsb-ihs (192.168.10.20). plugin-cfg.xml regenerated at v8 with both cluster members (port 9080 and 9081). Static assets under /apps/IBM/HTTPServer/htdocs/static/. Custom error pages under /apps/IBM/HTTPServer/htdocs/errors/. ErrorDocument 404/500/503 configured in httpd.conf.
 - **Any deviations from the roadmap so far:** OS confirmed as RHEL 8.x on dsb-dmgr (P01 v1 Sprint 2) — 
@@ -235,6 +240,38 @@ documentation corrected to reflect actual installed OS.
 ---
 
 ## Open Questions / Decisions Pending
+
+**Resolved — v9.5 relocated to v14.5, 2026-09-30.**
+
+Reason: manual-first learning — v10–v14 are configured by hand before any automation toolkit is built. v9.5 (wsadmin Jython Toolkit & Troubleshooting) is now v14.5, after v14. v10 follows v9 directly; v10 prerequisite changed to "P01 v9 signed off"; v14.5 prerequisite is "P01 v14 signed off"; P01 consolidation now triggers after v14.5 sign-off. No other version numbers changed. Files updated: P01_Foundation.md, P01_Sprint_Plan.md, SESSION_STATE.md, this file.
+
+**Resolved — v8.5 and v9.5 suffix-slot versions added, 2026-09-11.** (v9.5 later relocated to v14.5 — see entry above.)
+
+Two new suffix-slot versions inserted into P01_Foundation.md and
+P01_Sprint_Plan.md, following the same convention already established
+by v4.5 (a version that doesn't renumber the versions after it):
+
+- **v8.5 — Transaction Service / XA Recovery** — inserted between v8
+  and v9. Covers JTA transaction service, XA vs non-XA DataSources,
+  2PC, transaction/recovery logs, timeouts, heuristic outcomes,
+  WTRN/WSVR error codes. Prerequisite: P01 v7 signed off (DataSource/
+  pooling already in place). Produces a synthetic "FundsTransfer"
+  test (Servlet → EJB CMT → two XA DataSources) — infrastructure
+  proof only, not the customer-facing Fund Transfer feature (that
+  remains P02 v15).
+- **v9.5 — wsadmin Jython Toolkit & Troubleshooting** — inserted
+  between v9 and v10. Covers AdminControl/AdminConfig/AdminApp/
+  AdminTask fluency, thread/heap dump analysis, JVM tuning. Produces
+  `wasOps.py`, a properties-driven automation toolkit. Prerequisite:
+  P01 v8.5 signed off (reuses its transaction timeout settings as one
+  of the toolkit's scripted actions).
+
+No existing version numbers changed — same suffix-slot discipline
+already used for v4.5. P01's version count is now 17 total (was 15).
+SESSION_STATE.md pointer updated: next version is v8.5 Sprint 1, not
+v9. Files updated: P01_Foundation.md, P01_Sprint_Plan.md,
+SESSION_STATE.md, this file (Folder Tracker + Multi-Part Folder
+Detail Next Version columns).
 
 Resolved — Database engine change: PostgreSQL → Oracle 21c XE
 from v22.5 onward, 2026-08-28.

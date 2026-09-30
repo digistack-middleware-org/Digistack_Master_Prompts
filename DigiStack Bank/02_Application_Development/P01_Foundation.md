@@ -11,7 +11,7 @@ ARCH01
 
 
 Exports:
-Versions 1-4, 4.5, 5-8, 8.5, 9, 9.5, 10-14 (17 versions total; v4.5 = Basic IHS Standalone Era; v8.5 = Transaction Service/XA Recovery; v9.5 = wsadmin Jython Toolkit & Troubleshooting)
+Versions 1-4, 4.5, 5-8, 8.5, 9, 10-14, 14.5 (17 versions total; v4.5 = Basic IHS Standalone Era; v8.5 = Transaction Service/XA Recovery; v14.5 = wsadmin Jython Toolkit & Troubleshooting)
 First EAR deployment
 Login/session
 Basic transactions
@@ -69,10 +69,10 @@ Part-Start Architecture Diagram (generate first, before Version 1 work begins)
 --------------------------------------------------------------------------------
 Per 01_Architecture/README.md's Version-Start Diagram Check, generated once
 at the start of this Part — pruned to only the diagram files P01's versions
-(v1-v14) actually populate or extend. Files outside this tree stay
+(v1-v14.5, incl. v4.5 / v8.5 / v14.5 suffix slots) actually populate or extend. Files outside this tree stay
 untouched until a later Part's own start-of-Part diagram unlocks them.
 
-                 DIGISTACK BANK — P01 (v1-v14)
+                 DIGISTACK BANK — P01 (v1-v14.5)
                        |
        +---------------+---------------+
        |               |               |
@@ -534,37 +534,6 @@ SetupDoc section — this is a standard admin interview question and the
 documented reasoning is the deliverable, not just the config.
   
 
-Version 9.5 — wsadmin Jython Toolkit & Troubleshooting
----------------------------------------------------------
-WebSphere Topic: wsadmin scripting (AdminControl, AdminConfig, AdminApp,
-AdminTask), thread/heap dump analysis, log & trace subsystems, JVM tuning.
-
-Minimum App: Zero new functionality. All work targets the existing
-DigiStack deployment (V1–V9) as the automation and diagnostic surface.
-
-Topics Covered: wsadmin Jython fundamentals across all four Admin objects;
-properties-file-driven scripts (no hardcoded environment values); thread
-dumps (`kill -3` and wsadmin equivalent) analyzed for stuck threads/
-deadlocks; heap dumps analyzed with Eclipse MAT for a deliberately
-introduced memory leak; SystemOut/SystemErr, FFDC, activity.log, HPEL
-(`logViewer.sh`), and trace strings (`com.ibm.ws.webcontainer=all`,
-`Transaction=all` — ties back to V8.5's WTRN codes); JVM heap tuning
-(-Xms/-Xmx experiments, OOM simulation), GC policy comparison (gencon vs
-optthruput vs balanced) via GC log parsing; WebContainer thread pool
-sizing under simulated exhaustion.
-
-Sprint Deliverable: A `wasOps.py` toolkit covering start/stop, status
-listing, deploy/undeploy, pool changes, and — reusing V8.5 — transaction
-timeout changes, all driven by an external properties file (no
-hardcoded env). Separately: one intentionally leaky build analyzed end
-to end (heap dump → MAT → leak class identified) and one OOM/thread-pool
-exhaustion scenario captured via thread dump and resolved by tuning.
-
-Interview-anchor note: "How do you size a JVM? Prove it" and "walk me
-through diagnosing a stuck server" are answered from this version's
-captured dumps and GC log comparisons, not from memorized theory.
-
-
 Version 10 — Users & Groups
 --------------------------------
 WebSphere Topic: Administrative security, file-based federated repository,
@@ -582,6 +551,19 @@ Administrator roles/groups defined; Freeze/Unfreeze unreachable by a
 Customer-role user, proving role enforcement (not just UI hiding).
 
 LDAP federation is deliberately deferred to P06 and is not part of P01.
+
+Application Authentication Note (added 2026-09-30, gap fill)
+-------------------------------------------------------------
+Since v2 the app authenticates against the PostgreSQL `users` table via
+LoginServlet. Container-enforced roles (this version) need the caller
+identified by the WAS registry. Decision to record in SetupDoc-v10.md
+before Sprint 3: FORM login (`j_security_check`) against the file
+registry, with LoginServlet reading `getRemoteUser()` post-auth (default
+proposal). The `users` table remains for account data. Also: enabling
+Administrative Security forces a full restart/resync and every wsadmin
+call (incl. v6 freezeAccount.py) then requires credentials — externalized,
+never hardcoded. "Forgot Password?" remains unscoped (see Progress_Log.md
+Open Questions); v10 does NOT build it unless explicitly scoped.
 
 Roles Actually Built (clarification)
 -------------------------------------
@@ -692,11 +674,41 @@ structured capacity exercise against the whole v14 stack:
   4 more vCPUs" and "what breaks first — CPU, heap, or connections?" —
   this is the artifact, not the tuning itself; managers buy numbers.
 
+Version 14.5 — wsadmin Jython Toolkit & Troubleshooting
+----------------------------------------------------------
+WebSphere Topic: wsadmin scripting (AdminControl, AdminConfig, AdminApp,
+AdminTask), thread/heap dump analysis, log & trace subsystems, JVM tuning.
+
+Minimum App: Zero new functionality. All work targets the existing
+DigiStack deployment (V1–V14) as the automation and diagnostic surface.
+
+Topics Covered: wsadmin Jython fundamentals across all four Admin objects;
+properties-file-driven scripts (no hardcoded environment values); thread
+dumps (`kill -3` and wsadmin equivalent) analyzed for stuck threads/
+deadlocks; heap dumps analyzed with Eclipse MAT for a deliberately
+introduced memory leak; SystemOut/SystemErr, FFDC, activity.log, HPEL
+(`logViewer.sh`), and trace strings (`com.ibm.ws.webcontainer=all`,
+`Transaction=all` — ties back to V8.5's WTRN codes); JVM heap tuning
+(-Xms/-Xmx experiments, OOM simulation), GC policy comparison (gencon vs
+optthruput vs balanced) via GC log parsing; WebContainer thread pool
+sizing under simulated exhaustion.
+
+Sprint Deliverable: A `wasOps.py` toolkit covering start/stop, status
+listing, deploy/undeploy, pool changes, and — reusing V8.5 — transaction
+timeout changes, all driven by an external properties file (no
+hardcoded env). Separately: one intentionally leaky build analyzed end
+to end (heap dump → MAT → leak class identified) and one OOM/thread-pool
+exhaustion scenario captured via thread dump and resolved by tuning.
+
+Interview-anchor note: "How do you size a JVM? Prove it" and "walk me
+through diagnosing a stuck server" are answered from this version's
+captured dumps and GC log comparisons, not from memorized theory.
+
 ---
 
 Completion Checklist
 ------------------------
-□ digistack-bank-v14.ear running as a single EAR on WAS ND (no split yet)
+□ Final P01 EAR (digistack-bank-v14.ear — v14.5 adds no app functionality) running as a single EAR on WAS ND (no split yet)
 □ PostgreSQL connected via managed JNDI DataSource, no hardcoded credentials
 □ 2-member cluster operational, session replication/failover tested
 □ IHS installed, fronting cluster via plugin-cfg.xml
@@ -706,7 +718,7 @@ Completion Checklist
 □ Email notification working via WAS Mail Session/JNDI
 □ Large report generates under tuned JVM heap without OOM
 □ XA transaction recovery proven — in-doubt transaction replayed correctly after server kill (v8.5)
-□ wsadmin Jython toolkit (wasOps.py) built and properties-driven; thread/heap dump analysis demonstrated (v9.5)
+□ wsadmin Jython toolkit (wasOps.py) built and properties-driven; thread/heap dump analysis demonstrated (v14.5)
 □ App itself stayed intentionally tiny — every other topic practiced on
   infrastructure around this same small app
 
@@ -719,7 +731,7 @@ Infrastructure: DMGR, Node, Cluster, DataSource, JNDI, IHS (incl. custom
 404/500), SSL (end-to-end, mTLS on one hop), Security (roles/registry), JVM
 (heap-tuned), Mail (JNDI Mail Session), Reports, XA Transaction Service
 (2PC/recovery, tranlog — v8.5), wsadmin Jython Toolkit (wasOps.py,
-properties-driven — v9.5).
+properties-driven — v14.5).
 
 Carried Forward to P02
 ---------------------------

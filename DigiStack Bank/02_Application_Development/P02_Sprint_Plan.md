@@ -2578,12 +2578,37 @@ Non-gating — does not block sign-off.
 **All 12 versions (15–22, plus suffix-slot versions v16.5, v18.5, v22.5, and v22.7), 96 sprints total, planned.**
 
 ## P02 Target Final Application State
-- Modules: Customer (multi-account), Account, Beneficiary, Fund Transfer (internal via SIBus/MDB, external via IBM MQ), Transaction History/Account Statement (REST + SOAP), MFA/OTP, account lockout, Security Event Detection, Operations Dashboard (JVM/Session/Queue/DB Pool)
-- Infrastructure added on top of P01: SIBus/JMS (queues, MDB, DLQ), Web Services engine (JAX-RS + JAX-WS, WSDL), hardened security (MFA, LTPA, CSRF/XSS, API auth), PMI/JMX monitoring dashboard, IBM MQ Queue Manager, IHS advanced admin (rewrite, maintenance mode, health checks), External Load Balancer (blue-green, HA)
-- Still one EAR: `digistack-bank-v22.ear` — no Portal/CBS split yet (that's P03 v23)
+- Modules: Customer (multi-account), Account, Beneficiary, Fund Transfer
+  (internal via SIBus/MDB, external via IBM MQ), Transaction
+  History/Account Statement (REST + SOAP), MFA/OTP, account lockout,
+  Security Event Detection, Operations Dashboard (JVM/Session/Queue/DB Pool)
+- Infrastructure added on top of P01: SIBus/JMS (queues, MDB, DLQ), Web
+  Services engine (JAX-RS + JAX-WS, WSDL), hardened security (MFA, LTPA,
+  CSRF/XSS, API auth), PMI/JMX monitoring dashboard, IBM MQ Queue Manager,
+  IHS advanced admin (rewrite, maintenance mode, health checks), External
+  Load Balancer (blue-green, HA), Oracle 21c XE (DIGISTACK_CBS PDB on
+  dedicated VM dsb-oracle, jdbc/OracleDS + OracleAlias live, all tables
+  migrated with row-count verification, expdp backup discipline active —
+  v22.5), Liberty Profile (binaryScanner + Transformation Advisor run,
+  Notification module deployed on Liberty server digistack-notification-
+  liberty, side-by-side with traditional WAS, traditional WAS remains
+  authoritative — v22.7)
+- Still one EAR: `digistack-bank-v22.ear` — no Portal/CBS split yet
+  (that's P03 v23). Oracle is live; PostgreSQL on dsb-db remains running
+  independently until P03 v23 Sprint 4 decommissions it.
 
 ## Carried Forward to P03
-This is the target starting point for P03 after all P02 versions are successfully built and signed off — where the real Portal/CBS application split (v23), the two Tomcat-based channel simulators (Mobile v26, ATM v27), the WAS-hosted Card Portal (v28), and Branch Portal (v29) begin.
+This is the target starting point for P03 after all P02 versions are
+successfully built and signed off — where the real Portal/CBS application
+split (v23), the two Tomcat-based channel simulators (Mobile v26, ATM v27),
+the WAS-hosted Card Portal (v28), Branch Portal (v29), and Loan Management
+(v30) begin. After all P03 application development is complete (through
+v30.5 Expert War-Game & Final Exam), a Migration Series (v30.10–v30.13)
+migrates three WAS EARs (Notification Service, Reporting Service, Internet
+Banking Portal) to Apache Tomcat. Branch Portal is deliberately excluded
+from migration — its BOD/EOD WAS EJB Timer batch jobs require enterprise
+middleware. By end of P03 v30.13, the WAS EAR count is 4 and the Tomcat
+app count is 5.
 
 ---
 

@@ -1033,5 +1033,11 @@ Carried Forward to P03
 ---------------------------
 This is the exact starting point P03 picks up from — where the real
 Portal/CBS application split (v23), the two Tomcat-based channel simulators
-(Mobile v26, ATM v27), the WAS-hosted Card Portal (v28), and Branch Portal
-(v29) begin.
+(Mobile v26, ATM v27), the WAS-hosted Card Portal (v28), Branch Portal
+(v29), and Loan Management (v30) begin. After all P03 application
+development is complete (through v30.5 Expert War-Game & Final Exam), a
+Migration Series (v30.10–v30.13) migrates three WAS EARs (Notification
+Service, Reporting Service, Internet Banking Portal) to Apache Tomcat.
+Branch Portal is deliberately excluded from migration — its BOD/EOD
+WAS EJB Timer batch jobs require enterprise middleware. By end of P03
+v30.13, the WAS EAR count is 4 and the Tomcat app count is 5.

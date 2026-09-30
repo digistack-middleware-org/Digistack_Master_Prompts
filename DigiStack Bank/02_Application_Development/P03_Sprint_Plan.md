@@ -2,13 +2,16 @@
 ## Consolidated Sprint Plan (Versions 23–30)
 
 **Part:** P03 — Enterprise Banking Systems (CBS, Payments, Channel Simulators, Loans)
-**Versions Covered:** 23, 24, 25, 26, 27, 28, 29, 30
+**Versions Covered:** 23, 24, 25, 26, 27, 28, 29, 30, 30.5 (Expert War-Game & Final Exam), 30.10 (Notification Service → Tomcat), 30.11 (Reporting Service → Tomcat), 30.12 (Internet Banking Portal → Tomcat), 30.13 (Migration Consolidation)
 **Status:** ⏳ Not Started — planning document only, no versions built or signed off
 **Prerequisite:** P02 Completion Checkpoint satisfied (`digistack-bank-v22.ear`, full middleware stack — LB, IHS, WAS Cluster, SIBus JMS, IBM MQ, Web Services, Security Hardening, Monitoring — all operational)
 **Next:** P03.2 — Enterprise Interview Book (then P03.1 — Interview Preparation, per P03's Sub-Parts reading order)
 **Sprint Structure:** 8 sprints per version — Sprint 1–4 Build, Sprint 5 Package and Deploy, Sprint 6 Test Cases (executes the full TP01 5-stage pipeline per TP01_Test_Pipeline.md), Sprint 7 Sign-off, Sprint 8 Fault Injection + Incident.
 **Test Pipeline:** TP01 (mandatory from v8 onward) — every version's Sprint 6 runs DEV → SIT → UAT → PRE-PROD → PROD stages; results recorded in each TestCases-v<N>.md under "## TP01 Pipeline Results — v<N>".
 
+**Sub-Parts Note:** This Part is followed by two sub-Parts — P03.2 (Enterprise Interview Book, reference material) and P03.1 (Interview Preparation, drill layer) — which build on P03's nine-application topology before P04 begins observability work. Reading order: P03 → P03.2 → P03.1 → P04. Their scope is defined in their own Part files. P03 imposes no additional prerequisites on them beyond its own Completion Checklist.
+
+**Migration Series Note:** Versions 30.10–30.13 form a WAS-to-Tomcat Migration Series appended after v30.5's final exam. They migrate three WAS EARs (Notification Service, Reporting Service, Internet Banking Portal) to Apache Tomcat. Branch Portal is deliberately excluded — its WAS EJB Timer-driven BOD/EOD batch jobs require enterprise middleware and are not migrated. By end of v30.13, the WAS EAR count reduces from 7 to 4 and the Tomcat app count grows from 2 to 5. CBS, Payment Hub, Card Portal, and Branch Portal remain on WAS permanently. The CBS Governing Rule (only CBS writes to digistack_cbs) is unchanged throughout.
 
 ---
 
@@ -1576,12 +1579,522 @@ another customer of the same bank.
 
 ---
 
+---
+---
+
+# Version 30.5 — Expert War-Game & Final Exam
+
+## Version Overview
+
+**Version Objective:** Close P03's application-development arc with unscripted, timed failure drills across the full 9-application estate and a from-bare-VMs final build. No new banking features — validates and stress-tests everything built across P01–P03.
+
+**Business Scope:** None. This version is purely operational/diagnostic.
+
+**WebSphere Focus:** Memory leak diagnosis (Eclipse MAT, heap dump), induced failure recovery (11 outage scenarios), Core Groups / HA Manager (DRS settings), full rebuild from bare VMs in one scripted day.
+
+**Expected Outcome:** All 11 outage scenarios fixed and documented; memory leak identified and root-caused; one-day final build completed from bare VMs with every checklist item verifiable live.
+
+**Prerequisites:** P03 Version 30 Completion Checkpoint satisfied — all 9 applications (7 WAS EARs + 2 Tomcat apps) operational, P03 Completion Checklist signed off.
+
+**Note:** v30.5 is a prerequisite for the Migration Series (v30.10–v30.13). No migration version begins until the full 9-application estate passes this final exam.
+
+---
+
+### Sprint 1
+**Goal:** Memory Leak Hunt — deploy a deliberately leaky build; capture heap dumps over time.
+**Learning Objective:** Eclipse MAT analysis against a multi-app, multi-cluster topology (reuses V9.5 toolkit).
+**WebSphere Admin:** Deploy leaky build to one cluster member; enable verbose GC; capture heap dumps at intervals via wsadmin or Admin Console.
+**Deliverables:** Heap dump set captured.
+**Acceptance Criteria:** Heap growth over time is clearly visible in GC logs; at least two heap dumps captured before OOM or after observable growth.
+
+---
+
+### Sprint 2
+**Goal:** Analyze heap dumps in Eclipse MAT; identify the leaking class.
+**Learning Objective:** MAT dominator tree, reference chain analysis, leak suspect report.
+**WebSphere Admin:** Run Eclipse MAT against the captured dumps; identify the specific class holding the retained heap.
+**Deliverables:** FaultDrill-v30.5-leak.md (class identified, root cause stated, fix applied, re-test showing heap stabilises).
+**Acceptance Criteria:** Leaking class named with evidence from MAT; fix deployed; heap profile confirms stabilisation.
+
+---
+
+### Sprint 3
+**Goal:** Outage War-Game rounds 1–4 (timed, fix-and-document each).
+**Learning Objective:** Real fault diagnosis under time pressure across a multi-app topology.
+**WebSphere Admin:** Inject and resolve: (1) expired cert, (2) port conflict, (3) DataSource down, (4) corrupted config. Each broken deliberately; each resolved against the V19/V22 runbooks.
+**Deliverables:** Post-mortems for faults 1–4 (root-cause / fix / prevention per FaultDrill format).
+**Acceptance Criteria:** All four environments restored to known-good before moving to Sprint 4.
+
+---
+
+### Sprint 4
+**Goal:** Outage War-Game rounds 5–8.
+**WebSphere Admin:** Inject and resolve: (5) dead node agent, (6) full log disk, (7) stopped MQ channel, (8) MQ queue full.
+**Deliverables:** Post-mortems for faults 5–8.
+**Acceptance Criteria:** All four environments restored to known-good.
+
+---
+
+### Sprint 5
+**Goal:** Outage War-Game rounds 9–11 + Core Groups / HA Manager review.
+**WebSphere Admin:** Inject and resolve: (9) hung thread, (10) wrong virtual host, (11) in-doubt transaction requiring XA recovery (V8.5 pattern). Core group bridge configuration and DRS settings reviewed and tuned across the full cluster topology.
+**Deliverables:** Post-mortems for faults 9–11; DRS tuning note in SetupDoc-v30.5.md.
+**Acceptance Criteria:** All 11 faults documented with root-cause/fix/prevention writeups; DRS settings reviewed and documented.
+
+---
+
+### Sprint 6
+**Goal:** Final Exam — Build From Bare VMs (one day, fully scripted).
+**Learning Objective:** Demonstrating full P01–P03 fluency in a single timed rebuild.
+**WebSphere Admin:** Scripted rebuild: WAS ND 2-node cluster; IHS/NGINX with plugin routing; LDAP security + console role mapping; SSL/TLS end-to-end; Oracle XA DataSource; IBM MQ with external payment leg live; XA Transfer Test proof; end-to-end message flow Portal → WAS → JMS/MQ → CBS → reply; JMeter capacity report with sizing justification (V14 methodology).
+**Deliverables:** SetupDoc-v30.5.md (rebuild log).
+**Acceptance Criteria:** Every final-exam checklist item verifiable live from the rebuilt environment, not just documented.
+
+---
+
+### Sprint 7
+**Goal:** Sign off Version 30.5.
+**WebSphere Admin:** Capture backupConfig baseline from the rebuilt environment; final smoke test across all 9 applications.
+**Deliverables:** SetupDoc-v30.5.md (complete).
+**Acceptance Criteria:** SetupDoc complete; smoke test passes on the from-bare-VMs build; all 11 post-mortems and the leak analysis present and reviewed.
+**Enterprise Outcome:** Version 30.5 signed off — estate fully validated before any migration begins.
+
+---
+
+### Sprint 8
+**Goal:** Migration readiness check — confirm all 9 applications are stable and the estate is ready for v30.10.
+**WebSphere Admin:** Run the P03 Completion Checklist one final time against the from-bare-VMs rebuilt estate; confirm every item passes; document any observations that should inform the migration planning.
+**Deliverables:** Migration readiness sign-off note in SetupDoc-v30.5.md.
+**Acceptance Criteria:** All Completion Checklist items pass; no open Critical/High defects; migration readiness confirmed.
+**Enterprise Outcome:** Version 30.5 fault drill and final exam complete. Gate for Migration Series — v30.10 begins only after this sign-off.
+
+---
+
+## Version 30.5 Deliverables
+- Heap dump set + Eclipse MAT analysis artifact (leak class identified)
+- 11 × FaultDrill post-mortem writeups (root-cause / fix / prevention)
+- SetupDoc-v30.5.md (rebuild log + DRS tuning note + migration readiness sign-off)
+- JMeter capacity report (V14 methodology re-run against full P03 topology)
+
+## Version 30.5 Exit Criteria
+- ✅ Memory leak identified and root-caused via Eclipse MAT
+- ✅ All 11 outage scenarios resolved and documented
+- ✅ DRS / Core Group settings reviewed and documented
+- ✅ From-bare-VMs rebuild completed in one scripted day — all checklist items verifiable live
+- ✅ Migration readiness sign-off confirmed — 9-application estate stable
+- ✅ Ready for v30.10 (Migration Series begins)
+
+## Lessons Learned
+- **Key learnings:** "Walk me through your worst production outage" is answered from this version's 11 post-mortems plus the V8.5/T.8 XA recovery war-game — this is the version an interviewer's toughest scenario question is pulled from.
+- **Technical debt:** None — P03 closes clean at this version.
+
+---
+---
+
+# Version 30.10 — Notification Service → Tomcat
+
+## Version Overview
+
+**Version Objective:** Migrate digistack-notification-vN.ear off WebSphere and redeploy as a standalone WAR on dsb-tomcat. No change to CBS, no broken contracts, no customer-visible impact.
+
+**Business Scope:** None — zero new banking features. Migration only.
+
+**WebSphere Focus:** Graceful EAR undeploy from a running WAS cluster; JNDI Mail Session retirement; MQ activation spec removal; WAS EAR count drops from 7 to 6.
+
+**Expected Outcome:** digistack-notification deployed on dsb-tomcat, consuming from NOTIFICATION.QUEUE via IBM MQ Java Client, sending real emails on CBS transaction events. digistack-notification-vN.ear cleanly undeployed from WAS.
+
+**Prerequisites:** v30.5 signed off. All 9 applications stable on the full estate.
+
+---
+
+### Sprint 1
+**Goal:** Set up IBM MQ Java Client listener in Tomcat.
+**Learning Objective:** Replacing a WAS MDB/JCA connector with a standalone IBM MQ Java Client listener thread.
+**WebSphere Admin:** Place com.ibm.mq.allclient.jar in Tomcat lib/; write ServletContextListener that starts the MQ listener thread on deploy and stops it on undeploy.
+**Deliverables:** Working MQ listener thread in Tomcat JVM consuming NOTIFICATION.QUEUE.
+**Acceptance Criteria:** Test message placed on NOTIFICATION.QUEUE is consumed by the Tomcat listener (confirmed via Tomcat catalina.out).
+
+---
+
+### Sprint 2
+**Goal:** Reconfigure JavaMail via notification.properties inside the WAR.
+**Learning Objective:** Replacing WAS JNDI Mail Session with WAR-internal property-file configuration.
+**App Dev:** notification.properties (SMTP host, port, credentials reference — no hardcoded credentials per STD Golden Rules).
+**WebSphere Admin:** Deploy digistack-notification WAR to Tomcat.
+**Deliverables:** Email delivered via Tomcat-hosted WAR on a CBS transaction event.
+**Acceptance Criteria:** A fund transfer on CBS triggers the MQ event; Tomcat listener consumes it; email arrives via the notification.properties SMTP config.
+
+---
+
+### Sprint 3
+**Goal:** Parallel-run validation — WAS EAR and Tomcat WAR both consuming simultaneously (UAT only).
+**Learning Objective:** Parallel-run discipline before decommission.
+**WebSphere Admin:** Confirm both consumers receive events during a controlled UAT window; verify no duplicate emails (one should be disabled during testing, then the WAS one turned off permanently).
+**Deliverables:** Parallel-run evidence in SetupDoc-v30.10.md.
+**Acceptance Criteria:** Tomcat WAR handles all events correctly; WAS EAR confirmed redundant.
+
+---
+
+### Sprint 4
+**Goal:** Decommission digistack-notification-vN.ear from WAS.
+**Learning Objective:** Graceful EAR undeploy from a running cluster with no service interruption.
+**WebSphere Admin:** Drain NOTIFICATION.QUEUE; undeploy EAR via Admin Console; remove WAS JNDI Mail Session (mail/NotificationMailSession); remove WAS MQ activation spec for NOTIFICATION.QUEUE; document in SetupDoc-v30.10.md.
+**Deliverables:** WAS Admin Console showing 6 EARs. JNDI resources for Notification Service removed.
+**Acceptance Criteria:** WAS Admin Console confirms EAR is gone; NOTIFICATION.QUEUE continues draining via Tomcat listener; no stuck messages.
+
+---
+
+### Sprint 5
+**Goal:** Package and confirm final Tomcat deployment.
+**WebSphere Admin:** Final Tomcat WAR deploy; IHS routing confirmed unchanged (Notification Service has no public subdomain — no IHS change needed).
+**Deliverables:** Final digistack-notification WAR in dsb-tomcat.
+**Acceptance Criteria:** digistack-notification WAR shows as deployed in Tomcat Manager; no IHS change required.
+
+---
+
+### Sprint 6
+**Goal:** Test cases for v30.10.
+**Deliverables:** TestCases-v30.10.md.
+**Acceptance Criteria:** T1 (fund transfer → email via Tomcat); T2 (WAS Admin Console — EAR gone); T3 (MQ queue depth drains correctly); T4 (Tomcat stop → messages queue in MQ → delivered on restart); T5 (deliberate SMTP misconfiguration → error in catalina.out, not WAS logs). All Critical/High pass.
+
+---
+
+### Sprint 7
+**Goal:** Sign off v30.10.
+**Deliverables:** SetupDoc-v30.10.md.
+**Acceptance Criteria:** SetupDoc complete; WAS EAR count confirmed 6; smoke test passes.
+
+---
+
+### Sprint 8
+**Goal:** Fault Injection for v30.10.
+**WebSphere Admin:** Inject: MQ listener thread silently dies inside Tomcat (e.g., connection factory misconfigured after a Tomcat restart). Raise incident from symptom (emails stop arriving, no WAS error — error is in catalina.out). Diagnose and restore.
+**Deliverables:** FaultDrill-v30.10.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored. Non-gating.
+
+---
+
+## Version 30.10 Deliverables
+- digistack-notification WAR (Tomcat)
+- SetupDoc-v30.10.md, TestCases-v30.10.md, FaultDrill-v30.10.md
+
+## Version 30.10 Exit Criteria
+- ✅ digistack-notification WAR deployed on dsb-tomcat and consuming NOTIFICATION.QUEUE
+- ✅ digistack-notification-vN.ear undeployed from WAS; WAS EAR count = 6
+- ✅ JNDI Mail Session and MQ activation spec removed from WAS
+- ✅ TP01 pipeline passed
+- ✅ Ready for v30.11
+
+---
+---
+
+# Version 30.11 — Reporting Service → Tomcat
+
+## Version Overview
+
+**Version Objective:** Migrate digistack-reporting-vN.ear off WebSphere and redeploy as a WAR on dsb-tomcat at reports.digistack.cloud.
+
+**Business Scope:** None — migration only.
+
+**WebSphere Focus:** JNDI DataSource migration (WAS Admin Console → Tomcat context.xml); selective WAS resource removal without touching CBS's DataSource; IHS virtual host routing update (WAS plugin → Tomcat ProxyPass); WAS EAR count drops from 6 to 5.
+
+**Expected Outcome:** digistack-reporting deployed on dsb-tomcat at reports.digistack.cloud, generating reports with read-only Oracle access via Tomcat JNDI DataSource. digistack-reporting-vN.ear cleanly undeployed from WAS.
+
+**Prerequisites:** v30.10 signed off. Tomcat estate stable with Notification Service running.
+
+---
+
+### Sprint 1
+**Goal:** Declare jdbc/ReportingDataSource in Tomcat context.xml (read-only Oracle, same JNDI name as WAS).
+**Learning Objective:** JNDI DataSource migration — same name, different declaration location.
+**WebSphere Admin:** Add Oracle JDBC driver (ojdbc8.jar) to Tomcat lib/; declare jdbc/ReportingDataSource in context.xml pointing at DIGISTACK_CBS PDB with read-only credentials (ReportingAlias equivalent).
+**Deliverables:** jdbc/ReportingDataSource live in Tomcat; test servlet confirms read-only Oracle connection.
+**Acceptance Criteria:** JNDI lookup from Tomcat returns a live connection to digistack_cbs (read-only); write attempt rejected by Oracle credentials.
+
+---
+
+### Sprint 2
+**Goal:** Deploy digistack-reporting WAR to Tomcat; confirm report generation.
+**App Dev:** Deploy reporting WAR (same report generation logic — no code change).
+**WebSphere Admin:** Deploy WAR to Tomcat; test Transaction Report and EOD Reconciliation Report generation end to end.
+**Deliverables:** Both reports generated from Tomcat-hosted WAR.
+**Acceptance Criteria:** Transaction Report and EOD Reconciliation Report both generate correctly from dsb-tomcat; no regression in report content or format.
+
+---
+
+### Sprint 3
+**Goal:** Update IHS routing — reports.digistack.cloud → Tomcat ProxyPass.
+**Learning Objective:** Switching a subdomain from WAS plugin routing to Tomcat reverse proxy on the same IHS instance.
+**WebSphere Admin:** Add VirtualHost block for reports.digistack.cloud in IHS httpd.conf with ProxyPass to dsb-tomcat:8080/digistack-reporting/; provision SSL cert for the new subdomain; reload IHS.
+**Deliverables:** reports.digistack.cloud resolving via IHS to Tomcat.
+**Acceptance Criteria:** https://reports.digistack.cloud loads from Tomcat; mobile/atm/card/branch subdomains unaffected.
+
+---
+
+### Sprint 4
+**Goal:** Decommission digistack-reporting-vN.ear from WAS.
+**WebSphere Admin:** Undeploy EAR from WAS Admin Console; remove jdbc/ReportingDataSource from WAS (important: jdbc/CBSDataSource must NOT be touched); document removal in SetupDoc-v30.11.md.
+**Deliverables:** WAS Admin Console showing 5 EARs. jdbc/ReportingDataSource removed from WAS only.
+**Acceptance Criteria:** WAS Admin Console confirms EAR gone; jdbc/CBSDataSource still present and operational; reports still generate from Tomcat.
+
+---
+
+### Sprint 5
+**Goal:** Package and confirm final state.
+**WebSphere Admin:** Final Tomcat WAR confirmation; IHS routing audit (reports → Tomcat, all WAS subdomains still via plugin).
+**Deliverables:** Final digistack-reporting WAR in dsb-tomcat.
+**Acceptance Criteria:** All subdomain routing correct; Branch Portal calling reports.digistack.cloud receives reports from Tomcat with no change to call contract.
+
+---
+
+### Sprint 6
+**Goal:** Test cases for v30.11.
+**Deliverables:** TestCases-v30.11.md.
+**Acceptance Criteria:** T1 (EOD Reconciliation Report from Branch Portal via Tomcat); T2 (large Transaction Report — no OOM in catalina.out); T3 (WAS Admin Console — EAR gone, jdbc/ReportingDataSource gone); T4 (jdbc/CBSDataSource still present); T5 (routing negative test — WAS plugin for reports fails); T6 (SSL check on reports.digistack.cloud). All Critical/High pass.
+
+---
+
+### Sprint 7
+**Goal:** Sign off v30.11.
+**Deliverables:** SetupDoc-v30.11.md.
+**Acceptance Criteria:** SetupDoc complete; WAS EAR count confirmed 5; smoke test passes.
+
+---
+
+### Sprint 8
+**Goal:** Fault Injection for v30.11.
+**WebSphere Admin:** Inject: jdbc/ReportingDataSource misconfigured in Tomcat context.xml (wrong password). Symptom: report generation fails with a JNDI/Oracle error in catalina.out. Diagnose and restore.
+**Deliverables:** FaultDrill-v30.11.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored. Non-gating.
+
+---
+
+## Version 30.11 Deliverables
+- digistack-reporting WAR (Tomcat)
+- Updated IHS httpd.conf (reports.digistack.cloud VirtualHost block), SSL cert export
+- SetupDoc-v30.11.md, TestCases-v30.11.md, FaultDrill-v30.11.md
+
+## Version 30.11 Exit Criteria
+- ✅ digistack-reporting WAR deployed on dsb-tomcat at reports.digistack.cloud
+- ✅ digistack-reporting-vN.ear undeployed from WAS; WAS EAR count = 5
+- ✅ jdbc/ReportingDataSource removed from WAS; jdbc/CBSDataSource untouched
+- ✅ IHS routing updated; SSL confirmed
+- ✅ TP01 pipeline passed
+- ✅ Ready for v30.12
+
+---
+---
+
+# Version 30.12 — Internet Banking Portal → Tomcat
+
+## Version Overview
+
+**Version Objective:** Migrate digistack-portal-vN.ear off WebSphere and redeploy as a WAR on dsb-tomcat, serving www.digistack.cloud via IHS reverse proxy. Highest operational care required — this is the primary customer-facing application.
+
+**Business Scope:** None — migration only.
+
+**WebSphere Focus:** Graceful undeploy of the primary customer-facing EAR; LTPA deprecation; JWT introduction for cross-service identity propagation to CBS; IHS plugin-cfg.xml update (Portal removed from plugin routing); WAS virtual host cleanup; WAS EAR count drops from 5 to 4.
+
+**Key Technical Challenge — LTPA to JWT:** LTPA is WAS-proprietary. Tomcat cannot issue or validate LTPA tokens. Replacement: JWT (JSON Web Token, open standard). Portal on Tomcat authenticates the customer (same login/MFA flow), generates a signed JWT using a shared secret with CBS, and sends it in Authorization: Bearer on every CBS REST call. CBS validates the JWT signature. Same trust model, open standard token. This is the standard real-world replacement when migrating Portal off WAS.
+
+**Expected Outcome:** digistack-portal deployed on dsb-tomcat serving www.digistack.cloud via IHS reverse proxy. JWT identity propagation to CBS confirmed. LTPA retired. digistack-portal-vN.ear cleanly undeployed from WAS.
+
+**Prerequisites:** v30.11 signed off. Internal services (Notification, Reporting) stable on Tomcat before the primary customer-facing application is moved.
+
+---
+
+### Sprint 1
+**Goal:** Implement JWT issuance in the Portal WAR and JWT validation in CBS.
+**Learning Objective:** Replacing WAS LTPA with JWT — the open-standard equivalent for Tomcat-hosted callers.
+**App Dev:** Portal: generate signed JWT on login (shared secret with CBS). CBS: validate JWT signature on every incoming request from Portal.
+**Deliverables:** JWT issued by Portal WAR; CBS validates it. LTPA no longer required for Portal→CBS calls.
+**Acceptance Criteria:** A test Portal login produces a valid JWT; CBS accepts the JWT and rejects a tampered one.
+
+---
+
+### Sprint 2
+**Goal:** Deploy digistack-portal WAR to Tomcat; smoke-test all screens.
+**WebSphere Admin:** Deploy WAR to Tomcat; configure Tomcat Host element in server.xml for www.digistack.cloud; set session timeout in web.xml.
+**Deliverables:** All Portal screens functional from Tomcat (Login, Dashboard, Balance, Transfer, Statement, Cards, Loans).
+**Acceptance Criteria:** Every Portal screen works correctly against CBS via JWT. No LTPA token involved in any request.
+
+---
+
+### Sprint 3
+**Goal:** Update IHS routing — www.digistack.cloud → Tomcat ProxyPass.
+**Learning Objective:** Cutting over the primary customer-facing subdomain from WAS plugin to Tomcat proxy — biggest IHS routing change in the entire roadmap.
+**WebSphere Admin:** Remove WebSpherePluginConfig directive from the www.digistack.cloud VirtualHost in IHS httpd.conf; replace with ProxyPass to dsb-tomcat:8080/digistack-portal/; reload IHS. Run in UAT first; cut production only after UAT sign-off.
+**Deliverables:** www.digistack.cloud served from Tomcat via IHS reverse proxy.
+**Acceptance Criteria:** Customer browser hits www.digistack.cloud → IHS → Tomcat → Portal WAR → CBS. No WAS plugin directive active for this domain.
+
+---
+
+### Sprint 4
+**Goal:** Decommission digistack-portal-vN.ear from WAS.
+**WebSphere Admin:** Undeploy EAR from WAS Admin Console; remove WAS virtual host default_host Portal context root entry; document LTPA retirement in SetupDoc-v30.12.md (Global Security → LTPA settings — retired, not just unused).
+**Deliverables:** WAS Admin Console showing 4 EARs. WAS LTPA configuration documented as retired.
+**Acceptance Criteria:** WAS Admin Console confirms EAR gone; www.digistack.cloud still fully functional from Tomcat; CBS still on WAS unaffected.
+
+---
+
+### Sprint 5
+**Goal:** Package and confirm final state.
+**WebSphere Admin:** Full IHS httpd.conf audit — all 4 WAS subdomains (CBS internal, card.digistack.cloud, branch.digistack.cloud, and any remaining plugin-routed paths) confirmed correct; all 5 Tomcat subdomains (www, mobile, atm, reports) confirmed ProxyPass; Notification Service (internal, no subdomain) confirmed.
+**Deliverables:** IHS routing audit document in SetupDoc-v30.12.md.
+**Acceptance Criteria:** IHS routing audit clean — no stale plugin directives for migrated apps; no Tomcat ProxyPass for WAS-hosted apps.
+
+---
+
+### Sprint 6
+**Goal:** Test cases for v30.12.
+**Deliverables:** TestCases-v30.12.md.
+**Acceptance Criteria:** T1 (customer login at www.digistack.cloud from Tomcat); T2 (fund transfer — Portal→CBS JWT→PaymentHub→CBS settle→Notification email); T3 (session timeout matches configured value); T4 (WAS Admin Console — Portal EAR gone); T5 (IHS httpd.conf — www VirtualHost has ProxyPass, no plugin directive); T6 (LTPA negative test — CBS rejects old-format LTPA token); T7 (CBS/PaymentHub/CardPortal/BranchPortal unaffected on WAS). All Critical/High pass.
+
+---
+
+### Sprint 7
+**Goal:** Sign off v30.12.
+**Deliverables:** SetupDoc-v30.12.md (with LTPA retirement note and IHS routing audit).
+**Acceptance Criteria:** SetupDoc complete; WAS EAR count confirmed 4; smoke test passes; LTPA documented as retired.
+
+---
+
+### Sprint 8
+**Goal:** Fault Injection for v30.12.
+**WebSphere Admin:** Inject: JWT shared secret mismatch between Portal WAR and CBS (rotate the secret on one side only). Symptom: customer login succeeds on Tomcat but every CBS call returns 401 Unauthorized. Diagnose from Portal logs vs CBS logs; restore by re-aligning the shared secret.
+**Deliverables:** FaultDrill-v30.12.md.
+**Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored. Non-gating.
+
+---
+
+## Version 30.12 Deliverables
+- digistack-portal WAR (Tomcat), JWT implementation (Portal + CBS side)
+- Updated IHS httpd.conf (www.digistack.cloud VirtualHost — ProxyPass replacing plugin directive)
+- SetupDoc-v30.12.md (with LTPA retirement note + IHS routing audit), TestCases-v30.12.md, FaultDrill-v30.12.md
+
+## Version 30.12 Exit Criteria
+- ✅ digistack-portal WAR deployed on dsb-tomcat at www.digistack.cloud
+- ✅ JWT identity propagation to CBS confirmed; LTPA retired
+- ✅ digistack-portal-vN.ear undeployed from WAS; WAS EAR count = 4
+- ✅ IHS routing audit clean
+- ✅ TP01 pipeline passed
+- ✅ Ready for v30.13
+
+---
+---
+
+# Version 30.13 — Migration Consolidation & Architecture Review
+
+## Version Overview
+
+**Version Objective:** No new migration. Verify the complete post-migration topology, update all architecture diagrams, run end-to-end integration tests across the 4-WAS + 5-Tomcat estate, produce the post-migration architecture document.
+
+**Business Scope:** None — consolidation and validation only.
+
+**WebSphere Focus:** Post-migration topology documentation; IHS httpd.conf audit; WAS Admin Console audit (exactly 4 EARs remain); end-to-end integration test; IBM MQ health check; Governing Rule negative test on all 5 Tomcat apps.
+
+**Expected Outcome:** Complete post-migration architecture document. All integration tests passing. WAS Admin Console shows exactly 4 EARs. IHS routing audit clean. Governing Rule verified by negative test on all 5 Tomcat apps.
+
+**Prerequisites:** v30.12 signed off. All three migrations complete.
+
+**Final Estate:**
+- WAS (4 EARs — permanent): CBS, Payment Hub, Card Portal, Branch Portal
+- Tomcat / dsb-tomcat (5 apps): Internet Banking Portal, Mobile Banking, ATM Simulator, Notification Service, Reporting Service
+
+---
+
+### Sprint 1
+**Goal:** Update 08_Deployment_Architecture.md to reflect 4 WAS EARs + 5 Tomcat apps.
+**WebSphere Admin:** Revise the deployment architecture diagram; update IHS routing table; update VM layout (dsb-tomcat now hosts 5 apps).
+**Deliverables:** Updated 08_Deployment_Architecture.md.
+**Acceptance Criteria:** Diagram correctly shows 4 WAS EARs on the cluster and 5 Tomcat apps on dsb-tomcat, with correct IHS routing for all 9.
+
+---
+
+### Sprint 2
+**Goal:** IHS httpd.conf audit — confirm no stale WAS plugin directives remain for migrated apps.
+**WebSphere Admin:** Review every VirtualHost block in httpd.conf; confirm www / mobile / atm / reports use ProxyPass to Tomcat; confirm card and branch use the WAS plugin; confirm Notification Service (internal) has no VirtualHost entry.
+**Deliverables:** IHS audit section in SetupDoc-v30.13.md.
+**Acceptance Criteria:** Zero stale directives; zero Tomcat proxy for WAS-hosted apps.
+
+---
+
+### Sprint 3
+**Goal:** WAS Admin Console audit — confirm exactly 4 EARs, no orphaned JNDI resources.
+**WebSphere Admin:** List all deployed applications in WAS Admin Console; confirm exactly CBS, Payment Hub, Card Portal, Branch Portal; confirm no orphaned DataSources, Mail Sessions, or MQ activation specs from migrated services remain.
+**Deliverables:** WAS console audit section in SetupDoc-v30.13.md.
+**Acceptance Criteria:** Exactly 4 EARs visible; zero orphaned JNDI resources.
+
+---
+
+### Sprint 4
+**Goal:** End-to-end integration test — full banking day across 4-WAS + 5-Tomcat estate.
+**WebSphere Admin:** Execute: Customer login (Portal-Tomcat) → Fund Transfer (CBS-WAS → PaymentHub-WAS) → Notification email (Notification-Tomcat) → Branch BOD at 08:00 (Branch-WAS → CBS-WAS) → EOD at 18:00 (Branch-WAS → CBS-WAS → Reporting-Tomcat reconciliation report); Card Block via Card Portal (CardPortal-WAS) → ATM rejects blocked card (ATM-Tomcat → CBS-WAS).
+**Deliverables:** Integration test results in TestCases-v30.13.md.
+**Acceptance Criteria:** Every step in the integration chain passes; all 9 applications respond correctly in their new deployment positions.
+
+---
+
+### Sprint 5
+**Goal:** Governing Rule negative test on all 5 Tomcat apps.
+**WebSphere Admin:** Prove no Tomcat app can write to digistack_cbs directly — attempt a direct JDBC connection from each Tomcat app's test context; confirm all are rejected (no Oracle credentials in any Tomcat app config).
+**Deliverables:** Governing Rule negative test results in TestCases-v30.13.md.
+**Acceptance Criteria:** All 5 Tomcat apps confirmed unable to write to digistack_cbs directly; zero direct JDBC connectivity from any Tomcat app.
+
+---
+
+### Sprint 6
+**Goal:** Test cases for v30.13.
+**Deliverables:** TestCases-v30.13.md (complete — combining Sprint 4 integration test and Sprint 5 Governing Rule negative test).
+**Acceptance Criteria:** All Critical/High pass. Full integration chain verified. Governing Rule verified. WAS console audit clean. IHS audit clean.
+
+---
+
+### Sprint 7
+**Goal:** Sign off v30.13.
+**Deliverables:** SetupDoc-v30.13.md (post-migration architecture document).
+**Acceptance Criteria:** SetupDoc complete; WAS EAR count confirmed 4; Tomcat app count confirmed 5; all integration and negative tests signed off.
+
+---
+
+### Sprint 8
+**Goal:** Final migration retrospective.
+**WebSphere Admin:** Write a one-page retrospective in SetupDoc-v30.13.md: what changed (deployment placement, not data architecture), what stayed the same (CBS single-writer rule, all contracts, all database structures), and what the migration taught (LTPA→JWT, MDB→MQ Java Client, the difference between a WAS EAR and a Tomcat WAR lifecycle).
+**Deliverables:** Migration retrospective section in SetupDoc-v30.13.md.
+**Acceptance Criteria:** Retrospective present and signed off. This is the final deliverable of P03.
+**Enterprise Outcome:** P03 complete in full — 9-application estate operational across 4 WAS EARs + 5 Tomcat apps, CBS Governing Rule intact throughout.
+
+---
+
+## Version 30.13 Deliverables
+- Updated 08_Deployment_Architecture.md
+- SetupDoc-v30.13.md (post-migration architecture document + migration retrospective)
+- TestCases-v30.13.md (integration test chain + Governing Rule negative tests)
+
+## Version 30.13 Exit Criteria
+- ✅ Post-migration architecture document complete
+- ✅ IHS and WAS Admin Console audits clean
+- ✅ End-to-end integration test passed across 4-WAS + 5-Tomcat estate
+- ✅ Governing Rule verified by negative test on all 5 Tomcat apps
+- ✅ Migration retrospective complete
+- ✅ P03 fully complete
+
+---
+---
+
 # P03 — Overall Completion Summary
 
 **All 8 versions (23–30), 64 sprints total, complete.**
 
 ## P03 Final Application State
+
+**Pre-migration (after v30, before v30.10):**
 Total deployable applications: Internet Banking Portal, CBS, Payment Hub, Notification Service, Reporting Service, Branch Portal, Card Portal (7 WAS EARs) + Mobile Banking, ATM Simulator (2 Tomcat apps) = **9 distinct deployable applications**.
+
+**Post-migration (after v30.13):**
+WAS (4 EARs — permanent): CBS, Payment Hub, Card Portal, Branch Portal.
+Tomcat / dsb-tomcat (5 apps): Internet Banking Portal, Mobile Banking, ATM Simulator, Notification Service, Reporting Service.
+Total: 4 WAS EARs + 5 Tomcat apps = **9 distinct deployable applications** (count unchanged; only server placement changes).
 
 **Governing Rule:** Only CBS writes to `digistack_cbs`. Other applications
 must not perform business-data writes. They either invoke CBS services,
@@ -1593,7 +2106,7 @@ CIF, Account, Transaction, Card, Operations, Loan. These are internal CBS
 modules and do not become separately deployable applications in P03.
 
 ## Carried Forward to P03.2 / P03.1
-CBS as system of record, Payment Hub, Notification Service, Reporting Service, the two Tomcat-based channel simulators (Mobile/ATM), the WAS-hosted Card Portal, Branch Portal, and Loan Servicing all become subjects of Interview Preparation's Project Walkthrough, WebSphere Administration Q&A, Production Support, Troubleshooting Scenarios, and Banking Production Environment Q&A — followed by P04's observability instrumentation (APM, distributed tracing, chaos testing) once P03.1 is complete.
+CBS as system of record, Payment Hub, the WAS-hosted Card Portal, Branch Portal, and Loan Servicing all become subjects of Interview Preparation's Project Walkthrough, WebSphere Administration Q&A, Production Support, Troubleshooting Scenarios, and Banking Production Environment Q&A. Notification Service, Reporting Service, Internet Banking Portal, Mobile Banking, and ATM Simulator enter P03.2/P03.1 as Tomcat-hosted applications following the v30.10–v30.13 Migration Series. The post-migration topology (4 WAS EARs + 5 Tomcat apps) is the topology P03.2 and P03.1 reference throughout — followed by P04's observability instrumentation (APM, distributed tracing, chaos testing) once P03.1 is complete.
 
 ---
 

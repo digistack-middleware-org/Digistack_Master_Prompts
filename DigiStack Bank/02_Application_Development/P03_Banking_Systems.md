@@ -13,7 +13,7 @@ CONTEXT_PACK
 
 
 Exports:
-Versions 23-30 (incl. suffix-slot v30.5 Expert War-Game & Final Exam)
+Versions 23-30 (incl. suffix-slot v30.5 Expert War-Game & Final Exam; v30.10-v30.13 WAS-to-Tomcat Migration Series)
 Core Banking System (CBS) — sole writer of digistack_cbs
 CIF & Account Lifecycle
 Payment Hub (NEFT/IMPS)
@@ -45,6 +45,19 @@ P03 → P03.2 → P03.1 → P04. Their scope is defined in their own Part
 files; P03 imposes no additional prerequisites beyond its own Completion
 Checklist.
 
+Migration Series Note (added P03 v30.10)
+-----------------------------------------
+Versions 30.10–30.13 form a WAS-to-Tomcat Migration Series appended after
+v30.5's final exam. They migrate three WAS EARs (Notification Service,
+Reporting Service, Internet Banking Portal) to Apache Tomcat across four
+sub-versions (30.10, 30.11, 30.12, 30.13-consolidation). Branch Portal
+is deliberately excluded — its WAS EJB Timer-driven BOD/EOD batch jobs
+require enterprise middleware and are not migrated. By end of v30.13,
+the WAS EAR count reduces from 7 to 4, and the Tomcat app count grows
+from 2 to 5. CBS, Payment Hub, Card Portal, and Branch Portal remain on
+WAS permanently for the life of this roadmap. The CBS Governing Rule
+(only CBS writes to digistack_cbs) is unchanged throughout.
+
 
 ---
 
@@ -67,7 +80,10 @@ Two-App Architecture (Evolves in This Part)
 - NEW in this Part — Channel Simulators: Mobile Banking and ATM are built
   as small, separate applications deployed on Apache Tomcat (not
   WebSphere), each under its own subdomain, each calling CBS via REST/SOAP
-  exactly like any external client would. Card Portal, by contrast, is
+  exactly like any external client would. Three additional services
+  (Notification Service, Reporting Service, Internet Banking Portal) are
+  subsequently migrated to Tomcat in the v30.10–30.13 Migration Series
+  appended after v30.5. Card Portal, by contrast, is
   deployed on WebSphere — see "Why Card Portal Belongs on WAS" below. See
   the Channel Simulator Standard for the two Tomcat apps.
 - NEW in this Part — Satellite Services: Payment Hub, Notification
@@ -210,11 +226,12 @@ Applied per service, from Version 23 onward:
  Never touches digistack_cbs directly 
 |
 |
- Mobile / ATM (Tomcat) 
+| Mobile / ATM / Portal / Notification / Reporting (Tomcat) 
 |
- REST/SOAP calls into CBS 
+ REST/SOAP calls into CBS (Portal, Mobile, ATM); MQ event consumption (Notification); read-only DB reads (Reporting) 
 |
- Never touches digistack_cbs directly 
+ Never touches digistack_cbs directly for business-data writes 
+|
 |
 |
  Card Portal (WAS) 
@@ -244,7 +261,7 @@ deployed as its own WebSphere EAR (digistack-cardportal-vN.ear) on the same ND c
 Notification Service, and Reporting Service (Branch Portal joins at v29) — not on Tomcat.
 
 
-This raises the WAS EAR count to six (seven once Branch Portal joins at v29 — i.e., seven by end of this Part), giving practice
+This raises the WAS EAR count to six (seven once Branch Portal joins at v29 — i.e., seven by end of this Part; reduced to four by end of v30.13 after the Migration Series retires three EARs to Tomcat), giving practice
 across: multiple EAR deployments, context roots, virtual hosts, classloader
 isolation, shared libraries, security roles, independent deployment/rollback
 per application, application startup order, cluster deployment, session
@@ -1428,11 +1445,15 @@ Internet Banking Mobile Banking ATM Sim Card Portal
                 (dedicated CBS database — CBS is the
                    ONLY application that writes here)
 
-Total deployable applications by end of this Part: Internet Banking
-Portal, CBS, Payment Hub, Notification Service, Reporting Service, Branch
-Portal, Card Portal (7 WAS EARs) + Mobile Banking, ATM Simulator (2 Tomcat
-apps) = 9 distinct deployable applications, all governed by a single rule
-that Only CBS performs business-data writes to digistack_cbs.
+Note: The diagram above reflects the estate at end of v30 (pre-migration, 7 WAS EARs + 2 Tomcat apps). After the v30.10–v30.13 Migration Series, Internet Banking Portal, Notification Service, and Reporting Service move to Tomcat — the cluster box reduces to 4 EARs (CBS, Payment Hub, Card Portal, Branch Portal) and the Tomcat tier expands to 5 apps. The Governing Rule and all request flows are unchanged.
+
+Total deployable applications by end of this Part (v30): Internet Banking
+Portal, CBS, Payment Hub, Notification Service, Reporting Service,
+Branch Portal, Card Portal (7 WAS EARs) + Mobile Banking, ATM Simulator
+(2 Tomcat apps) = 9 distinct deployable applications. By end of v30.13
+(Migration Series): 4 WAS EARs + 5 Tomcat apps = 9 applications, same
+count, different placement. All governed by a single rule: Only CBS
+performs business-data writes to digistack_cbs.
 
 ---
 
@@ -1483,6 +1504,195 @@ question gets pulled from.
 
 ---
 
+Version 30.10 — Notification Service → Tomcat
+------------------------------------------------
+Objective: Migrate digistack-notification-vN.ear off WebSphere and
+redeploy as digistack-notification WAR on dsb-tomcat. No change to CBS,
+no broken contracts, no customer-visible impact.
+
+Prerequisite: v30.5 Final Exam passed. All 9 applications stable on the
+full WAS+Tomcat estate before any EAR is retired.
+
+What Changes:
+- digistack-notification-vN.ear undeployed from WAS ND Cluster
+- MDB (WAS JCA MQ connector) replaced by standalone IBM MQ Java Client
+  listener thread running inside Tomcat (ServletContextListener)
+- JavaMail reconfigured via notification.properties inside the WAR
+  (replaces WAS JNDI Mail Session mail/NotificationMailSession)
+- WAS MQ activation spec for NOTIFICATION.QUEUE removed
+
+What Does NOT Change:
+- IBM MQ queue name: NOTIFICATION.QUEUE — unchanged
+- CBS publishes to the same queue — CBS is untouched
+- Email/SMS logic — same code, same behaviour
+- No public subdomain; no IHS routing change needed (internal service)
+
+Request Flow After Migration:
+CBS (publishes event) → IBM MQ (NOTIFICATION.QUEUE)
+→ MQ Java Client listener (Tomcat JVM)
+→ JavaMail (notification.properties SMTP)
+→ Customer Email / SMS Gateway
+
+Topics Covered: Graceful EAR undeploy from running WAS cluster; JNDI
+Mail Session retirement; MQ activation spec removal; IBM MQ Java Client
+setup in Tomcat (com.ibm.mq.allclient.jar in lib/); background listener
+thread lifecycle via ServletContextListener; heterogeneous topology —
+WAS EAR count drops to 6, Tomcat app count rises to 3.
+
+Sprint Deliverable: digistack-notification deployed on dsb-tomcat,
+consuming from NOTIFICATION.QUEUE via IBM MQ Java Client, sending real
+emails on CBS transaction events. digistack-notification-vN.ear cleanly
+undeployed from WAS. WAS EAR count: 6.
+
+---
+
+Version 30.11 — Reporting Service → Tomcat
+--------------------------------------------
+Objective: Migrate digistack-reporting-vN.ear off WebSphere and redeploy
+as digistack-reporting WAR on dsb-tomcat at reports.digistack.cloud.
+
+Prerequisite: v30.10 complete. Tomcat estate stable with Notification
+Service running.
+
+What Changes:
+- digistack-reporting-vN.ear undeployed from WAS ND Cluster
+- JNDI DataSource jdbc/ReportingDataSource removed from WAS Admin Console
+  and re-declared in Tomcat context.xml (same JNDI name — zero code change)
+- ojdbc8.jar moved to Tomcat lib/
+- IHS VirtualHost for reports.digistack.cloud updated: WAS plugin
+  directive removed, ProxyPass to Tomcat added
+- SSL cert provisioned for reports.digistack.cloud on existing IHS instance
+  (same process as mobile/atm subdomains at v26/v27)
+
+What Does NOT Change:
+- JNDI name jdbc/ReportingDataSource — same name, new location
+- Oracle read-only credentials (ReportingAlias) — unchanged
+- Report generation logic (PDF/CSV) — untouched
+- jdbc/CBSDataSource in WAS — must NOT be touched (CBS still uses it)
+- Branch Portal calling reports.digistack.cloud — same URL, no change
+
+Topics Covered: JNDI DataSource migration (WAS Admin Console →
+Tomcat context.xml); selective WAS resource removal without disturbing
+CBS DataSource; IHS virtual host routing update (WAS plugin → Tomcat
+ProxyPass); SSL cert provisioning for new internal subdomain; WAS EAR
+count drops to 5, Tomcat app count rises to 4.
+
+Sprint Deliverable: digistack-reporting deployed on dsb-tomcat at
+reports.digistack.cloud, generating reports with read-only Oracle access
+via Tomcat JNDI DataSource. digistack-reporting-vN.ear cleanly undeployed
+from WAS. WAS EAR count: 5.
+
+---
+
+Version 30.12 — Internet Banking Portal → Tomcat
+--------------------------------------------------
+Objective: Migrate digistack-portal-vN.ear off WebSphere and redeploy as
+digistack-portal WAR on dsb-tomcat, serving www.digistack.cloud via IHS
+reverse proxy to Tomcat.
+
+Prerequisite: v30.11 complete. Internal services (Notification, Reporting)
+stable on Tomcat before the primary customer-facing application is moved.
+
+Key Technical Challenge — LTPA to JWT:
+LTPA (Lightweight Third Party Authentication) is WAS-proprietary. The
+Portal on WAS issued LTPA tokens; CBS on WAS trusted them because both
+are in the same WAS cell. Tomcat cannot issue or validate LTPA tokens.
+Replacement: JWT (JSON Web Token) — open standard, works from any JVM.
+- Portal on Tomcat authenticates the customer (same login/MFA flow)
+- Portal generates a signed JWT using a shared secret with CBS
+- Portal sends JWT in Authorization: Bearer header on every CBS REST call
+- CBS validates the JWT signature using the shared key
+- Same trust model, open standard token
+This is the standard real-world replacement when migrating Portal off WAS.
+
+What Changes:
+- digistack-portal-vN.ear undeployed from WAS ND Cluster
+- LTPA token issuance retired; JWT identity propagation to CBS introduced
+- IHS VirtualHost for www.digistack.cloud updated: WAS plugin directive
+  removed, ProxyPass to Tomcat added (www.digistack.cloud has been
+  plugin-routed since P01 v8 — this is the first cutover to Tomcat proxy)
+- WAS virtual host default_host Portal context root entry removed
+- WAS Global Security LTPA configuration retired (documented in
+  SetupDoc-v30.12.md)
+
+What Does NOT Change:
+- Customer login flow — same screens, same MFA behaviour
+- All CBS REST/SOAP call URLs and contracts — unchanged
+- www.digistack.cloud DNS — same URL for customers
+- SSL cert on IHS — same cert, no reprovisioning needed
+
+Cutover Discipline (highest care — customer-facing):
+Run parallel in UAT first. IHS routes UAT traffic to Tomcat Portal while
+WAS Portal still serves production. Only after UAT sign-off: update
+production IHS httpd.conf, verify all screens, then undeploy WAS EAR.
+
+Topics Covered: Graceful undeploy of primary customer-facing EAR; LTPA
+deprecation and JWT introduction for cross-service identity propagation;
+IHS plugin-cfg.xml update (Portal removed from plugin routing); WAS
+virtual host cleanup; parallel-run cutover discipline; WAS EAR count
+drops to 4, Tomcat app count rises to 5.
+
+Sprint Deliverable: digistack-portal deployed on dsb-tomcat serving
+www.digistack.cloud via IHS reverse proxy. JWT identity propagation to
+CBS confirmed. LTPA retired. digistack-portal-vN.ear cleanly undeployed
+from WAS. WAS EAR count: 4.
+
+---
+
+Version 30.13 — Migration Consolidation & Architecture Review
+--------------------------------------------------------------
+Objective: No new migration. Verify the complete post-migration topology,
+update all architecture diagrams, run end-to-end integration test across
+the 4-WAS + 5-Tomcat estate, produce the post-migration architecture
+document.
+
+Prerequisite: v30.12 complete. All three migrations done.
+
+Final Estate After This Version:
+
+WAS ND Cluster (4 EARs — permanent, never migrated):
+  digistack-cbs-vN.ear          — Core Banking System
+  digistack-paymenthub-vN.ear   — Payment Hub
+  digistack-cardportal-vN.ear   — Card Portal
+  digistack-branch-vN.ear       — Branch Portal (BOD/EOD — stays on WAS)
+
+Tomcat / dsb-tomcat (5 apps):
+  digistack-portal              — www.digistack.cloud
+  digistack-mobile              — mobile.digistack.cloud
+  digistack-atm-sim             — atm.digistack.cloud
+  digistack-notification        — (internal, no subdomain)
+  digistack-reporting           — reports.digistack.cloud
+
+IHS Routing After Consolidation:
+  www.digistack.cloud      → ProxyPass → Tomcat
+  mobile.digistack.cloud   → ProxyPass → Tomcat
+  atm.digistack.cloud      → ProxyPass → Tomcat
+  reports.digistack.cloud  → ProxyPass → Tomcat
+  card.digistack.cloud     → WAS Plugin → WAS Cluster
+  branch.digistack.cloud   → WAS Plugin → WAS Cluster
+  (CBS, PaymentHub — internal, no public subdomain)
+
+Governing Rule — Unchanged Throughout:
+Only CBS writes to digistack_cbs. Every migrated Tomcat application
+still calls CBS via REST/SOAP. The migration moved where apps run,
+not who owns the data.
+
+Topics Covered: Post-migration topology documentation (update
+08_Deployment_Architecture.md to reflect 4 WAS EARs + 5 Tomcat apps);
+IHS httpd.conf audit — confirm no stale WAS plugin directives remain for
+migrated apps; WAS Admin Console audit — confirm only 4 EARs remain, no
+orphaned JNDI resources; end-to-end integration test across full estate;
+IBM MQ health check (Notification and Branch Portal both consuming their
+queues correctly); Governing Rule negative test (no Tomcat app can write
+to digistack_cbs directly).
+
+Sprint Deliverable: Complete post-migration architecture document.
+All integration tests passing. WAS Admin Console shows exactly 4 EARs.
+IHS routing audit clean. Governing Rule verified by negative test on all
+5 Tomcat apps. TestCases-v30.13.md signed off.
+
+---
+
 Completion Checklist
 ------------------------
 □ Governing Rule enforced: only CBS writes to digistack_cbs; Payment Hub,
@@ -1527,6 +1737,22 @@ Completion Checklist
 □ Promoted Dev → UAT → Prod per Environment Promotion Standards,
   part3-release tag applied (all 9 applications — 7 WAS EARs + 2 Tomcat
   apps — promoted together, per environment)
+□ v30.10 — Notification Service migrated to Tomcat; digistack-notification
+  EAR undeployed from WAS; MQ Java Client listener confirmed consuming
+  NOTIFICATION.QUEUE; WAS EAR count = 6
+□ v30.11 — Reporting Service migrated to Tomcat; digistack-reporting EAR
+  undeployed from WAS; jdbc/ReportingDataSource removed from WAS;
+  reports.digistack.cloud IHS routing updated to Tomcat proxy; WAS EAR count = 5
+□ v30.12 — Internet Banking Portal migrated to Tomcat; digistack-portal
+  EAR undeployed from WAS; LTPA retired; JWT identity propagation to CBS
+  confirmed; www.digistack.cloud IHS routing updated to Tomcat proxy;
+  WAS EAR count = 4
+□ v30.13 — Migration consolidation complete; post-migration architecture
+  document produced; end-to-end integration test passed across 4-WAS +
+  5-Tomcat estate; Governing Rule verified by negative test on all
+  Tomcat apps
+□ Branch Portal — confirmed NOT migrated; remains on WAS permanently;
+  BOD/EOD EJB Timer batch jobs require enterprise middleware
 
 Module Sufficiency Review — Resolved
 -----------------------------------------
@@ -1580,23 +1806,28 @@ Decisions reflected in this version of the document:
 
 Application State After This Part
 --------------------------------------
-Total deployable applications: Internet Banking Portal, CBS, Payment Hub,
-Notification Service, Reporting Service, Branch Portal, Card Portal (7 WAS
-EARs) + Mobile Banking, ATM Simulator (2 Tomcat apps) = 9 distinct
-deployable applications.
+Total deployable applications at end of v30 (pre-migration): Internet
+Banking Portal, CBS, Payment Hub, Notification Service, Reporting Service,
+Branch Portal, Card Portal (7 WAS EARs) + Mobile Banking, ATM Simulator
+(2 Tomcat apps) = 9 distinct deployable applications.
+
+After v30.13 Migration Series: CBS, Payment Hub, Card Portal, Branch
+Portal (4 WAS EARs) + Internet Banking Portal, Mobile Banking, ATM
+Simulator, Notification Service, Reporting Service (5 Tomcat apps) =
+9 distinct deployable applications (count unchanged; only server
+placement changes).
 
 Governing Rule in force: only CBS writes to digistack_cbs — every other
 application invokes CBS services or consumes CBS-published events.
 
 Carried Forward to P04
 ---------------------------
-CBS as system of record, Payment Hub, Notification Service, Reporting
-Service, the two Tomcat-based channel simulators (Mobile/ATM), the
-WAS-hosted Card Portal, Branch Portal, and Loan Servicing all become
-subjects of observability instrumentation (APM, distributed tracing, chaos
-testing) in P04. The heterogeneous WAS+Tomcat topology, combined with 9
-independently deployed applications all communicating through CBS, is
-especially valuable here — distributed tracing across this many services,
-on two different application server products, is closer to real
-enterprise observability work than a single-vendor, single-app stack
-would be.
+CBS as system of record, Payment Hub, the WAS-hosted Card Portal and
+Branch Portal, and Loan Servicing all become subjects of observability
+instrumentation (APM, distributed tracing, chaos testing) in P04.
+Notification Service, Reporting Service, Internet Banking Portal, Mobile
+Banking, and ATM Simulator enter P04 as Tomcat-hosted applications
+following the v30.10–30.13 Migration Series. The heterogeneous topology (4 WAS EARs + 5 Tomcat apps) is unchanged at
+P04 start. Distributed tracing across this many services — on two different
+application server products — is closer to real enterprise observability
+work than a single-vendor, single-app stack would be.
