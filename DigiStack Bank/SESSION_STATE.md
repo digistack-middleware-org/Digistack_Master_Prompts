@@ -10,7 +10,7 @@ Title: Session State — Global Pointer
 
 Folder:   02_Application_Development/
 Part:     P01 — Foundation
-Version:     v10 — Users & Groups
+Version:     v11 — SSL (HTTPS at the Web Tier)
 Sprint:   Sprint 1
 Status:   NOT YET STARTED
 VM Status: dsb-dmgr ON | dsb-node02 ON | dsb-ihs ON | dsb-db ON
@@ -133,4 +133,4 @@ At each version sign-off, change:
 - Status to NOT YET STARTED
 - VM Status if a new VM powered on this version
 
-Last Updated: 2026-09-30
+Last Updated: 2026-10-02
