@@ -1,64 +1,64 @@
-# Current Sprint — Version 11 — SSL (HTTPS at the Web Tier)
+# Current Sprint — Version 12 — WAS SSL Configuration (End-to-End)
 
 ## Version Overview
-**Objective:** Move all existing pages to HTTPS; establish certificates, keystore/truststore, certificate chain fundamentals.
-**Business Scope:** Zero new functionality. All existing pages move to HTTPS.
-**WebSphere Focus:** SSL Basics, Certificates, KeyStore, TrustStore, HTTPS, Certificate Chains.
-**Expected Outcome:** Self-signed certificate generated/imported; HTTPS enforced on IHS; HTTP redirects to HTTPS.
-**Prerequisites:** P01 v10 signed off.
+**Objective:** Extend v11's SSL to the full hop chain (IHS↔plugin↔AppServer↔DB) with mTLS on ≥1 internal hop.
+**Business Scope:** Zero new functionality.
+**WebSphere Focus:** SSL Repertoires, NodeDefaultSSLSettings, CellDefaultSSLSettings, Mutual SSL (mTLS), Plugin SSL, Certificate Renewal, SSL Troubleshooting.
+**Expected Outcome:** SSL end-to-end; mTLS on ≥1 internal hop; cert expiry/renewal process documented and tested.
+**Prerequisites:** P01 v11 signed off.
 
 ### Sprint 1
-**Goal:** Generate a self-signed certificate; configure keystore/truststore.
-**WebSphere Admin:** Generate cert for `www.digistack.cloud` (`digistack-ihs-webtier.crt`, per CI01); populate IHS KeyStore/TrustStore.
-**Acceptance Criteria:** Cert details (CN, validity) confirmed correct.
+**Goal:** Configure the IHS plugin↔AppServer SSL hop.
+**WebSphere Admin:** Configure plugin SSL settings for HTTPS transport; regenerate/propagate plugin-cfg.xml.
+**Acceptance Criteria:** Plugin logs confirm HTTPS used for IHS→AppServer hop.
 
 ### Sprint 2
-**Goal:** Configure IHS to serve HTTPS on port 443.
-**WebSphere Admin:** Configure IHS `httpd.conf` for SSL; restart IHS; confirm HTTPS reachable.
-**Acceptance Criteria:** Home page loads over `https://`.
+**Goal:** Configure SSL Repertoires and Cell/Node Default SSL Settings.
+**WebSphere Admin:** Configure `NodeDefaultSSLSettings`/`CellDefaultSSLSettings`; create dedicated SSL Repertoire for internal traffic.
+**Acceptance Criteria:** Repertoire correctly referenced by both members.
 
 ### Sprint 3
-**Goal:** Enforce HTTP → HTTPS redirect.
-**WebSphere Admin:** Configure IHS redirect rule (port 80 → 443).
-**Acceptance Criteria:** `http://` requests redirect cleanly to `https://`, path preserved.
+**Goal:** Enable mutual TLS (mTLS) on the AppServer↔DB hop.
+**WebSphere Admin:** Configure PostgreSQL to require client cert auth; configure `jdbc/BankDS` to present a client cert.
+**Acceptance Criteria:** Connection succeeds only with correct cert; wrong/missing cert rejected.
 
 ### Sprint 4
-**Goal:** Validate certificate chain trust; re-test all existing pages over HTTPS.
-**WebSphere Admin:** Walk through cert chain validation; re-run Login, Deposit/Withdraw, Freeze/Unfreeze under HTTPS.
-**Acceptance Criteria:** All features function over HTTPS; no mixed-content warnings.
+**Goal:** Validate the full end-to-end SSL chain; re-test all features.
+**WebSphere Admin:** Trace request end-to-end confirming SSL/mTLS at every hop; deliberately break one hop, diagnose via logs.
+**Acceptance Criteria:** All features function over full SSL chain; deliberate break correctly diagnosed.
 
 ### Sprint 5
-**Goal:** Package/deploy `digistack-bank-v11.ear`; update Certificate Inventory.
-**WebSphere Admin:** Deploy v11 (unchanged app); add `digistack-ihs-webtier.crt` to CI01 §5.2.
-**Acceptance Criteria:** App unchanged functionally; cert entry recorded with Annual renewal cadence.
+**Goal:** Package/deploy `digistack-bank-v12.ear`; document/test certificate renewal.
+**WebSphere Admin:** Deploy v12; perform deliberate cert renewal (internal-hop cert), confirm zero downtime.
+**Acceptance Criteria:** Renewal completes with no interruption; CI01 updated (`digistack-mtls-internal-hop.crt`).
 
 ### Sprint 6
-**Goal:** Write and execute test cases for Version 11.
+**Goal:** Write and execute test cases for Version 12.
 **Learning Objective:** Test Case discipline (TCS01/TCS02).
-**Deliverables:** TestCases-v11.md (including TP01 Pipeline Results section).
-**WebSphere Admin:** Execute TP01_Test_Pipeline.md stages 1–5 (DEV → SIT → UAT → PRE-PROD → PROD) and record every stage in the "TP01 Pipeline Results — v11" table.
+**Deliverables:** TestCases-v12.md (including TP01 Pipeline Results section).
+**WebSphere Admin:** Execute TP01_Test_Pipeline.md stages 1–5 (DEV → SIT → UAT → PRE-PROD → PROD) and record every stage in the "TP01 Pipeline Results — v12" table.
 **Acceptance Criteria:** All Critical/High test cases pass per TCS01 §2.7; all TP01 pipeline stages Pass (Critical/High) per TP01 R3.
-**Enterprise Outcome:** Version 11 test coverage complete.
+**Enterprise Outcome:** Version 12 test coverage complete.
 
 ### Sprint 7
-**Goal:** Sign off Version 11.
+**Goal:** Sign off Version 12.
 **Learning Objective:** SetupDoc discipline (SDD01).
 **WebSphere Admin:** Capture backupConfig baseline; final smoke test.
-**Deliverables:** SetupDoc-v11.md.
+**Deliverables:** SetupDoc-v12.md.
 **Acceptance Criteria:** SetupDoc complete and followed start to finish; backupConfig captured; smoke test passes.
-**Enterprise Outcome:** Version 11 signed off.
+**Enterprise Outcome:** Version 12 signed off.
 
 ### Sprint 8
-**Goal:** Fault Injection + Incident Simulation for Version 11.
+**Goal:** Fault Injection + Incident Simulation for Version 12.
 **Learning Objective:** Real fault diagnosis against a live broken environment (PIS01/FIS01).
 **WebSphere Admin:** Phase 1 — inject a realistic fault tied to this version's topic. Phase 2 — incident ticket raised from real symptoms. Phase 3 — investigate live, perform RCA, restore environment.
-**Deliverables:** FaultDrill-v11.md.
+**Deliverables:** FaultDrill-v12.md.
 **Acceptance Criteria:** Fault injected, incident raised, RCA completed, environment restored to known-good state.
-**Enterprise Outcome:** Version 11 fault drill complete. Non-gating — does not block sign-off.
+**Enterprise Outcome:** Version 12 fault drill complete. Non-gating — does not block sign-off.
 
-**Version 11 Deliverables:** `digistack-bank-v11.ear`, SetupDoc-v11.md, TestCases-v11.md, FaultDrill-v11.md, IHS SSL config.
-**Exit Criteria (target, not yet verified):** IHS HTTPS on port 443 operational; certificate and truststore configuration verified; HTTP → HTTPS redirect working with path preservation; all existing application features function over HTTPS; Smoke passed; Fault drill complete (Sprint 8, non-gating).
-**Lessons Learned:** Web-tier SSL is distinct from end-to-end SSL (deferred to v12).
-**Technical Debt:** Self-signed cert only; internal hops beyond IHS unencrypted until v12.
+**Version 12 Deliverables:** `digistack-bank-v12.ear`, SetupDoc-v12.md, TestCases-v12.md, FaultDrill-v12.md, plugin SSL/SSL Repertoires/mTLS config.
+**Exit Criteria (target, not yet verified):** IHS → plugin → AppServer → DB SSL path verified; NodeDefaultSSLSettings and CellDefaultSSLSettings correctly configured; mTLS enforced on the selected internal hop; deliberate SSL failure diagnosed; certificate renewal tested; Smoke passed; Fault drill complete (Sprint 8, non-gating).
+**Lessons Learned:** SSL Repertoires provide explicit, reusable scoping; mTLS requires client authentication too.
+**Technical Debt:** Only one internal hop carries mTLS, per NFR matrix's "≥1 internal hop" requirement — intentional scope.
 
 ---
