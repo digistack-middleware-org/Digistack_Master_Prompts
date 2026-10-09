@@ -1,5 +1,5 @@
 ID: SESSION01
-Version: 1.9
+Version: 2.0
 Status: Active
 
 Title: Session State — Global Pointer
@@ -10,7 +10,7 @@ Title: Session State — Global Pointer
 
 Folder:   02_Application_Development/
 Part:     P01 — Foundation
-Version:     v12 — WAS SSL Configuration (End-to-End)
+Version:     v13 — Notifications (JavaMail / JNDI Mail Session)
 Sprint:   Sprint 1
 Status:   NOT YET STARTED
 VM Status: dsb-dmgr ON | dsb-node02 ON | dsb-ihs ON | dsb-db ON
@@ -59,6 +59,18 @@ file, shared styles in css/common/common.css. No new inline styles or
 
 ---
 
+## Editing Existing Code — Standing Rule (added 2026-10-09)
+
+Claude cannot see the project code between chats. Therefore:
+1. Before changing ANY existing file (Java, JSP, CSS, web.xml, pom.xml),
+   the user pastes the CURRENT file into the chat.
+2. Claude returns the COMPLETE updated file (NDS01 Rule 1), changing only
+   what the sprint requires. Never rewrite from memory.
+3. Claude states exactly which lines changed and why (Rule 6: no regression).
+4. TEST01: all 25 unit tests must still pass after every code change.
+
+---
+
 ## Version Pins (WAS ND / PostgreSQL / IHS CONFIRMED; Oracle / ojdbc8 / MQ still target)
 
 WAS ND:       9.0.5.28   (CONFIRMED at P01 v5 sign-off, 2026-09-01)
@@ -69,6 +81,51 @@ ojdbc8.jar:   latest      (confirms at v22.5 sign-off)
 IHS:          9.0.5.28   (CONFIRMED running at P01 v4.5)
 IBM MQ:       9.3.x/9.4.x (confirms at P02 v19)
 OS:           RHEL 8.x   (CONFIRMED on dsb-dmgr, P01 v1 Sprint 2)
+
+---
+
+## Environment Facts Built Through v12 (added 2026-10-09)
+
+Credentials: never stored in project files. wasadmin password, keystore
+passwords and DB password are kept in the user's password manager and
+supplied by the user when a command needs them.
+
+Cell/cluster: cell devdsbincell01; cluster devdsbinappcluster01;
+members devdsbinappclustermember01 (node devdsbinnode01 on dsb-dmgr)
+and devdsbinappclustermember02 (node devdsbinnode02 on dsb-node02).
+App name in WAS: digistack-bank. Current EAR: digistack-bank-v12.ear.
+
+Hosts: dsb-dmgr 192.168.10.10 | dsb-node02 192.168.10.11 |
+dsb-ihs 192.168.10.20 | dsb-db 192.168.10.30.
+
+Security (v10): Administrative + Application Security ON. Users:
+wasadmin (console admin), customer1 (Customer group), admin1
+(Administrator group). Every wsadmin call needs -user/-password.
+FORM login. /Freeze and /Unfreeze = Administrator only (403 for customer).
+
+SSL (v11): IHS HTTPS on 443, self-signed cert digistack-ihs-webtier
+(CN=www.digistack.cloud), files in /apps/IBM/HTTPServer/ssl/.
+HTTP→HTTPS 301 redirect, path preserved. SSLv2/SSLv3 disabled.
+
+SSL (v12): plugin→WAS over HTTPS (plugin keystore
+/apps/IBM/HTTPServer/ssl/plugin-key.kdb). SSL Repertoire
+DigiStackInternalSSL referenced by NodeDefaultSSLSettings and
+CellDefaultSSLSettings. mTLS on WAS→PostgreSQL: private CA digistack-ca,
+files in /etc/postgresql/ssl/ (dsb-db) and
+<profile>/ssl/mtls/ (WAS hosts). jdbc/BankDS has ssl, sslmode,
+sslcert, sslkey, sslrootcert custom properties; client cert is
+digistack-mtls-internal-hop.crt. CI01 §5.2 and §5.3 recorded.
+
+Logs to know: IHS /apps/IBM/HTTPServer/logs/error_log; plugin
+/apps/IBM/WebSphere/Plugins/logs/webserver1/http_plugin.log; WAS
+SystemOut.log under profiles/<profile>/logs/<server>/.
+
+Lessons carried forward: Admin Console green does NOT prove SSL or
+dependencies work; configtest does not check file existence; after any
+cert/key change check owner and mode of key files on every host.
+
+Latest backups: backup-v12-signoff.zip (dmgr backups folder),
+ihs-v12-signoff.tar.gz (dsb-ihs), pg-v12-signoff.tar.gz (dsb-db).
 
 ---
 
@@ -108,21 +165,9 @@ dsb-tomcat: OFF — powers on at P03 v26
 | 2026-08-25 | Reset #2 — VM + chat lost    | P01 v1 Sprint 1 — not started   |
 | 2026-09-11 | Roadmap updated — v8.5 and v9.5 inserted into P01_Foundation.md / P01_Sprint_Plan.md | P01 v8.5 Sprint 1 — not started |
 | 2026-09-30 | Roadmap updated — v9.5 relocated to v14.5 (manual-first); v9 signed off | P01 v10 Sprint 1 — not started |
-| 2026-09-30 | Gap-fill pass — pins marked CONFIRMED, v10 pre-flight added (see below), credentials removed from Progress_Log | P01 v10 Sprint 1 — not started |
+| 2026-09-30 | Gap-fill pass — pins marked CONFIRMED, v10 pre-flight added, credentials removed from Progress_Log | P01 v10 Sprint 1 — not started |
 | 2026-10-07 | v11 signed off — SSL (HTTPS at the Web Tier) complete | P01 v12 Sprint 1 — not started |
-
----
-
-## v10 Pre-Flight (added 2026-09-30)
-
-Before v10 Sprint 1 — enabling Administrative Security is disruptive:
-1. Take backupConfig on dsb-dmgr (and record the archive name in SetupDoc-v10.md).
-2. Enabling admin security forces restart of DMgr, both node agents and
-   both cluster members + full resync. Plan the outage.
-3. After it is on, EVERY wsadmin call (incl. v6 freezeAccount.py) needs
-   credentials (-user/-password or soap.client.props). Never hardcode.
-4. Decide app-login mechanism before Sprint 3 (see P01_Foundation.md
-   v10 "Application Authentication Note").
+| 2026-10-09 | v12 signed off — WAS SSL Configuration (End-to-End) complete | P01 v13 Sprint 1 — not started |
 
 ---
 
@@ -133,5 +178,7 @@ At each version sign-off, change:
 - Sprint field to Sprint 1
 - Status to NOT YET STARTED
 - VM Status if a new VM powered on this version
+- Add a row to the Pause/Resume Log
+- Add any new durable environment facts to "Environment Facts"
 
-Last Updated: 2026-10-07
+Last Updated: 2026-10-09
