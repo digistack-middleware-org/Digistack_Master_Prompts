@@ -20,7 +20,7 @@
 | # | Folder | Status | Last Completed Version | Next Version | Current Focus (AI Resume one-liner) |
 |---|---|---|---|---|---|
 | 00 | Core | 🔒 Frozen | — | — | — |
-| 02 | Application_Development | 🔓 In Progress | v12 (P01) | v13 (P01) | v12 (WAS SSL End-to-End) signed off 2026-10-09 — 36 test cases ([x] Critical + [x] High + [x] Medium pass), [x]/25 unit tests (TEST01). IHS plugin→WAS over HTTPS (plugin-key.kdb), SSL Repertoire DigiStackInternalSSL referenced by NodeDefaultSSLSettings + CellDefaultSSLSettings, mTLS on WAS→PostgreSQL hop (private CA digistack-ca, hostssl cert rules in pg_hba.conf, jdbc/BankDS ssl properties). Zero-downtime cert renewal (digistack-mtls-internal-hop.crt), CI01 §5.3 added. digistack-bank-v12.ear deployed. backupConfig: backup-v12-signoff.zip. Sprint 4 break: plugin KeyringLocation corrupted, diagnosed via http_plugin.log. Fault drill INC-v12-001: client key permissions on dsb-dmgr — member 1 lost DB connectivity, MTTD [x] / MTTR [x]. Next: v13 Sprint 1. dsb-dmgr, dsb-node02, dsb-ihs, dsb-db all ON. Mirrors Multi-Part Folder Detail row below. |
+| 02 | Application_Development | 🔓 In Progress | v12 (P01) | v12.5 (P01) | v12 (WAS SSL End-to-End) signed off 2026-10-09 — 36 test cases ([x] Critical + [x] High + [x] Medium pass), [x]/25 unit tests (TEST01). IHS plugin→WAS over HTTPS (plugin-key.kdb), SSL Repertoire DigiStackInternalSSL referenced by NodeDefaultSSLSettings + CellDefaultSSLSettings, mTLS on WAS→PostgreSQL hop (private CA digistack-ca, hostssl cert rules in pg_hba.conf, jdbc/BankDS ssl properties). Zero-downtime cert renewal (digistack-mtls-internal-hop.crt), CI01 §5.3 added. digistack-bank-v12.ear deployed. backupConfig: backup-v12-signoff.zip. Sprint 4 break: plugin KeyringLocation corrupted, diagnosed via http_plugin.log. Fault drill INC-v12-001: client key permissions on dsb-dmgr — member 1 lost DB connectivity, MTTD [x] / MTTR [x]. Next: v12.5 Sprint 1 (Customer Onboarding & Registry-Based Login, inserted 2026-10-09; v13 follows). dsb-dmgr, dsb-node02, dsb-ihs, dsb-db all ON. Mirrors Multi-Part Folder Detail row below. |
 | 03 | Interview_Prep | ⏳ Not Started | — | Interview-1 (P03.1) | Not started — depends on P03 completion |
 | 04 | Observability | ⏳ Not Started | — | v31 (P04) | Not started — depends on P03 completion |
 | 05 | HA_DR | ⏳ Not Started | — | v36 (P05) | Not started — depends on P04 completion |
@@ -58,7 +58,7 @@ Once frozen, a folder is only reopened for a documented correction — never sil
 
 | Part | Status | Last Approved Version | Next Version |
 |---|---|---|---|
-| P01 — Foundation | 🔓 In Progress | v12 | v13 |
+| P01 — Foundation | 🔓 In Progress | v12 | v12.5 |
 | P02 — Middleware | ⏳ Not Started | — | v15 |
 | P03 — Banking Systems | ⏳ Not Started | — | v23 |
 
@@ -250,6 +250,14 @@ documentation corrected to reflect actual installed OS.
 
 ## Open Questions / Decisions Pending
 
+**Resolved — v12.5 (Customer Onboarding & Registry-Based Login) inserted, 2026-10-09.**
+
+Reason: the only customers are the seeded customer1 and admin1 (created by SeedUsers.java), and v10 registered roles and group bindings without making the container authenticate logins (Login.jsp posts to /Login, LoginServlet verifies the users-table hash). v12.5 adds an Administrator-only Onboard Customer screen, a Change Password screen, and moves authentication to the WAS registry via request.login(), with credentials held in the registry and the users table holding profile data only. Suffix-slot convention (like v4.5/v8.5/v14.5): no other version numbers changed. v13 prerequisite changed to "P01 v12.5 signed off". EAR name for this version: digistack-bank-v12.5.ear.
+
+Effect on the unscoped items below: "Open an Account" is partly addressed (Administrator-assisted onboarding with first account opened at onboarding). Self-service and Teller onboarding (P03 v29) remain undecided. "Forgot Password?" remains unscoped. Self-registration is deliberately not built.
+
+Files updated: P01_Foundation.md, P01_Sprint_Plan.md, SESSION_STATE.md, this file, CURRENT_SPRINT.md (to be prepared for v12.5), 02_Application_Development README (Next Task).
+
 **Resolved — v9.5 relocated to v14.5, 2026-09-30.**
 
 Reason: manual-first learning — v10–v14 are configured by hand before any automation toolkit is built. v9.5 (wsadmin Jython Toolkit & Troubleshooting) is now v14.5, after v14. v10 follows v9 directly; v10 prerequisite changed to "P01 v9 signed off"; v14.5 prerequisite is "P01 v14 signed off"; P01 consolidation now triggers after v14.5 sign-off. No other version numbers changed. Files updated: P01_Foundation.md, P01_Sprint_Plan.md, SESSION_STATE.md, this file.
@@ -341,7 +349,7 @@ P01-P10:
 | Element | Why it's a gap | Decision needed |
 |---|---|---|
 | "Personal \| Business" toggle | Business/corporate banking not scoped anywhere in ARCH01 or any Part (retail-only project) | Scope a Business Banking module (new Part?) or drop permanently — undecided |
-| "Open an Account" (self-service) | Accounts are currently only created via SQL seed scripts, not a customer-facing flow. Related to the Admin/Teller account-opening gap already logged (2026-08-24, tied to P03 v29 Branch Portal) | Decide: self-service (customer-facing) vs. admin-assisted (Teller, P03 v29) vs. both — undecided |
+| "Open an Account" (self-service) | Accounts are currently only created via SQL seed scripts, not a customer-facing flow. Related to the Admin/Teller account-opening gap already logged (2026-08-24, tied to P03 v29 Branch Portal) | Decide: self-service (customer-facing) vs. admin-assisted (Teller, P03 v29) vs. both — undecided. Update 2026-10-09: P01 v12.5 builds Administrator-assisted customer onboarding (first account opened at onboarding); self-service and Teller onboarding remain undecided |
 | "Forgot Password?" | No password-reset flow anywhere in P01 v2 or v10 | Decide which version builds it (candidate: P01 v10, Administrative Security) — undecided |
 
 Decision (2026-08-24): render all three as disabled/"Coming soon" in the

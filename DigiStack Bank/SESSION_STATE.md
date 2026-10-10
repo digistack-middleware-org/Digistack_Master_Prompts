@@ -10,7 +10,7 @@ Title: Session State — Global Pointer
 
 Folder:   02_Application_Development/
 Part:     P01 — Foundation
-Version:     v13 — Notifications (JavaMail / JNDI Mail Session)
+Version:     v12.5 — Customer Onboarding & Registry-Based Login
 Sprint:   Sprint 1
 Status:   NOT YET STARTED
 VM Status: dsb-dmgr ON | dsb-node02 ON | dsb-ihs ON | dsb-db ON
@@ -168,6 +168,8 @@ dsb-tomcat: OFF — powers on at P03 v26
 | 2026-09-30 | Gap-fill pass — pins marked CONFIRMED, v10 pre-flight added, credentials removed from Progress_Log | P01 v10 Sprint 1 — not started |
 | 2026-10-07 | v11 signed off — SSL (HTTPS at the Web Tier) complete | P01 v12 Sprint 1 — not started |
 | 2026-10-09 | v12 signed off — WAS SSL Configuration (End-to-End) complete | P01 v13 Sprint 1 — not started |
+| 2026-10-09 | Roadmap updated — v12.5 (Customer Onboarding & Registry-Based Login) inserted between v12 and v13; v13 prerequisite changed to v12.5 | P01 v12.5 Sprint 1 — not started |
+| 2026-10-09 | Roadmap updated — v12.5 (Customer Onboarding & Registry-Based Login) inserted between v12 and v13; v13 prerequisite changed to v12.5 | P01 v12.5 Sprint 1 — not started |
 
 ---
 

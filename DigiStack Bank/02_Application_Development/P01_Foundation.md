@@ -11,7 +11,7 @@ ARCH01
 
 
 Exports:
-Versions 1-4, 4.5, 5-8, 8.5, 9, 10-14, 14.5 (17 versions total; v4.5 = Basic IHS Standalone Era; v8.5 = Transaction Service/XA Recovery; v14.5 = wsadmin Jython Toolkit & Troubleshooting)
+Versions 1-4, 4.5, 5-8, 8.5, 9, 10-12, 12.5, 13-14, 14.5 (18 versions total; v4.5 = Basic IHS Standalone Era; v8.5 = Transaction Service/XA Recovery; v12.5 = Customer Onboarding & Registry-Based Login; v14.5 = wsadmin Jython Toolkit & Troubleshooting)
 First EAR deployment
 Login/session
 Basic transactions
@@ -22,6 +22,7 @@ IHS
 Session management
 Users/groups/security
 SSL end-to-end
+Customer onboarding / registry-based login
 Notifications
 Reports/JVM tuning
 
@@ -69,7 +70,7 @@ Part-Start Architecture Diagram (generate first, before Version 1 work begins)
 --------------------------------------------------------------------------------
 Per 01_Architecture/README.md's Version-Start Diagram Check, generated once
 at the start of this Part — pruned to only the diagram files P01's versions
-(v1-v14.5, incl. v4.5 / v8.5 / v14.5 suffix slots) actually populate or extend. Files outside this tree stay
+(v1-v14.5, incl. v4.5 / v8.5 / v12.5 / v14.5 suffix slots) actually populate or extend. Files outside this tree stay
 untouched until a later Part's own start-of-Part diagram unlocks them.
 
                  DIGISTACK BANK — P01 (v1-v14.5)
@@ -107,14 +108,14 @@ untouched until a later Part's own start-of-Part diagram unlocks them.
        v
  06_Database_ER_Diagram.md
  (v1 app_config, v2 users,
-  v3 accounts, v6 is_frozen —
+  v3 accounts, v6 is_frozen, v12.5 must_change_password —
   redrawn every schema change)
 
    SECURITY
        |
        v
  07_Security_Architecture.md
- (v10 roles/registry,
+ (v10 roles/registry, v12.5 registry-based login,
   v11/v12 SSL/mTLS)
 
 Not in scope this Part: 05_MQ_Architecture.md (MQ doesn't exist until P02
@@ -565,6 +566,11 @@ call (incl. v6 freezeAccount.py) then requires credentials — externalized,
 never hardcoded. "Forgot Password?" remains unscoped (see Progress_Log.md
 Open Questions); v10 does NOT build it unless explicitly scoped.
 
+Update (v12.5): as built, v10 registered the roles and group bindings, but
+Login.jsp still posted to /Login and LoginServlet still verified the hash
+in the `users` table, so the container never authenticated the caller.
+Version 12.5 closes this gap with request.login() against the registry.
+
 Roles Actually Built (clarification)
 -------------------------------------
 Only two roles are built in this roadmap: Customer and Administrator
@@ -601,6 +607,77 @@ SSL Troubleshooting.
 Sprint Deliverable: SSL enabled end-to-end (browser→IHS→plugin→AppServer→DB);
 mTLS configured on at least one internal hop; cert expiry/renewal process
 documented and tested once.
+
+Version 12.5 — Customer Onboarding & Registry-Based Login
+---------------------------------------------------------
+WebSphere Topic: Programmatic container authentication (request.login),
+identity provisioning to the file-based federated repository,
+administrative security in practice, role-protected servlets, wsadmin
+Jython, JDBC local transactions.
+
+Minimum App: One Administrator-only screen, "Onboard Customer", plus a
+Change Password screen. The Administrator enters full name, email and
+username; the app generates a temporary password, creates the customer in
+the registry and the database, and opens their first Savings account
+(balance 0.00). No self-registration. This is the smallest new screen the
+topic needs (Continuity Rule (a)); it replaces SeedUsers.java for all new
+customers.
+
+Responsibility Split: The registry owns username, password and group
+membership (Customer / Administrator) and authenticates every login. The
+`users` table owns profile and status only (full_name, email, role,
+is_active, must_change_password, last_login). password_hash and
+password_salt are no longer used for login.
+
+Login Change: Login.jsp is unchanged and still posts to /Login.
+LoginServlet.doPost calls request.login(username, password), reads
+getRemoteUser(), loads the `users` row, checks is_active, then continues
+as before. If must_change_password = TRUE the user is redirected to
+/ChangePassword and cannot reach Dashboard, Deposit or Withdraw.
+LoginServlet.doGet handles ?reason= BEFORE the "already logged in"
+redirect so a logged-in Customer blocked by 403 still sees the message.
+
+Onboarding Flow: OnboardCustomerServlet (Administrator only, security-
+constraint) -> OnboardingService -> one JDBC transaction (INSERT users,
+INSERT accounts) plus RegistryGateway.createUser(..., group "Customer").
+If the commit fails after the registry call succeeded, a compensating
+RegistryGateway.deleteUser() removes the registry user. The temporary
+password is shown ONCE and is never stored, logged or emailed.
+
+Design Rule: All registry operations (createUser, deleteUser,
+changePassword, userExists) go through one RegistryGateway interface.
+P06 replaces the implementation with LDAP without touching servlets.
+
+Schema Change (next free Flyway number): users.must_change_password
+BOOLEAN NOT NULL DEFAULT FALSE; users.password_hash and
+users.password_salt become NULLable; account_number sequence
+(DSB + zero-padded number). No data changes to existing rows.
+
+Prerequisites (record in SetupDoc-v12.5.md): seeded customer1 and admin1
+exist in the WAS registry in the Customer and Administrator groups with
+their current passwords; request.login() proven on WAS 9.0.5.28 with
+Administrative Security enabled; registry-write mechanism (service API vs
+wsadmin) and the service ID's minimum permission decided and tested;
+service ID credentials externalized, never hardcoded.
+
+Scope Boundaries: Administrator performs onboarding (the Teller role does
+not exist until P03 v29). No self-registration, email verification or KYC
+(Aadhaar/PAN belongs to P03 v24). No welcome email (v13 may later send
+the username only). "Forgot Password?" stays unscoped. Registry and
+database are two systems, so there is no single atomic commit; the
+compensating delete is the handling.
+
+Topics Covered: Programmatic Container Login, Identity Provisioning,
+Registry vs Application Data, Role-Protected Servlets, Forced Password
+Change, Distributed Write with Compensation, wsadmin User Scripting.
+
+Sprint Deliverable: customer1 and admin1 log in through the container
+(request.login). The Administrator onboards a new customer; the customer
+logs in with the temporary password, is forced to change it, then sees
+their account at balance 0.00. A Customer-role user cannot reach Onboard
+Customer (403, role enforcement not UI hiding). A duplicate username or
+email leaves no partial rows in the registry or the database. An
+onboarded customer's `users` row holds no password data.
 
 Version 13 — Notifications (JavaMail / JNDI Mail Session)
 ------------------------------------------------------------
@@ -714,6 +791,7 @@ Completion Checklist
 □ IHS installed, fronting cluster via plugin-cfg.xml
 □ SSL/HTTPS end-to-end, mTLS on at least one hop
 □ Administrative security enabled — Customer/Administrator roles enforced
+□ Customer onboarding and registry-based login proven — request.login against the file registry; onboarded customer forced to change temporary password (v12.5)
 □ DMgr + federated nodes operational, wsadmin fluency demonstrated
 □ Email notification working via WAS Mail Session/JNDI
 □ Large report generates under tuned JVM heap without OOM
@@ -725,6 +803,7 @@ Completion Checklist
 Application State After P01
 -------------------------------
 Modules: Home, Login/Logout, Balance, Deposit, Withdraw, Freeze/Unfreeze,
+Onboard Customer, Change Password (v12.5),
 one Transaction Report, one Withdraw email.
 
 Infrastructure: DMGR, Node, Cluster, DataSource, JNDI, IHS (incl. custom
